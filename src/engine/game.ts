@@ -7,19 +7,26 @@ import {
   COSTS,
   EVACUATE_COST,
   FLUSH_CONCENTRATION,
+  ITEMS,
   MAX_CONCENTRATION,
+  MAX_CONCENTRATION_LOSS,
   MAX_MERDASCORE,
   MAX_STAT,
   MAX_TEAM,
   ROUNDS,
+  SHOP_OFFER,
   SHOWER_DISCOUNT,
   STARTER_CHOICES,
+  STARTING_MERDASCORE,
+  STAT_KEYS,
+  STARTING_TP,
   TOWEL_TP,
+  TRADE,
 } from './data';
 import { createMerdomon, createWave } from './generate';
 import { Rng } from './rng';
-import { countTraits, traitValue } from './traits';
-import type { ItemId, Rarity, Reward, RunState, RunStats, StatKey } from './types';
+import { apBonus, countTraits, traitValue } from './traits';
+import type { ItemId, Merdomon, Rarity, Reward, RunState, RunStats, StatKey } from './types';
 
 // Every action is a pure function: it returns a new state, or the same state if the action isn't allowed.
 
@@ -50,15 +57,16 @@ function emptyStats(): RunStats {
 
 export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
   const s: RunState = {
-    version: 1,
+    version: 2,
     phase: 'starter',
     round: 1,
     concentration: MAX_CONCENTRATION,
-    tp: 0,
-    merdascore: 0,
+    tp: STARTING_TP,
+    merdascore: STARTING_MERDASCORE,
     ap: BASE_AP,
     team: [],
     items: [],
+    shopOffer: [],
     starters: [],
     pending: null,
     wave: [],
@@ -75,9 +83,11 @@ export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
 
 function startPreparation(s: RunState) {
   s.phase = 'preparation';
-  s.ap = BASE_AP;
+  s.ap = BASE_AP + apBonus(s.team, s.items);
   s.wave = withRng(s, (rng) => createWave(rng, s.round, s.nextId));
   s.nextId += s.wave.length;
+  const available = ITEMS.filter((i) => !s.items.includes(i));
+  s.shopOffer = withRng(s, (rng) => rng.shuffle([...available]).slice(0, SHOP_OFFER));
 }
 
 const inPreparation = (s: RunState) => s.phase === 'preparation' && !s.pending;
@@ -121,8 +131,8 @@ export function assignBonusPoint(prev: RunState, stat: StatKey): RunState {
 
 // ---------- Costs ----------
 
-export function tpCost(s: RunState, action: 'flush' | 'bonusAction' | 'upgrade'): number {
-  return COSTS[action] - (s.items.includes('shower') ? SHOWER_DISCOUNT : 0);
+export function tpCost(s: RunState, action: 'shop' | 'flush' | 'bonusAction'): number {
+  return Math.max(0, COSTS[action] - (s.items.includes('shower') ? SHOWER_DISCOUNT : 0));
 }
 
 // ---------- AP actions ----------
@@ -155,15 +165,16 @@ export function evacuate(prev: RunState, rarity: Rarity): RunState {
 }
 
 export function canBuy(s: RunState, item: ItemId): boolean {
-  return inPreparation(s) && s.ap >= 1 && s.tp >= COSTS.shop && !s.items.includes(item);
+  return inPreparation(s) && s.ap >= 1 && s.tp >= tpCost(s, 'shop') && s.shopOffer.includes(item);
 }
 
 export function buy(prev: RunState, item: ItemId): RunState {
   if (!canBuy(prev, item)) return prev;
   const s = clone(prev);
   s.ap--;
-  s.tp -= COSTS.shop;
+  s.tp -= tpCost(s, 'shop');
   s.items.push(item);
+  s.shopOffer = s.shopOffer.filter((i) => i !== item);
   s.stats.itemsBought++;
   return s;
 }
@@ -219,21 +230,37 @@ export function bonusAction(prev: RunState): RunState {
   return s;
 }
 
-export function canUpgrade(s: RunState, id?: number, stat?: StatKey): boolean {
-  if (!inPreparation(s) || s.tp < tpCost(s, 'upgrade')) return false;
-  if (id === undefined) return s.team.length > 0;
-  const m = s.team.find((x) => x.id === id);
-  if (!m) return false;
-  return stat === undefined || m.stats[stat] < MAX_STAT;
+// ---------- Trade (1 AP) ----------
+
+export function canTrade(s: RunState): boolean {
+  return inPreparation(s) && s.ap >= 1;
 }
 
-export function upgrade(prev: RunState, id: number, stat: StatKey): RunState {
-  if (!canUpgrade(prev, id, stat)) return prev;
+export function trade(prev: RunState, resource: 'merdascore' | 'tp'): RunState {
+  if (!canTrade(prev)) return prev;
+  const s = clone(prev);
+  s.ap--;
+  if (resource === 'merdascore') s.merdascore = Math.min(MAX_MERDASCORE, s.merdascore + TRADE.merdascore);
+  else s.tp += TRADE.tp;
+  return s;
+}
+
+export function canTradeStat(s: RunState, id?: number, stat?: StatKey): boolean {
+  if (!canTrade(s)) return false;
+  const upgradable = (m: Merdomon) => STAT_KEYS.some((k) => m.stats[k] < MAX_STAT);
+  if (id === undefined) return s.team.some(upgradable);
+  const m = s.team.find((x) => x.id === id);
+  if (!m) return false;
+  return stat === undefined ? upgradable(m) : m.stats[stat] < MAX_STAT;
+}
+
+export function tradeStat(prev: RunState, id: number, stat: StatKey): RunState {
+  if (!canTradeStat(prev, id, stat)) return prev;
   const s = clone(prev);
   const m = s.team.find((x) => x.id === id)!;
-  s.tp -= tpCost(s, 'upgrade');
-  m.stats[stat]++;
-  if (stat === 'hp') m.hp++;
+  s.ap--;
+  m.stats[stat] += TRADE.stat;
+  if (stat === 'hp') m.hp += TRADE.stat;
   return s;
 }
 
@@ -265,11 +292,12 @@ export function fight(prev: RunState): RunState {
   if (!canFight(prev)) return prev;
   const s = clone(prev);
   const traits = countTraits(s.team, s.items);
-  const result = withRng(s, (rng) => simulateCombat(s.team, s.wave, s.items, rng));
+  const toothbrushHp = s.items.includes('toothbrush') ? s.ap : 0;
+  const result = withRng(s, (rng) => simulateCombat(s.team, s.wave, s.items, rng, toothbrushHp));
 
   const rewards: Reward[] = [];
   if (result.won) rewards.push({ source: 'survivors', resource: 'merdascore', amount: result.survivors });
-  else rewards.push({ source: 'enemies', resource: 'concentration', amount: -result.enemySurvivors });
+  else rewards.push({ source: 'enemies', resource: 'concentration', amount: -Math.min(result.enemySurvivors, MAX_CONCENTRATION_LOSS) });
   if (result.damageDealt > 0) rewards.push({ source: 'damage', resource: 'tp', amount: result.damageDealt });
   const paper = traitValue('paper', traits.paper);
   if (paper > 0) rewards.push({ source: 'paper', resource: 'tp', amount: paper });
@@ -279,11 +307,12 @@ export function fight(prev: RunState): RunState {
   if (s.items.includes('towel')) rewards.push({ source: 'towel', resource: 'tp', amount: TOWEL_TP });
   for (const r of rewards) applyReward(s, r);
 
-  // Combat-only bonus HP is dropped; fallen Merdomon come back with 1 HP.
+  // Combat-only bonus HP is dropped; fallen Merdomon come back with half their max HP.
   s.team.forEach((m, i) => {
     const hp = result.hpAfter[i];
-    m.hp = hp > 0 ? Math.min(hp, m.stats.hp) : 1;
+    m.hp = hp > 0 ? Math.min(hp, m.stats.hp) : Math.ceil(m.stats.hp / 2);
   });
+  s.ap = 0;
 
   s.stats.damageDealt += result.damageDealt;
   s.stats.enemiesDefeated += result.enemiesDefeated;

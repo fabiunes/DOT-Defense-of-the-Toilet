@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { COSTS, EVACUATE_COST, ITEMS, ITEM_INFO, MAX_TEAM, STAT_KEYS, CONCENTRATE_GAIN } from '../../engine/data';
+import { COSTS, EVACUATE_COST, ITEM_INFO, MAX_TEAM, STAT_KEYS, CONCENTRATE_GAIN, TRADE } from '../../engine/data';
 import * as G from '../../engine/game';
 import { countTraits } from '../../engine/traits';
 import type { ItemId, Rarity, RunState, TraitId } from '../../engine/types';
-import { PlayerArt } from '../art';
+import { EnemyArt, PlayerArt } from '../art';
 import {
   CostBadge,
   EmptySlot,
@@ -24,15 +24,17 @@ type Panel =
   | { kind: 'actions' }
   | { kind: 'evacuate' }
   | { kind: 'shop' }
+  | { kind: 'trade' }
+  | { kind: 'scout' }
   | { kind: 'detail'; id: number }
-  | { kind: 'upgrade'; id: number }
+  | { kind: 'tradeStat'; id: number }
   | { kind: 'flush'; id: number }
   | { kind: 'item'; item: ItemId }
   | { kind: 'trait'; trait: TraitId };
 
-type Mode = 'organize' | 'flush' | 'upgrade' | null;
+type Mode = 'organize' | 'flush' | 'tradeStat' | null;
 
-const MODE_ICON: Record<Exclude<Mode, null>, IconName> = { organize: 'swap', flush: 'flush', upgrade: 'upgrade' };
+const MODE_ICON: Record<Exclude<Mode, null>, IconName> = { organize: 'swap', flush: 'flush', tradeStat: 'upgrade' };
 
 export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
   const [panel, setPanel] = useState<Panel | null>(null);
@@ -56,8 +58,8 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       }
     } else if (mode === 'flush') {
       setPanel({ kind: 'flush', id: m.id });
-    } else if (mode === 'upgrade') {
-      setPanel({ kind: 'upgrade', id: m.id });
+    } else if (mode === 'tradeStat') {
+      setPanel({ kind: 'tradeStat', id: m.id });
     } else {
       setPanel({ kind: 'detail', id: m.id });
     }
@@ -82,21 +84,13 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       ) : (
         <div className="main-buttons">
           <button className="big-btn shadow" onClick={() => setPanel({ kind: 'actions' })}>
-            <Icon name="bonus" size={22} fill="#fff" /> Action
+            <Icon name="bonus" size={22} fill="#fff" /> Preparation
           </button>
           <button className="big-btn shadow fight-btn" onClick={() => update(G.fight)} disabled={!G.canFight(run)}>
             <span className="fight-label">
               <Icon name="fight" size={22} /> Next Wave
             </span>
-            <span className="wave-preview">
-              {run.wave.map((e) =>
-                e.boss ? (
-                  <Icon key={e.id} name="crown" size={16} fill="#1b1b1b" />
-                ) : (
-                  <Icon key={e.id} name="phone" size={16} fill={e.rarity === 'rare' ? '#1b1b1b' : '#fff'} />
-                ),
-              )}
-            </span>
+            <WavePreview run={run} />
           </button>
         </div>
       )}
@@ -130,12 +124,24 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       )}
       {panel?.kind === 'evacuate' && <EvacuatePanel run={run} update={update} onClose={close} />}
       {panel?.kind === 'shop' && <ShopPanel run={run} update={update} onClose={close} />}
+      {panel?.kind === 'scout' && <ScoutPanel run={run} onClose={close} />}
+      {panel?.kind === 'trade' && (
+        <TradePanel
+          run={run}
+          update={update}
+          onClose={close}
+          onStat={() => {
+            close();
+            setMode('tradeStat');
+          }}
+        />
+      )}
       {panel?.kind === 'detail' && findM(panel.id) && (
         <Modal onClose={close}>
           <MerdomonDetail m={findM(panel.id)!} />
         </Modal>
       )}
-      {panel?.kind === 'upgrade' && findM(panel.id) && (
+      {panel?.kind === 'tradeStat' && findM(panel.id) && (
         <Modal onClose={close}>
           <MerdomonDetail m={findM(panel.id)!}>
             <div className="upgrade-row">
@@ -143,16 +149,20 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
                 <button
                   key={k}
                   className="stat-btn sk"
-                  disabled={!G.canUpgrade(run, panel.id, k)}
-                  onClick={() => update((s) => G.upgrade(s, panel.id, k))}
+                  disabled={!G.canTradeStat(run, panel.id, k)}
+                  onClick={() => {
+                    update((s) => G.tradeStat(s, panel.id, k));
+                    close();
+                    exitMode();
+                  }}
                 >
                   <Icon name={STAT_ICON[k]} size={20} />
-                  <b>+1</b>
+                  <b>+{TRADE.stat}</b>
                 </button>
               ))}
             </div>
             <div className="center">
-              <CostBadge tp={G.tpCost(run, 'upgrade')} />
+              <CostBadge ap={1} />
             </div>
           </MerdomonDetail>
         </Modal>
@@ -198,6 +208,20 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
 
       {run.pending && <BonusPointModal run={run} m={run.pending} update={update} />}
     </div>
+  );
+}
+
+export function WavePreview({ run }: { run: RunState }) {
+  return (
+    <span className="wave-preview">
+      {run.wave.map((e) =>
+        e.boss ? (
+          <Icon key={e.id} name="crown" size={16} fill="#1b1b1b" />
+        ) : (
+          <Icon key={e.id} name="phone" size={16} fill={e.rarity === 'rare' ? '#1b1b1b' : '#fff'} />
+        ),
+      )}
+    </span>
   );
 }
 
@@ -247,8 +271,8 @@ function ActionPanel({
       key: 'shop',
       icon: 'shop',
       label: 'Shop',
-      enabled: run.ap >= 1 && run.items.length < ITEMS.length,
-      cost: { ap: 1, tp: COSTS.shop },
+      enabled: run.ap >= 1 && run.shopOffer.length > 0,
+      cost: { ap: 1, tp: G.tpCost(run, 'shop') },
       onClick: () => onOpen({ kind: 'shop' }),
     },
     {
@@ -261,6 +285,14 @@ function ActionPanel({
         update(G.concentrate);
         onClose();
       },
+    },
+    {
+      key: 'trade',
+      icon: 'trade',
+      label: 'Trade',
+      enabled: G.canTrade(run),
+      cost: { ap: 1 },
+      onClick: () => onOpen({ kind: 'trade' }),
     },
   ];
   const free: Tile[] = [
@@ -289,12 +321,12 @@ function ActionPanel({
       onClick: () => update(G.bonusAction),
     },
     {
-      key: 'upgrade',
-      icon: 'upgrade',
-      label: 'Upgrade',
-      enabled: G.canUpgrade(run),
-      cost: { tp: G.tpCost(run, 'upgrade') },
-      onClick: () => onMode('upgrade'),
+      key: 'scout',
+      icon: 'eye',
+      label: 'Scout',
+      enabled: run.wave.length > 0,
+      cost: {},
+      onClick: () => onOpen({ kind: 'scout' }),
     },
   ];
 
@@ -349,33 +381,115 @@ function EvacuatePanel({ run, update, onClose }: { run: RunState; update: Update
   );
 }
 
+function TradePanel({
+  run,
+  update,
+  onClose,
+  onStat,
+}: {
+  run: RunState;
+  update: Update;
+  onClose: () => void;
+  onStat: () => void;
+}) {
+  return (
+    <Modal onClose={onClose}>
+      <div className="panel-head">
+        <Icon name="trade" size={28} />
+        <CostBadge ap={1} />
+      </div>
+      <div className="evac-options">
+        <button
+          className="tile sk"
+          disabled={!G.canTrade(run)}
+          onClick={() => {
+            update((s) => G.trade(s, 'merdascore'));
+            onClose();
+          }}
+        >
+          <Icon name="poop" size={30} fill="#fff" />
+          <b className="trade-gain">+{TRADE.merdascore}</b>
+        </button>
+        <button
+          className="tile sk"
+          disabled={!G.canTrade(run)}
+          onClick={() => {
+            update((s) => G.trade(s, 'tp'));
+            onClose();
+          }}
+        >
+          <Icon name="tp" size={30} fill="#fff" />
+          <b className="trade-gain">+{TRADE.tp}</b>
+        </button>
+        <button className="tile sk" disabled={!G.canTradeStat(run)} onClick={onStat}>
+          <span className="trade-stats">
+            {STAT_KEYS.map((k) => (
+              <Icon key={k} name={STAT_ICON[k]} size={15} />
+            ))}
+          </span>
+          <b className="trade-gain">+{TRADE.stat}</b>
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 function ShopPanel({ run, update, onClose }: { run: RunState; update: Update; onClose: () => void }) {
   return (
     <Modal onClose={onClose} className="shop-panel">
       <div className="panel-head">
         <Icon name="shop" size={28} fill="#fff" />
-        <CostBadge ap={1} tp={COSTS.shop} />
+        <CostBadge ap={1} tp={G.tpCost(run, 'shop')} />
       </div>
-      <div className="shop-items">
-        {ITEMS.map((it) => {
-          const owned = run.items.includes(it);
-          return (
+      {run.shopOffer.length === 0 ? (
+        <p className="muted center">Sold out – come back next round</p>
+      ) : (
+        <div className="shop-items single">
+          {run.shopOffer.map((it) => (
             <button
               key={it}
-              className={`shop-item sk ${owned ? 'owned' : ''}`}
+              className="shop-item sk"
               disabled={!G.canBuy(run, it)}
               onClick={() => update((s) => G.buy(s, it))}
             >
               <span className="shop-item-head">
                 <ItemIcon item={it} size={28} />
+                <b>{ITEM_INFO[it].name}</b>
                 <TraitIcon trait={ITEM_INFO[it].trait} size={16} />
-                {owned && <Icon name="check" size={18} />}
               </span>
-              <b>{ITEM_INFO[it].name}</b>
               <small>{ITEM_INFO[it].desc}</small>
             </button>
-          );
-        })}
+          ))}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+/** Preview of the incoming wave, in fighting order. */
+function ScoutPanel({ run, onClose }: { run: RunState; onClose: () => void }) {
+  return (
+    <Modal onClose={onClose} className="scout-panel">
+      <div className="panel-head">
+        <Icon name="eye" size={28} fill="#fff" />
+        <WavePreview run={run} />
+      </div>
+      <div className="scout-list">
+        {run.wave.map((e, i) => (
+          <div key={e.id} className={`scout-row ${e.boss ? 'boss' : ''}`}>
+            <span className="scout-index">{i + 1}</span>
+            <EnemyArt size={e.boss ? 40 : 34} boss={e.boss} />
+            <Stars rarity={e.rarity} size={11} />
+            <span className="scout-stats">
+              {STAT_KEYS.map((k) => (
+                <span key={k}>
+                  <Icon name={STAT_ICON[k]} size={14} />
+                  <b>{e.stats[k]}</b>
+                </span>
+              ))}
+            </span>
+          </div>
+        ))}
       </div>
     </Modal>
   );

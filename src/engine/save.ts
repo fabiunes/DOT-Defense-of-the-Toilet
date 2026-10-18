@@ -1,6 +1,6 @@
 import type { RunState } from './types';
 
-const KEY = 'dot.save.v1';
+const KEY = 'dot.save.v2';
 
 export function saveRun(s: RunState): void {
   try {
@@ -15,7 +15,7 @@ export function loadRun(): RunState | null {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as RunState;
-    return s?.version === 1 && s.phase === 'preparation' ? s : null;
+    return s?.version === 2 && s.phase === 'preparation' ? s : null;
   } catch {
     return null;
   }

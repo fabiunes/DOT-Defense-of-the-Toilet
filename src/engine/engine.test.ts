@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { damage, simulateCombat } from './combat';
-import { MAX_STAT, RARITY_POINTS } from './data';
+import { damage, hitsPerTurn, simulateCombat } from './combat';
+import { ITEMS, MAX_STAT, RARITY_POINTS } from './data';
 import * as G from './game';
 import { createWave, rollStats } from './generate';
 import { Rng } from './rng';
@@ -70,9 +70,17 @@ describe('traits', () => {
 });
 
 describe('combat', () => {
-  it('deals at least 1 damage', () => {
+  it('defense blocks half its value, at least 1 damage', () => {
     expect(damage(2, 9)).toBe(1);
-    expect(damage(7, 3)).toBe(4);
+    expect(damage(7, 3)).toBe(6);
+    expect(damage(5, 2)).toBe(4);
+  });
+
+  it('twice the speed means two hits per turn', () => {
+    expect(hitsPerTurn(4, 2)).toBe(2);
+    expect(hitsPerTurn(3, 2)).toBe(1);
+    const r = simulateCombat([mk({ atk: 2, spd: 4 })], [foe({ hp: 10, def: 0, atk: 1, spd: 2 })], [], new Rng(1));
+    expect(r.events.slice(1, 4).map((e) => e.type === 'attack' && e.side)).toEqual(['p', 'p', 'e']);
   });
 
   it('faster fighter strikes first and a win reports survivors', () => {
@@ -91,7 +99,7 @@ describe('combat', () => {
 
   it('sends the next Merdomon in after one falls', () => {
     const r = simulateCombat(
-      [mk({ hp: 1, atk: 1 }), mk({ hp: 10, atk: 10 })],
+      [mk({ hp: 1, atk: 1 }), mk({ hp: 10, atk: 10, spd: 5 })],
       [foe({ hp: 8, atk: 5, def: 1, spd: 9 })],
       [],
       new Rng(1),
@@ -102,10 +110,11 @@ describe('combat', () => {
     expect(r.events.filter((e) => e.type === 'duel')).toHaveLength(2);
   });
 
-  it('applies trait bonuses for combat only', () => {
+  it('applies trait bonuses and Toothbrush HP for combat only', () => {
     const team = [mk({ hp: 3, atk: 1 }, { traits: ['fighter', 'fighter'] })];
-    const r = simulateCombat(team, [foe({ hp: 10, def: 0 })], [], new Rng(1));
+    const r = simulateCombat(team, [foe({ hp: 10, def: 0 })], [], new Rng(1), 2);
     expect(r.player[0].atk).toBe(2);
+    expect(r.player[0].maxHp).toBe(5);
     expect(team[0].stats.atk).toBe(1);
   });
 
@@ -115,10 +124,11 @@ describe('combat', () => {
   });
 
   it('Window gives the front Merdomon a double strike on its first attack only', () => {
-    const r = simulateCombat([mk({ atk: 2, spd: 9 })], [foe({ hp: 10, def: 1, atk: 1 })], ['window'], new Rng(1));
+    const r = simulateCombat([mk({ atk: 2, spd: 9 })], [foe({ hp: 10, def: 1, atk: 1, spd: 6 })], ['window'], new Rng(1));
     const playerHits = r.events.filter((e) => e.type === 'attack' && e.side === 'p');
     expect(playerHits[1]).toMatchObject({ double: true });
     expect(r.events[3]).toMatchObject({ type: 'attack', side: 'e' });
+    expect(r.events[4]).toMatchObject({ type: 'attack', side: 'p', double: false });
   });
 
   it('loses with an empty team', () => {
@@ -129,20 +139,26 @@ describe('combat', () => {
 });
 
 describe('run flow', () => {
-  it('starts with the spec resources and 3 common starters', () => {
+  it('starts with 5 TP, 5 Merdascore and 3 common starters', () => {
     const s = G.newRun(1);
-    expect(s).toMatchObject({ phase: 'starter', concentration: 10, tp: 0, merdascore: 0, ap: 1 });
+    expect(s).toMatchObject({ phase: 'starter', concentration: 10, tp: 5, merdascore: 5, ap: 1 });
     expect(s.starters).toHaveLength(3);
     expect(s.starters.every((m) => m.rarity === 'common' && m.traits.length === 1)).toBe(true);
   });
 
-  it('starter pick + bonus point enters preparation with wave 1', () => {
+  it('starter pick + bonus point enters preparation with wave 1 and a shop offer', () => {
     const s = prepRun();
     expect(s.phase).toBe('preparation');
     expect(s.team).toHaveLength(1);
     expect(s.wave).toHaveLength(1);
+    expect(s.shopOffer).toHaveLength(3);
     const st = s.team[0].stats;
     expect(st.hp + st.atk + st.def + st.spd).toBe(10);
+  });
+
+  it('rare enemies get 8 extra points', () => {
+    const wave = createWave(new Rng(9), 9, 1);
+    for (const e of wave) expect(e.stats.hp + e.stats.atk + e.stats.def + e.stats.spd).toBe(4 + 8);
   });
 
   it('Concentrate needs more than 2 concentration and caps Merdascore', () => {
@@ -162,12 +178,28 @@ describe('run flow', () => {
     expect(G.canEvacuate(full, 'common')).toBe(false);
   });
 
-  it('Hand Shower discounts TP actions but not the shop', () => {
+  it('Shop sells only the offered items, which then leave the offer', () => {
+    const s = prepRun({ tp: 30 });
+    const notOffered = ITEMS.find((i) => !s.shopOffer.includes(i))!;
+    expect(G.canBuy(s, notOffered)).toBe(false);
+    const item = s.shopOffer[0];
+    const after = G.buy(s, item);
+    expect(after.items).toEqual([item]);
+    expect(after.shopOffer).not.toContain(item);
+    expect(after.tp).toBe(20);
+  });
+
+  it('the next shop offer never contains owned items', () => {
+    let s = prepRun({ items: ['brush', 'magazine', 'bidet', 'shower', 'window'] });
+    s = G.continueAfterCombat(G.fight(s));
+    expect([...s.shopOffer].sort()).toEqual(['toothbrush', 'towel']);
+  });
+
+  it('Hand Shower discounts Shop, Flush and Bonus Action by 2', () => {
     const s = prepRun({ tp: 30, items: ['shower'] });
-    expect(G.tpCost(s, 'flush')).toBe(4);
-    expect(G.tpCost(s, 'upgrade')).toBe(9);
-    expect(G.tpCost(s, 'bonusAction')).toBe(19);
-    expect(G.buy(s, 'towel').tp).toBe(20);
+    expect(G.tpCost(s, 'flush')).toBe(3);
+    expect(G.tpCost(s, 'shop')).toBe(8);
+    expect(G.tpCost(s, 'bonusAction')).toBe(18);
   });
 
   it('Flush cannot remove the last Merdomon', () => {
@@ -175,23 +207,45 @@ describe('run flow', () => {
     expect(G.canFlush(s)).toBe(false);
   });
 
-  it('Upgrade respects the max of 10', () => {
-    const s = prepRun({ tp: 50 });
+  it('Trade turns 1 AP into 2 Merdascore, 5 TP or +1 stat (max 10)', () => {
+    const s = prepRun({ tp: 0, merdascore: 0 });
+    expect(G.trade(s, 'merdascore')).toMatchObject({ merdascore: 2, ap: 0 });
+    expect(G.trade(s, 'tp')).toMatchObject({ tp: 5, ap: 0 });
     const m = s.team[0];
+    const up = G.tradeStat(s, m.id, 'atk');
+    expect(up.team[0].stats.atk).toBe(m.stats.atk + 1);
+    expect(up.ap).toBe(0);
+    expect(G.canTrade(up)).toBe(false);
     m.stats.spd = 10;
-    expect(G.canUpgrade(s, m.id, 'spd')).toBe(false);
-    expect(G.upgrade(s, m.id, 'atk').team[0].stats.atk).toBe(m.stats.atk + 1);
+    expect(G.canTradeStat(s, m.id, 'spd')).toBe(false);
   });
 
-  it('a lost wave costs concentration per surviving enemy and fallen Merdomon revive at 1 HP', () => {
+  it('the Action trait adds AP each round, and unspent AP do not carry over', () => {
+    let s = prepRun();
+    s.team[0].traits = ['action', 'action'];
+    s = G.bonusAction({ ...s, tp: 20 });
+    expect(s.ap).toBe(2);
+    s = G.fight(s);
+    expect(s.ap).toBe(0);
+    s = G.continueAfterCombat(s);
+    expect(s.ap).toBe(2); // 1 base + 1 from Action (2 traits)
+  });
+
+  it('Toothbrush adds unspent AP as combat HP', () => {
+    const s = prepRun({ items: ['toothbrush'] });
+    const after = G.fight(G.bonusAction({ ...s, tp: 20 }));
+    expect(after.lastCombat!.player[0].maxHp).toBe(s.team[0].stats.hp + 2);
+  });
+
+  it('a lost wave costs at most 3 concentration and fallen Merdomon return at half HP', () => {
     const s = prepRun();
-    s.team = [mk({ hp: 1, atk: 1, def: 1, spd: 1 })];
-    s.wave = [foe({ hp: 10, atk: 9, spd: 9 }), foe({}), foe({})];
+    s.team = [mk({ hp: 6, atk: 1, def: 1, spd: 1 })];
+    s.wave = [foe({ hp: 10, atk: 9, spd: 9 }), foe({}), foe({}), foe({}), foe({})];
     const after = G.fight(s);
     expect(after.phase).toBe('combat');
     expect(after.lastCombat?.won).toBe(false);
     expect(after.concentration).toBe(7);
-    expect(after.team[0].hp).toBe(1);
-    expect(after.tp).toBe(0); // the faster enemy kills before the Merdomon can strike
+    expect(after.team[0].hp).toBe(3);
+    expect(after.tp).toBe(5); // only the starting TP: the faster enemy kills before the Merdomon can strike
   });
 });

@@ -159,7 +159,7 @@ export function InfoRow({ run, onItem }: { run: RunState; onItem: (item: ItemId)
   return (
     <div className="inforow">
       <span className="round-badge">
-        {run.round}/{ROUNDS}
+        Round {run.round}/{ROUNDS}
       </span>
       <span className="ap-pips" aria-label={`${run.ap} action points`}>
         {Array.from({ length: Math.max(run.ap, 1) }, (_, i) => (

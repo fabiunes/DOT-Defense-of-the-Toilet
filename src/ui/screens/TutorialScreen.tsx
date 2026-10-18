@@ -2,10 +2,12 @@ import { useRef, useState, type ReactNode } from 'react';
 import {
   CONCENTRATE_GAIN,
   COSTS,
+  ENEMY_RARITY_POINTS,
   EVACUATE_COST,
   ITEMS,
   ITEM_INFO,
   MAX_CONCENTRATION,
+  MAX_CONCENTRATION_LOSS,
   MAX_MERDASCORE,
   RARITY_POINTS,
   RARITY_TRAITS,
@@ -13,6 +15,7 @@ import {
   TRAITS,
   TRAIT_INFO,
   TRAIT_VALUES,
+  TRADE,
 } from '../../engine/data';
 import type { Merdomon, Rarity, RunState } from '../../engine/types';
 import { EnemyArt, MerdomonArt } from '../art';
@@ -29,7 +32,7 @@ const demoTeam: Merdomon[] = [
 ];
 
 const demoRun: RunState = {
-  version: 1,
+  version: 2,
   phase: 'preparation',
   round: 3,
   concentration: 7,
@@ -38,6 +41,7 @@ const demoRun: RunState = {
   ap: 1,
   team: demoTeam,
   items: ['brush', 'window'],
+  shopOffer: [],
   starters: [],
   pending: null,
   wave: [
@@ -165,11 +169,11 @@ const pages: Page[] = [
           <InfoRow run={demoRun} onItem={noop} />
           <TraitsRow run={demoRun} onTrait={noop} />
         </Demo>
-        <Row icon={<span className="round-badge">3/{ROUNDS}</span>} title="Round">
+        <Row icon={<span className="round-badge">Round 3/{ROUNDS}</span>} title="Round">
           Current wave out of {ROUNDS}.
         </Row>
         <Row icon={I('ap', '#1b1b1b')} title="Action Points">
-          You get 1 every round, to spend on the main actions.
+          1 every round (more with the Action trait). Spend them on the main actions: unspent ones are lost.
         </Row>
         <Row icon={<ItemIcon item="brush" size={22} />} title="Items">
           Your items (top right). Tap one to read what it does.
@@ -295,7 +299,7 @@ const pages: Page[] = [
     body: (
       <>
         <p className="tut-note">
-          Tap <b>{ii('bonus')} Action</b>. The top row costs 1 {ii('ap', '#1b1b1b')}:
+          Tap <b>{ii('bonus')} Preparation</b>. The top actions cost 1 {ii('ap', '#1b1b1b')}:
         </p>
         <TileDemo
           tiles={[
@@ -303,21 +307,24 @@ const pages: Page[] = [
             { icon: 'toilet', label: 'Evacuate', cost: { ap: 1, ms: `${EVACUATE_COST.common}+` } },
             { icon: 'shop', label: 'Shop', cost: { ap: 1, tp: COSTS.shop } },
             { icon: 'focus', label: 'Concentrate', cost: { ap: 1, ms: `+${CONCENTRATE_GAIN}`, conc: -COSTS.concentrate } },
+            { icon: 'trade', label: 'Trade', cost: { ap: 1 } },
           ]}
         />
         <Row icon={I('heal')} title="Heal">
-          All Merdomon back to full HP. <CostBadge ap={1} />
+          All Merdomon back to full HP.
         </Row>
         <Row icon={I('toilet')} title="Evacuate">
-          Spend Merdascore to create a new Merdomon (max 6). Then pick a stat for its +1 point.{' '}
-          <CostBadge ap={1} ms={`${EVACUATE_COST.common}+`} />
+          Spend Merdascore to create a new Merdomon (max 6), then give it +1 to a stat.
         </Row>
         <Row icon={I('shop')} title="Shop">
-          Buy one item. <CostBadge ap={1} tp={COSTS.shop} />
+          Buy one of the 3 items on sale this round.
         </Row>
         <Row icon={I('focus')} title="Concentrate">
-          Trade Concentration for Merdascore.{' '}
-          <CostBadge ap={1} ms={`+${CONCENTRATE_GAIN}`} conc={-COSTS.concentrate} />
+          Trade 2 Concentration for {CONCENTRATE_GAIN} Merdascore.
+        </Row>
+        <Row icon={I('trade')} title="Trade">
+          Swap 1 {ii('ap', '#1b1b1b')} for +{TRADE.merdascore} {ii('poop')}, +{TRADE.tp} {ii('tp')} or +{TRADE.stat} to a
+          Merdomon stat (max 10).
         </Row>
       </>
     ),
@@ -326,26 +333,26 @@ const pages: Page[] = [
     title: 'Free actions',
     body: (
       <>
-        <p className="tut-note">The bottom row needs no {ii('ap', '#1b1b1b')}, only Toilet Paper:</p>
+        <p className="tut-note">The bottom actions need no {ii('ap', '#1b1b1b')}:</p>
         <TileDemo
           tiles={[
             { icon: 'swap', label: 'Organize', cost: {} },
             { icon: 'flush', label: 'Flush', cost: { tp: COSTS.flush } },
             { icon: 'bonus', label: 'Bonus Action', cost: { tp: COSTS.bonusAction } },
-            { icon: 'upgrade', label: 'Upgrade', cost: { tp: COSTS.upgrade } },
+            { icon: 'eye', label: 'Scout', cost: {} },
           ]}
         />
         <Row icon={I('swap')} title="Organize">
           Swap positions: tap one Merdomon, then where it goes. Slot 1 fights first!
         </Row>
         <Row icon={I('flush')} title="Flush">
-          Remove a Merdomon and get +1 Concentration. <CostBadge tp={COSTS.flush} />
+          Remove a Merdomon and get +1 Concentration.
         </Row>
         <Row icon={I('bonus')} title="Bonus Action">
-          +1 {ii('ap', '#1b1b1b')} for this round. <CostBadge tp={COSTS.bonusAction} />
+          +1 {ii('ap', '#1b1b1b')} for this round.
         </Row>
-        <Row icon={I('upgrade')} title="Upgrade">
-          +1 to one stat of a Merdomon (max 10). <CostBadge tp={COSTS.upgrade} />
+        <Row icon={I('eye')} title="Scout">
+          See the stats of the incoming Distractions, in fighting order.
         </Row>
       </>
     ),
@@ -368,15 +375,17 @@ const pages: Page[] = [
         </Demo>
         <p className="tut-note">The icons under the button show who is coming:</p>
         <Row icon={I('phone')} title="Common distraction">
-          Weak, {RARITY_POINTS.common} extra stat points.
+          Weak, {ENEMY_RARITY_POINTS.common} extra stat points.
         </Row>
         <Row icon={I('phone', '#1b1b1b')} title="Rare distraction">
-          Tougher, {RARITY_POINTS.rare} extra stat points.
+          Tougher, {ENEMY_RARITY_POINTS.rare} extra stat points.
         </Row>
         <Row icon={I('crown', '#1b1b1b')} title="The Boss">
           Epic, only in wave {ROUNDS}, and always last in line.
         </Row>
-        <p className="tut-note">When you're ready, tap Next Wave: the fight plays out by itself.</p>
+        <p className="tut-note">
+          Use {ii('eye')} Scout to see their stats. When you're ready, tap Next Wave: the fight plays out by itself.
+        </p>
       </>
     ),
   },
@@ -388,23 +397,23 @@ const pages: Page[] = [
           <div>
             <MerdomonArt size={56} />
             <span className="tut-duel-stats">
-              {ii('fist')}4 {ii('bolt')}3
+              {ii('fist')}5 {ii('bolt')}6
             </span>
           </div>
           <span className="vs">VS</span>
           <div>
             <EnemyArt size={56} />
             <span className="tut-duel-stats">
-              {ii('shield')}1 {ii('bolt')}2
+              {ii('shield')}3 {ii('bolt')}3
             </span>
           </div>
         </div>
         <Row icon={<span className="tut-step">1</span>}>Your first Merdomon faces the first Distraction, one on one.</Row>
         <Row icon={<span className="tut-step">2</span>}>
-          Higher {ii('bolt')} Speed strikes first. Tie: the faster team, then luck.
+          Higher {ii('bolt')} strikes first (tie: faster team, then luck). <b>Twice as fast</b>: two hits per turn!
         </Row>
         <Row icon={<span className="tut-step">3</span>}>
-          Damage = {ii('fist')} − {ii('shield')}, at least 1. Here: 4 − 1 = <b>3</b>.
+          Damage = {ii('fist')} − half {ii('shield')} (rounded down), at least 1. Here: 5 − 1 = <b>4</b>, twice.
         </Row>
         <Row icon={<span className="tut-step">4</span>}>
           They trade hits until one falls. The next in line steps in, until a team is out.
@@ -431,14 +440,15 @@ const pages: Page[] = [
             {I('skull', '#fff', 30)}
             <b>Lost</b>
             <p>
-              −1 {ii('focus')} for each Distraction still standing
+              −1 {ii('focus')} for each Distraction still standing (max −{MAX_CONCENTRATION_LOSS})
             </p>
           </div>
         </div>
         <p className="tut-note">Then, either way:</p>
         <Row icon={I('tp')}>+1 Toilet Paper for every point of damage dealt.</Row>
         <Row icon={<TraitIcon trait="paper" size={22} />}>Trait and item bonuses are paid out.</Row>
-        <Row icon={<MerdomonArt size={26} sad />}>Fallen Merdomon come back with 1 HP. Heal them!</Row>
+        <Row icon={<MerdomonArt size={26} sad />}>Fallen Merdomon come back with half their HP.</Row>
+        <Row icon={I('ap', '#1b1b1b')}>Unspent Action Points are lost.</Row>
       </>
     ),
   },
@@ -447,7 +457,7 @@ const pages: Page[] = [
     body: (
       <>
         <p className="tut-note">
-          Bought in the Shop. Each one also counts as <b>1 trait</b>.
+          3 random items are on sale each round. Each one also counts as <b>1 trait</b>.
         </p>
         {ITEMS.map((it) => (
           <Row

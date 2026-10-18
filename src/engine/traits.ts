@@ -30,3 +30,8 @@ export function combatBonus(team: readonly Merdomon[], items: readonly ItemId[])
     spd: traitValue('haste', c.haste),
   };
 }
+
+/** Extra Action Points each round from the Action trait. */
+export function apBonus(team: readonly Merdomon[], items: readonly ItemId[]): number {
+  return traitValue('action', countTraits(team, items).action);
+}

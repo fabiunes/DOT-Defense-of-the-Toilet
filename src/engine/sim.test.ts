@@ -18,13 +18,14 @@ function playPreparation(s: RunState): RunState {
       else if (s.team.some((m) => m.hp * 2 < m.stats.hp)) s = G.heal(s);
       else if (ITEMS.some((i) => G.canBuy(s, i))) s = G.buy(s, ITEMS.find((i) => G.canBuy(s, i))!);
       else if (s.concentration > 6 && s.team.length < MAX_TEAM) s = G.concentrate(s);
+      else if (s.team.length < MAX_TEAM) s = G.trade(s, 'merdascore');
+      else {
+        const m = s.team[0];
+        const stat = (['atk', 'hp', 'def', 'spd'] as const).find((k) => G.canTradeStat(s, m.id, k));
+        if (stat) s = G.tradeStat(s, m.id, stat);
+      }
     }
     if (s === before && s.tp >= 40 && G.canBonusAction(s)) s = G.bonusAction(s);
-    if (s === before && s.tp >= 25) {
-      const m = s.team[0];
-      const stat = (['atk', 'hp', 'def', 'spd'] as const).find((k) => G.canUpgrade(s, m.id, k));
-      if (stat) s = G.upgrade(s, m.id, stat);
-    }
     if (s === before) break;
   }
   return G.fight(s);

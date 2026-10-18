@@ -17,17 +17,26 @@ export interface CombatResult {
   merdomonFallen: number;
 }
 
+/** Defense blocks half its value (rounded down); at least 1 damage always goes through. */
 export function damage(atk: number, def: number): number {
-  return Math.max(1, atk - def);
+  return Math.max(1, atk - Math.floor(def / 2));
 }
 
+/** At least twice as fast as the opponent → two hits per turn. */
+export function hitsPerTurn(spd: number, opponentSpd: number): number {
+  return spd >= opponentSpd * 2 ? 2 : 1;
+}
+
+/** `extraHp` is added to every Merdomon for this combat only (Toothbrush). */
 export function simulateCombat(
   team: readonly Merdomon[],
   wave: readonly Enemy[],
   items: readonly ItemId[],
   rng: Rng,
+  extraHp = 0,
 ): CombatResult {
   const bonus = combatBonus(team, items);
+  bonus.hp += extraHp;
   const player: Fighter[] = team.map((m) => ({
     id: m.id,
     rarity: m.rarity,
@@ -73,18 +82,21 @@ export function simulateCombat(
     let turn = first;
     while (p.hp > 0 && e.hp > 0) {
       if (turn === 'p') {
-        const hits = windowReady && pi === 0 ? 2 : 1;
+        const hits = hitsPerTurn(p.spd, e.spd) + (windowReady && pi === 0 ? 1 : 0);
         if (pi === 0) windowReady = false;
         for (let h = 0; h < hits && e.hp > 0; h++) {
           const dealt = Math.min(damage(p.atk, e.def), e.hp);
           e.hp -= dealt;
           damageDealt += dealt;
-          events.push({ type: 'attack', side: 'p', damage: dealt, hp: e.hp, double: h === 1 });
+          events.push({ type: 'attack', side: 'p', damage: dealt, hp: e.hp, double: h > 0 });
         }
       } else {
-        const dealt = Math.min(damage(e.atk, p.def), p.hp);
-        p.hp -= dealt;
-        events.push({ type: 'attack', side: 'e', damage: dealt, hp: p.hp, double: false });
+        const hits = hitsPerTurn(e.spd, p.spd);
+        for (let h = 0; h < hits && p.hp > 0; h++) {
+          const dealt = Math.min(damage(e.atk, p.def), p.hp);
+          p.hp -= dealt;
+          events.push({ type: 'attack', side: 'e', damage: dealt, hp: p.hp, double: h > 0 });
+        }
       }
       turn = turn === 'p' ? 'e' : 'p';
     }

@@ -5,7 +5,8 @@ export type IconName =
   | 'tp' | 'poop' | 'focus' | 'ap' | 'heart' | 'fist' | 'shield' | 'bolt'
   | 'heal' | 'toilet' | 'shop' | 'swap' | 'flush' | 'bonus' | 'upgrade' | 'fight'
   | 'close' | 'check' | 'star' | 'ff' | 'skip' | 'home' | 'trophy' | 'skull' | 'crown' | 'question' | 'phone' | 'play'
-  | 'brush' | 'magazine' | 'bidet' | 'shower' | 'window' | 'towel';
+  | 'trade' | 'eye'
+  | 'brush' | 'magazine' | 'bidet' | 'shower' | 'window' | 'towel' | 'toothbrush';
 
 export const TRAIT_COLOR: Record<TraitId, string> = {
   paper: '#4f8fe8',
@@ -14,6 +15,7 @@ export const TRAIT_COLOR: Record<TraitId, string> = {
   haste: '#f2b705',
   fighter: '#f07a1a',
   defender: '#22a06b',
+  action: '#8b5cf6',
 };
 
 export const TRAIT_ICON: Record<TraitId, IconName> = {
@@ -23,6 +25,7 @@ export const TRAIT_ICON: Record<TraitId, IconName> = {
   haste: 'bolt',
   fighter: 'fist',
   defender: 'shield',
+  action: 'ap',
 };
 
 export const STAT_ICON: Record<StatKey, IconName> = { hp: 'heart', atk: 'fist', def: 'shield', spd: 'bolt' };
@@ -63,13 +66,13 @@ function shapes(name: IconName, fill: string): ReactNode {
         />
       );
     case 'fist':
+      // Boxing glove.
       return (
         <>
-          <path
-            fill={fill}
-            d="M4.5 11V9.5a2 2 0 0 1 4 0 2 2 0 0 1 3.5 0 2 2 0 0 1 3.5 0 2 2 0 0 1 4 0V16a5 5 0 0 1-5 5h-5a5 5 0 0 1-5-5z"
-          />
-          <path d="M8.5 9.5v3M12 9.5v3M15.5 9.5v3M4.5 14.5h5.5a1.5 1.5 0 0 0 0-3H6" />
+          <path fill={fill} d="M7.5 16.5V8.5A5.5 5.5 0 0 1 13 3h1.5A5.5 5.5 0 0 1 20 8.5v3a5 5 0 0 1-5 5z" />
+          <path fill={fill} d="M7.5 10.5H6a2.5 2.5 0 0 0 0 5h1.5" />
+          <rect x="7" y="16.5" width="13" height="4.5" rx="1" fill={fill} />
+          <path d="M11 7.5c1.5-1 4-1 5.5 0M10.5 18.75h6" />
         </>
       );
     case 'shield':
@@ -156,6 +159,24 @@ function shapes(name: IconName, fill: string): ReactNode {
         <>
           <rect x="6.5" y="2.5" width="11" height="19" rx="2.5" fill={fill} />
           <path d="M10.5 18.5h3" />
+        </>
+      );
+    case 'trade':
+      return <path d="M4 8.5h14M14.5 5 18 8.5 14.5 12M20 15.5H6M9.5 12 6 15.5 9.5 19" />;
+    case 'eye':
+      return (
+        <>
+          <path fill={fill} d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z" />
+          <circle cx="12" cy="12" r="3" />
+          <circle cx="12" cy="12" r="1" fill="currentColor" />
+        </>
+      );
+    case 'toothbrush':
+      return (
+        <>
+          <path d="M2.5 17h11" strokeWidth={3} />
+          <rect x="13.5" y="14.5" width="8" height="4.5" rx="1.5" fill={fill} />
+          <path d="M15 14.5V11M17.5 14.5V11M20 14.5V11" />
         </>
       );
     case 'brush':

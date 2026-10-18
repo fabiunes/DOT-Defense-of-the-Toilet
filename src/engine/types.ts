@@ -1,7 +1,7 @@
 export type Rarity = 'common' | 'rare' | 'epic';
 export type StatKey = 'hp' | 'atk' | 'def' | 'spd';
-export type TraitId = 'paper' | 'merdon' | 'healthy' | 'haste' | 'fighter' | 'defender';
-export type ItemId = 'brush' | 'magazine' | 'bidet' | 'shower' | 'window' | 'towel';
+export type TraitId = 'paper' | 'merdon' | 'healthy' | 'haste' | 'fighter' | 'defender' | 'action';
+export type ItemId = 'brush' | 'magazine' | 'bidet' | 'shower' | 'window' | 'towel' | 'toothbrush';
 export type AbilityId = 'generic';
 
 export interface Stats {
@@ -88,7 +88,7 @@ export interface RunStats {
 export type Phase = 'starter' | 'preparation' | 'combat' | 'gameover' | 'victory';
 
 export interface RunState {
-  version: 1;
+  version: 2;
   phase: Phase;
   round: number;
   concentration: number;
@@ -97,6 +97,8 @@ export interface RunState {
   ap: number;
   team: Merdomon[];
   items: ItemId[];
+  /** Items on sale this round (random, never already owned). */
+  shopOffer: ItemId[];
   /** Starter choices (only during the 'starter' phase). */
   starters: Merdomon[];
   /** A freshly generated Merdomon waiting for its +1 bonus point. */

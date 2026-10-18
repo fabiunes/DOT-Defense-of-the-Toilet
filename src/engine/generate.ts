@@ -1,4 +1,4 @@
-import { MAX_STAT, RARITY_POINTS, RARITY_TRAITS, STAT_KEYS, TRAITS, WAVES } from './data';
+import { ENEMY_RARITY_POINTS, MAX_STAT, RARITY_POINTS, RARITY_TRAITS, STAT_KEYS, TRAITS, WAVES } from './data';
 import type { Rng } from './rng';
 import type { Enemy, Merdomon, Rarity, Stats } from './types';
 
@@ -20,7 +20,7 @@ export function createMerdomon(rng: Rng, id: number, rarity: Rarity): Merdomon {
 }
 
 export function createEnemy(rng: Rng, id: number, rarity: Rarity, boss = false): Enemy {
-  return { id, rarity, stats: rollStats(rng, RARITY_POINTS[rarity]), ability: 'generic', boss };
+  return { id, rarity, stats: rollStats(rng, ENEMY_RARITY_POINTS[rarity]), ability: 'generic', boss };
 }
 
 /** Enemies in random order; the Boss (if any) is always last. */

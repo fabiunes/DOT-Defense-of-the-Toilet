@@ -4,7 +4,7 @@ Roguelite auto-battler per smartphone: difendi la tua pausa bagno dai *Distracti
 
 **Gioca:** https://fabiunes.github.io/DOT-Defense-of-the-Toilet/
 
-Le regole complete sono in [GDD.md](GDD.md).
+Le regole complete sono in [GDD.md](GDD.md), le novità di ogni versione in [CHANGELOG.md](CHANGELOG.md).
 
 ## Sviluppo
 

@@ -435,7 +435,7 @@ button:disabled {
 }
 .tiles {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
 }
 .tile {
@@ -1127,4 +1127,60 @@ button:disabled {
 .tut-demo .tile {
   display: flex;
   align-items: center;
+}
+
+/* ---------- v0.1: Trade, Scout, Shop offer ---------- */
+.trade-gain {
+  font-size: 22px;
+}
+.trade-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 15px);
+  gap: 1px 3px;
+}
+.shop-items.single {
+  grid-template-columns: 1fr;
+}
+.shop-items.single .shop-item-head b {
+  flex: 1;
+}
+.shop-items.single .shop-item small {
+  font-size: 14px;
+}
+.scout-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.scout-row {
+  display: grid;
+  grid-template-columns: 18px 40px 36px 1fr;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1.5px dashed var(--soft);
+  padding-bottom: 2px;
+}
+.scout-row.boss {
+  border: 2px solid var(--ink);
+  border-radius: var(--r-small);
+  padding: 2px 4px;
+}
+.scout-index {
+  color: var(--muted);
+  font-size: 15px;
+}
+.scout-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  font-size: 17px;
+}
+.scout-stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.version {
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
 }
