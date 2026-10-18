@@ -1,7 +1,17 @@
 import { MerdomonArt, PlayerArt } from '../art';
 import { Icon } from '../icons';
 
-export function HomeScreen({ hasSave, onNew, onContinue }: { hasSave: boolean; onNew: () => void; onContinue: () => void }) {
+export function HomeScreen({
+  hasSave,
+  onNew,
+  onContinue,
+  onTutorial,
+}: {
+  hasSave: boolean;
+  onNew: () => void;
+  onContinue: () => void;
+  onTutorial: () => void;
+}) {
   return (
     <div className="screen home">
       <div className="home-title">
@@ -15,6 +25,9 @@ export function HomeScreen({ hasSave, onNew, onContinue }: { hasSave: boolean; o
         </button>
         <button className="big-btn shadow" onClick={onContinue} disabled={!hasSave}>
           <Icon name="ff" size={22} fill="#fff" /> Continue
+        </button>
+        <button className="big-btn shadow" onClick={onTutorial}>
+          <Icon name="question" size={22} fill="#fff" /> Tutorial
         </button>
         <button className="big-btn" disabled>
           <Icon name="upgrade" size={22} /> Upgrade <span className="soon">soon</span>

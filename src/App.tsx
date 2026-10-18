@@ -8,11 +8,13 @@ import { EndScreen } from './ui/screens/EndScreen';
 import { HomeScreen } from './ui/screens/HomeScreen';
 import { PrepScreen } from './ui/screens/PrepScreen';
 import { StarterScreen } from './ui/screens/StarterScreen';
+import { TutorialScreen } from './ui/screens/TutorialScreen';
 import type { Update } from './ui/update';
 
 export default function App() {
   const [run, setRun] = useState<RunState | null>(null);
   const [hasSave, setHasSave] = useState(() => loadRun() !== null);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   // Autosave during preparation; a finished run removes the save.
   useEffect(() => {
@@ -29,8 +31,17 @@ export default function App() {
   };
 
   let content;
-  if (!run) {
-    content = <HomeScreen hasSave={hasSave} onNew={() => setRun(newRun())} onContinue={() => setRun(loadRun())} />;
+  if (showTutorial) {
+    content = <TutorialScreen onClose={() => setShowTutorial(false)} />;
+  } else if (!run) {
+    content = (
+      <HomeScreen
+        hasSave={hasSave}
+        onNew={() => setRun(newRun())}
+        onContinue={() => setRun(loadRun())}
+        onTutorial={() => setShowTutorial(true)}
+      />
+    );
   } else if (run.phase === 'starter') {
     content = <StarterScreen run={run} update={update} />;
   } else if (run.phase === 'preparation') {

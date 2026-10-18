@@ -884,3 +884,247 @@ button:disabled {
     font-size: 20px;
   }
 }
+
+/* ---------- Tutorial ---------- */
+.tutorial {
+  gap: 10px;
+}
+.tut-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tut-head h2 {
+  font-size: 26px;
+}
+.tut-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  animation: fade 0.2s;
+}
+.tut-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tut-nav .icon-btn {
+  min-width: 52px;
+  min-height: 42px;
+}
+.tut-done {
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.flip {
+  transform: scaleX(-1);
+}
+.tut-dots {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.tut-dot {
+  width: 11px;
+  height: 11px;
+  padding: 0;
+  border-radius: 50%;
+  border-width: 1.5px;
+}
+.tut-dot.on {
+  background: var(--ink);
+}
+.tut-row {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+.tut-row-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.tut-row b {
+  font-size: 18px;
+}
+.tut-row p {
+  font-size: 15px;
+  line-height: 1.2;
+}
+.tut-row .costs,
+.tut-note .costs {
+  vertical-align: middle;
+}
+.tut-note {
+  font-size: 15px;
+  line-height: 1.25;
+  color: #444;
+}
+.inline-icon {
+  vertical-align: -2px;
+  margin: 0 1px;
+}
+.tut-demo {
+  padding: 8px;
+  pointer-events: none;
+  border-style: dashed;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tut-center {
+  align-items: center;
+}
+.tut-fake-btn {
+  border: 2px solid var(--ink);
+  border-radius: var(--r);
+  display: inline-flex;
+  min-width: 200px;
+}
+.tut-chip {
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--r);
+}
+.tut-minimap {
+  align-self: center;
+  width: calc(375px * 0.5);
+  height: calc(700px * 0.5);
+  max-height: 46vh;
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 3px 3px 0 var(--ink);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+.tut-minimap-inner {
+  width: 375px;
+  height: 700px;
+  transform: scale(0.5);
+  transform-origin: top left;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+}
+.tut-card-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.tut-card-demo {
+  width: 130px;
+  flex-shrink: 0;
+  padding: 4px;
+}
+.tut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 16px;
+}
+.tut-legend > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.tut-mini-bar {
+  width: 30px;
+  height: 10px;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  background: repeating-linear-gradient(-45deg, #b9b4a8 0 2px, #e2ded4 2px 5px);
+}
+.tut-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 16px;
+  text-align: center;
+}
+.tut-table th {
+  font-weight: normal;
+  color: var(--muted);
+  font-size: 14px;
+}
+.tut-table td,
+.tut-table th {
+  padding: 3px 2px;
+  border-bottom: 1.5px dashed var(--soft);
+}
+.tut-table td.left {
+  text-align: left;
+}
+.tut-table td.left small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.1;
+}
+.tut-duel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+.tut-duel > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.tut-duel-stats {
+  font-size: 16px;
+}
+.tut-step {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+}
+.tut-outcomes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.tut-outcomes > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 6px;
+  gap: 2px;
+}
+.tut-outcomes b {
+  font-size: 20px;
+}
+.tut-outcomes p {
+  font-size: 15px;
+}
+.tut-outcomes .lose b {
+  color: var(--danger);
+}
+
+@media (max-height: 680px) {
+  .tut-row p,
+  .tut-note {
+    font-size: 14px;
+  }
+  .tut-body {
+    gap: 6px;
+  }
+}
+.tut-demo .tile {
+  display: flex;
+  align-items: center;
+}
