@@ -1,5 +1,16 @@
 import { useState } from 'react';
-import { COSTS, EVACUATE_COST, ITEM_INFO, MAX_TEAM, STAT_KEYS, CONCENTRATE_GAIN, TRADE } from '../../engine/data';
+import {
+  COSTS,
+  EVACUATE_COST,
+  ITEM_INFO,
+  KIND_NAME,
+  MAX_TEAM,
+  REROLL_COST,
+  SIZE_NAME,
+  STAT_KEYS,
+  CONCENTRATE_GAIN,
+  TRADE,
+} from '../../engine/data';
 import * as G from '../../engine/game';
 import { countTraits } from '../../engine/traits';
 import type { ItemId, Rarity, RunState, TraitId } from '../../engine/types';
@@ -12,6 +23,7 @@ import {
   MerdomonDetail,
   Modal,
   Stars,
+  StatValue,
   TopBar,
   TraitDetail,
   TraitsRow,
@@ -194,7 +206,9 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
             <div className="detail-title">
               <ItemIcon item={panel.item} size={40} />
               <h2>{ITEM_INFO[panel.item].name}</h2>
-              <TraitIcon trait={ITEM_INFO[panel.item].trait} size={22} />
+              {ITEM_INFO[panel.item].traits.map((t) => (
+                <TraitIcon key={t} trait={t} size={22} />
+              ))}
             </div>
             <p>{ITEM_INFO[panel.item].desc}</p>
           </div>
@@ -206,6 +220,7 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
         </Modal>
       )}
 
+      {run.choices.length > 0 && <ChoicesModal run={run} update={update} />}
       {run.pending && <BonusPointModal run={run} m={run.pending} update={update} />}
     </div>
   );
@@ -271,7 +286,7 @@ function ActionPanel({
       key: 'shop',
       icon: 'shop',
       label: 'Shop',
-      enabled: run.ap >= 1 && run.shopOffer.length > 0,
+      enabled: run.ap >= 1,
       cost: { ap: 1, tp: G.tpCost(run, 'shop') },
       onClick: () => onOpen({ kind: 'shop' }),
     },
@@ -372,12 +387,39 @@ function EvacuatePanel({ run, update, onClose }: { run: RunState; update: Update
             }}
           >
             <Stars rarity={r} size={18} />
+            <span className="tile-label">{SIZE_NAME[r]}</span>
             <CostBadge ms={String(EVACUATE_COST[r])} />
           </button>
         ))}
       </div>
       {run.team.length >= MAX_TEAM && <p className="muted center">Team full – Flush first</p>}
     </Modal>
+  );
+}
+
+/** Pick one of the evacuated Merdomon (or re-roll them). */
+function ChoicesModal({ run, update }: { run: RunState; update: Update }) {
+  return (
+    <Modal className="choices-modal">
+      <div className="panel-head">
+        <Icon name="toilet" size={28} fill="#fff" />
+      </div>
+      <div className={`choice-cards n${run.choices.length}`}>
+        {run.choices.map((m, i) => (
+          <MerdomonCard key={m.id} m={m} big onClick={() => update((s) => G.chooseEvacuated(s, i))} />
+        ))}
+      </div>
+      <RerollButton enabled={G.canRerollChoices(run)} onClick={() => update(G.rerollChoices)} />
+    </Modal>
+  );
+}
+
+function RerollButton({ enabled, onClick }: { enabled: boolean; onClick: () => void }) {
+  return (
+    <button className="big-btn reroll-btn" disabled={!enabled} onClick={onClick}>
+      <Icon name="dice" size={22} fill="#fff" /> Re-Roll
+      <CostBadge tp={REROLL_COST} />
+    </button>
   );
 }
 
@@ -455,13 +497,16 @@ function ShopPanel({ run, update, onClose }: { run: RunState; update: Update; on
               <span className="shop-item-head">
                 <ItemIcon item={it} size={28} />
                 <b>{ITEM_INFO[it].name}</b>
-                <TraitIcon trait={ITEM_INFO[it].trait} size={16} />
+                {ITEM_INFO[it].traits.map((t) => (
+                  <TraitIcon key={t} trait={t} size={16} />
+                ))}
               </span>
               <small>{ITEM_INFO[it].desc}</small>
             </button>
           ))}
         </div>
       )}
+      <RerollButton enabled={G.canRerollShop(run)} onClick={() => update(G.rerollShop)} />
     </Modal>
   );
 }
@@ -478,13 +523,16 @@ function ScoutPanel({ run, onClose }: { run: RunState; onClose: () => void }) {
         {run.wave.map((e, i) => (
           <div key={e.id} className={`scout-row ${e.boss ? 'boss' : ''}`}>
             <span className="scout-index">{i + 1}</span>
-            <EnemyArt size={e.boss ? 40 : 34} boss={e.boss} />
-            <Stars rarity={e.rarity} size={11} />
+            <EnemyArt size={40} kind={e.kind} rarity={e.rarity} boss={e.boss} />
+            <span className="scout-name">
+              <Stars rarity={e.rarity} size={10} />
+              <small>{KIND_NAME[e.kind]}</small>
+            </span>
             <span className="scout-stats">
               {STAT_KEYS.map((k) => (
                 <span key={k}>
                   <Icon name={STAT_ICON[k]} size={14} />
-                  <b>{e.stats[k]}</b>
+                  <StatValue value={e.stats[k]} />
                 </span>
               ))}
             </span>

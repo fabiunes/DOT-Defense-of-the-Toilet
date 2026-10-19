@@ -1,7 +1,9 @@
 export type Rarity = 'common' | 'rare' | 'epic';
 export type StatKey = 'hp' | 'atk' | 'def' | 'spd';
 export type TraitId = 'paper' | 'merdon' | 'healthy' | 'haste' | 'fighter' | 'defender' | 'action';
-export type ItemId = 'brush' | 'magazine' | 'bidet' | 'shower' | 'window' | 'towel' | 'toothbrush';
+export type ItemId = 'brush' | 'magazine' | 'bidet' | 'shower' | 'window' | 'towel' | 'toothbrush' | 'flipflops' | 'gameboy';
+export type MerdomonKind = 'normal' | 'runny' | 'fart';
+export type EnemyKind = 'phone' | 'book' | 'console';
 export type AbilityId = 'generic';
 
 export interface Stats {
@@ -13,7 +15,9 @@ export interface Stats {
 
 export interface Merdomon {
   id: number;
+  /** Size: common = Small, rare = Big, epic = Huge. */
   rarity: Rarity;
+  kind: MerdomonKind;
   /** Base stats; `stats.hp` is the max HP. */
   stats: Stats;
   /** Current HP, persists between rounds. */
@@ -25,6 +29,7 @@ export interface Merdomon {
 export interface Enemy {
   id: number;
   rarity: Rarity;
+  kind: EnemyKind;
   stats: Stats;
   ability: AbilityId;
   boss: boolean;
@@ -36,6 +41,7 @@ export type Side = 'p' | 'e';
 export interface Fighter {
   id: number;
   rarity: Rarity;
+  kind: MerdomonKind | EnemyKind;
   boss: boolean;
   maxHp: number;
   hp: number;
@@ -61,8 +67,16 @@ export interface Reward {
   amount: number;
 }
 
+/** A combat-start modifier, shown before the fight. Items without a stat are passive effects. */
+export interface CombatBonus {
+  source: TraitId | ItemId;
+  stat?: StatKey;
+  amount?: number;
+}
+
 export interface CombatReport {
   round: number;
+  bonuses: CombatBonus[];
   won: boolean;
   events: CombatEvent[];
   player: Fighter[];
@@ -88,7 +102,7 @@ export interface RunStats {
 export type Phase = 'starter' | 'preparation' | 'combat' | 'gameover' | 'victory';
 
 export interface RunState {
-  version: 2;
+  version: 3;
   phase: Phase;
   round: number;
   concentration: number;
@@ -101,6 +115,8 @@ export interface RunState {
   shopOffer: ItemId[];
   /** Starter choices (only during the 'starter' phase). */
   starters: Merdomon[];
+  /** Evacuate options to pick one from (empty when none is pending). */
+  choices: Merdomon[];
   /** A freshly generated Merdomon waiting for its +1 bonus point. */
   pending: Merdomon | null;
   /** The upcoming wave, generated at the start of each preparation. */

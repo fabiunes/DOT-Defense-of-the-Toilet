@@ -1,5 +1,16 @@
 import type { ReactNode } from 'react';
-import { MAX_CONCENTRATION, MAX_MERDASCORE, ROUNDS, STAT_KEYS, TRAITS, TRAIT_INFO, TRAIT_THRESHOLDS, TRAIT_VALUES } from '../engine/data';
+import {
+  KIND_NAME,
+  MAX_CONCENTRATION,
+  MAX_MERDASCORE,
+  ROUNDS,
+  SIZE_NAME,
+  STAT_KEYS,
+  TRAITS,
+  TRAIT_INFO,
+  TRAIT_THRESHOLDS,
+  TRAIT_VALUES,
+} from '../engine/data';
 import { countTraits, traitTier } from '../engine/traits';
 import type { ItemId, Merdomon, Rarity, RunState, Stats, TraitId } from '../engine/types';
 import { MerdomonArt } from './art';
@@ -43,16 +54,34 @@ export function HpBar({ hp, max }: { hp: number; max: number }) {
   );
 }
 
+/** Loot-style colour band for a stat value: 1–2, 3–4, 5–6, 7–8, 9+ → 1..5. */
+export function statBand(v: number): number {
+  return Math.min(5, Math.max(1, Math.ceil(v / 2)));
+}
+
+/** A stat number on its colour band. */
+export function StatValue({ value, label }: { value: number; label?: string }) {
+  return <b className={`sv band-${statBand(value)}`}>{label ?? value}</b>;
+}
+
 export function StatGrid({ stats, hp, compact = false }: { stats: Stats; hp?: number; compact?: boolean }) {
   return (
     <div className={`statgrid ${compact ? 'compact' : ''}`}>
       {STAT_KEYS.map((k) => (
         <span key={k} className="stat">
           <Icon name={STAT_ICON[k]} size={compact ? 14 : 18} />
-          <b>{k === 'hp' && hp !== undefined && !compact ? `${hp}/${stats.hp}` : stats[k]}</b>
+          <StatValue value={stats[k]} label={k === 'hp' && hp !== undefined && !compact ? `${hp}/${stats.hp}` : undefined} />
         </span>
       ))}
     </div>
+  );
+}
+
+export function KindLabel({ m }: { m: Pick<Merdomon, 'rarity' | 'kind'> }) {
+  return (
+    <span className="kind-label">
+      {SIZE_NAME[m.rarity]} · {KIND_NAME[m.kind]}
+    </span>
   );
 }
 
@@ -85,7 +114,7 @@ export function MerdomonCard({
         <Stars rarity={m.rarity} size={big ? 14 : 10} />
         <TraitList traits={m.traits} size={big ? 18 : 13} />
       </div>
-      <MerdomonArt size={big ? 72 : 40} sad={m.hp <= 1 && m.stats.hp > 1} />
+      <MerdomonArt size={big ? 72 : 44} kind={m.kind} rarity={m.rarity} sad={m.hp <= 1 && m.stats.hp > 1} />
       <HpBar hp={m.hp} max={m.stats.hp} />
       <StatGrid stats={m.stats} compact />
     </button>
@@ -161,16 +190,17 @@ export function InfoRow({ run, onItem }: { run: RunState; onItem: (item: ItemId)
       <span className="round-badge">
         Round {run.round}/{ROUNDS}
       </span>
-      <span className="ap-pips" aria-label={`${run.ap} action points`}>
-        {Array.from({ length: Math.max(run.ap, 1) }, (_, i) => (
-          <Icon key={i} name="ap" size={16} fill={i < run.ap ? '#1b1b1b' : '#fff'} />
-        ))}
-      </span>
       <span className="items">
         {run.items.map((it) => (
           <button key={it} className="icon-btn item-btn" onClick={() => onItem(it)} aria-label={it}>
             <ItemIcon item={it} size={20} />
           </button>
+        ))}
+      </span>
+      <span className="round-badge ap-badge" aria-label={`${run.ap} action points`}>
+        Actions
+        {Array.from({ length: Math.max(run.ap, 1) }, (_, i) => (
+          <Icon key={i} name="ap" size={14} fill={i < run.ap ? '#1b1b1b' : '#fff'} />
         ))}
       </span>
     </div>
@@ -220,9 +250,12 @@ export function MerdomonDetail({ m, children }: { m: Merdomon; children?: ReactN
   return (
     <div className="detail">
       <div className="detail-title">
-        <MerdomonArt size={80} />
+        <MerdomonArt size={80} kind={m.kind} rarity={m.rarity} />
         <div>
-          <Stars rarity={m.rarity} size={16} />
+          <span className="detail-meta">
+            <Stars rarity={m.rarity} size={16} />
+            <KindLabel m={m} />
+          </span>
           <HpBar hp={m.hp} max={m.stats.hp} />
         </div>
       </div>

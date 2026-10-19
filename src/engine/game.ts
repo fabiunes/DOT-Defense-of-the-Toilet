@@ -4,6 +4,8 @@ import {
   BIDET_CONCENTRATION,
   BRUSH_MERDASCORE,
   CONCENTRATE_GAIN,
+  EVACUATE_CHOICES,
+  GAMEBOY_CHOICES,
   COSTS,
   EVACUATE_COST,
   FLUSH_CONCENTRATION,
@@ -13,6 +15,7 @@ import {
   MAX_MERDASCORE,
   MAX_STAT,
   MAX_TEAM,
+  REROLL_COST,
   ROUNDS,
   SHOP_OFFER,
   SHOWER_DISCOUNT,
@@ -25,8 +28,8 @@ import {
 } from './data';
 import { createMerdomon, createWave } from './generate';
 import { Rng } from './rng';
-import { apBonus, countTraits, traitValue } from './traits';
-import type { ItemId, Merdomon, Rarity, Reward, RunState, RunStats, StatKey } from './types';
+import { apBonus, combatBonus, countTraits, traitValue } from './traits';
+import type { CombatBonus, ItemId, Merdomon, Rarity, Reward, RunState, RunStats, StatKey } from './types';
 
 // Every action is a pure function: it returns a new state, or the same state if the action isn't allowed.
 
@@ -57,7 +60,7 @@ function emptyStats(): RunStats {
 
 export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
   const s: RunState = {
-    version: 2,
+    version: 3,
     phase: 'starter',
     round: 1,
     concentration: MAX_CONCENTRATION,
@@ -68,6 +71,7 @@ export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
     items: [],
     shopOffer: [],
     starters: [],
+    choices: [],
     pending: null,
     wave: [],
     lastCombat: null,
@@ -86,11 +90,26 @@ function startPreparation(s: RunState) {
   s.ap = BASE_AP + apBonus(s.team, s.items);
   s.wave = withRng(s, (rng) => createWave(rng, s.round, s.nextId));
   s.nextId += s.wave.length;
-  const available = ITEMS.filter((i) => !s.items.includes(i));
-  s.shopOffer = withRng(s, (rng) => rng.shuffle([...available]).slice(0, SHOP_OFFER));
+  drawShop(s);
 }
 
-const inPreparation = (s: RunState) => s.phase === 'preparation' && !s.pending;
+/** How many options the Shop and Evacuate offer (Game Boy: 3). */
+export function choiceCount(s: RunState, base: number): number {
+  return s.items.includes('gameboy') ? GAMEBOY_CHOICES : base;
+}
+
+function drawShop(s: RunState) {
+  const available = ITEMS.filter((i) => !s.items.includes(i));
+  s.shopOffer = withRng(s, (rng) => rng.shuffle([...available]).slice(0, choiceCount(s, SHOP_OFFER)));
+}
+
+function drawChoices(s: RunState, rarity: Rarity) {
+  s.choices = withRng(s, (rng) =>
+    Array.from({ length: choiceCount(s, EVACUATE_CHOICES) }, () => createMerdomon(rng, s.nextId++, rarity)),
+  );
+}
+
+const inPreparation = (s: RunState) => s.phase === 'preparation' && !s.pending && s.choices.length === 0;
 
 // ---------- Starter & bonus point ----------
 
@@ -153,14 +172,49 @@ export function canEvacuate(s: RunState, rarity: Rarity): boolean {
   return inPreparation(s) && s.ap >= 1 && s.team.length < MAX_TEAM && s.merdascore >= EVACUATE_COST[rarity];
 }
 
-/** Creates a Merdomon that waits in `pending` for its bonus point. */
+/** Pays and offers 2 (Game Boy: 3) Merdomon to choose from. */
 export function evacuate(prev: RunState, rarity: Rarity): RunState {
   if (!canEvacuate(prev, rarity)) return prev;
   const s = clone(prev);
   s.ap--;
   s.merdascore -= EVACUATE_COST[rarity];
-  s.pending = withRng(s, (rng) => createMerdomon(rng, s.nextId++, rarity));
+  drawChoices(s, rarity);
   if (s.items.includes('bidet')) s.concentration = Math.min(MAX_CONCENTRATION, s.concentration + BIDET_CONCENTRATION);
+  return s;
+}
+
+/** The picked option waits in `pending` for its bonus point. */
+export function chooseEvacuated(prev: RunState, index: number): RunState {
+  if (prev.phase !== 'preparation' || !prev.choices[index]) return prev;
+  const s = clone(prev);
+  s.pending = s.choices[index];
+  s.choices = [];
+  return s;
+}
+
+// ---------- Re-Roll (TP, unlimited) ----------
+
+export function canRerollChoices(s: RunState): boolean {
+  return s.phase === 'preparation' && s.choices.length > 0 && s.tp >= REROLL_COST;
+}
+
+export function rerollChoices(prev: RunState): RunState {
+  if (!canRerollChoices(prev)) return prev;
+  const s = clone(prev);
+  s.tp -= REROLL_COST;
+  drawChoices(s, s.choices[0].rarity);
+  return s;
+}
+
+export function canRerollShop(s: RunState): boolean {
+  return inPreparation(s) && s.tp >= REROLL_COST && ITEMS.some((i) => !s.items.includes(i));
+}
+
+export function rerollShop(prev: RunState): RunState {
+  if (!canRerollShop(prev)) return prev;
+  const s = clone(prev);
+  s.tp -= REROLL_COST;
+  drawShop(s);
   return s;
 }
 
@@ -295,6 +349,14 @@ export function fight(prev: RunState): RunState {
   const toothbrushHp = s.items.includes('toothbrush') ? s.ap : 0;
   const result = withRng(s, (rng) => simulateCombat(s.team, s.wave, s.items, rng, toothbrushHp));
 
+  // What changes at combat start, for the pre-fight recap.
+  const bonuses: CombatBonus[] = [];
+  const statBonus = combatBonus(s.team, s.items);
+  const BONUS_TRAIT = { hp: 'healthy', atk: 'fighter', def: 'defender', spd: 'haste' } as const;
+  for (const k of STAT_KEYS) if (statBonus[k] > 0) bonuses.push({ source: BONUS_TRAIT[k], stat: k, amount: statBonus[k] });
+  if (toothbrushHp > 0) bonuses.push({ source: 'toothbrush', stat: 'hp', amount: toothbrushHp });
+  for (const item of ['window', 'flipflops', 'magazine'] as const) if (s.items.includes(item)) bonuses.push({ source: item });
+
   const rewards: Reward[] = [];
   if (result.won) rewards.push({ source: 'survivors', resource: 'merdascore', amount: result.survivors });
   else rewards.push({ source: 'enemies', resource: 'concentration', amount: -Math.min(result.enemySurvivors, MAX_CONCENTRATION_LOSS) });
@@ -322,6 +384,7 @@ export function fight(prev: RunState): RunState {
 
   s.lastCombat = {
     round: s.round,
+    bonuses,
     won: result.won,
     events: result.events,
     player: result.player,

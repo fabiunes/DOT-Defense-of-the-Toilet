@@ -1,12 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ITEM_INFO, ROUNDS, TRAIT_INFO } from '../../engine/data';
-import type { CombatEvent, CombatReport, Fighter, RewardSource, Side } from '../../engine/types';
+import { ITEM_INFO, ROUNDS, STAT_KEYS, TRAIT_INFO } from '../../engine/data';
+import type { CombatBonus, CombatEvent, CombatReport, EnemyKind, Fighter, MerdomonKind, RewardSource, Side, StatKey } from '../../engine/types';
 import { EnemyArt, MerdomonArt } from '../art';
-import { HpBar, Stars } from '../components';
+import { HpBar, Stars, StatValue } from '../components';
 import { Icon, ItemIcon, RESOURCE_ICON, STAT_ICON, TraitIcon } from '../icons';
 
 const DELAY: Record<CombatEvent['type'], number> = { duel: 450, attack: 420, death: 380, revive: 650, end: 350 };
 const SPEEDS = [1, 2, 4];
+const INTRO_MS = 2600;
+
+const STAT_NAME: Record<StatKey, string> = { hp: 'HP', atk: 'ATK', def: 'DEF', spd: 'SPD' };
+const PASSIVE_TEXT: Partial<Record<CombatBonus['source'], string>> = {
+  window: 'First strike hits twice',
+  flipflops: 'Double hits at 2× speed',
+  magazine: 'One free revive',
+};
 
 interface View {
   php: number[];
@@ -37,14 +45,21 @@ function replay(report: CombatReport, upto: number): View {
 export function CombatScreen({ report, onDone }: { report: CombatReport; onDone: () => void }) {
   const [step, setStep] = useState(0);
   const [speedIdx, setSpeedIdx] = useState(0);
+  const [intro, setIntro] = useState(report.bonuses.length > 0);
   const total = report.events.length;
   const done = step >= total;
 
   useEffect(() => {
-    if (done) return;
+    if (!intro) return;
+    const t = setTimeout(() => setIntro(false), INTRO_MS);
+    return () => clearTimeout(t);
+  }, [intro]);
+
+  useEffect(() => {
+    if (done || intro) return;
     const t = setTimeout(() => setStep((s) => s + 1), DELAY[report.events[step].type] / SPEEDS[speedIdx]);
     return () => clearTimeout(t);
-  }, [step, speedIdx, done, report]);
+  }, [step, speedIdx, done, intro, report]);
 
   const view = useMemo(() => replay(report, step), [report, step]);
   const last = view.last;
@@ -62,7 +77,7 @@ export function CombatScreen({ report, onDone }: { report: CombatReport; onDone:
     <div className="screen combat">
       <div className="combat-head">
         <span className="round-badge">
-          {report.round}/{ROUNDS}
+          Round {report.round}/{ROUNDS}
         </span>
         <Icon name="fight" size={22} />
       </div>
@@ -109,6 +124,7 @@ export function CombatScreen({ report, onDone }: { report: CombatReport; onDone:
         </button>
       </div>
 
+      {intro && <BonusIntro report={report} onStart={() => setIntro(false)} />}
       {done && <ResultOverlay report={report} onDone={onDone} />}
     </div>
   );
@@ -132,7 +148,11 @@ function BigFighter({
   return (
     <div className={`big-fighter ${anim} ${hp <= 0 ? 'dead' : ''}`}>
       <div className="art-wrap">
-        {enemy ? <EnemyArt size={f.boss ? 104 : 86} boss={f.boss} /> : <MerdomonArt size={86} />}
+        {enemy ? (
+          <EnemyArt size={f.boss ? 104 : 90} kind={f.kind as EnemyKind} rarity={f.rarity} boss={f.boss} />
+        ) : (
+          <MerdomonArt size={90} kind={f.kind as MerdomonKind} rarity={f.rarity} />
+        )}
         {dmg !== null && (
           <span className="dmg">
             -{dmg}
@@ -147,7 +167,7 @@ function BigFighter({
           {(['atk', 'def', 'spd'] as const).map((k) => (
             <span key={k}>
               <Icon name={STAT_ICON[k]} size={12} />
-              {f[k]}
+              <StatValue value={f[k]} />
             </span>
           ))}
         </span>
@@ -161,7 +181,11 @@ function Queue({ fighters, hp, active, enemy = false }: { fighters: Fighter[]; h
     <div className="queue">
       {fighters.map((f, i) => (
         <div key={f.id} className={`queue-item ${i === active ? 'active' : ''} ${hp[i] <= 0 ? 'dead' : ''}`}>
-          {enemy ? <EnemyArt size={30} boss={f.boss} /> : <MerdomonArt size={30} />}
+          {enemy ? (
+            <EnemyArt size={32} kind={f.kind as EnemyKind} rarity={f.rarity} boss={f.boss} />
+          ) : (
+            <MerdomonArt size={32} kind={f.kind as MerdomonKind} rarity={f.rarity} />
+          )}
           <div className="queue-hp">
             <div style={{ width: `${Math.max(0, (hp[i] / f.maxHp) * 100)}%` }} />
           </div>
@@ -184,6 +208,53 @@ function SourceIcon({ source }: { source: RewardSource }) {
       if (source in ITEM_INFO) return <ItemIcon item={source as keyof typeof ITEM_INFO} size={22} />;
       return null;
   }
+}
+
+function BonusSource({ source }: { source: CombatBonus['source'] }) {
+  if (source in TRAIT_INFO) return <TraitIcon trait={source as keyof typeof TRAIT_INFO} size={24} />;
+  return <ItemIcon item={source as keyof typeof ITEM_INFO} size={24} />;
+}
+
+/** Combat-start recap: what traits and items change, and the boosted team. Tap or wait to start. */
+function BonusIntro({ report, onStart }: { report: CombatReport; onStart: () => void }) {
+  const boosted = new Set(report.bonuses.flatMap((b) => (b.stat ? [b.stat] : [])));
+  return (
+    <div className="overlay" onClick={onStart}>
+      <div className="modal sk intro">
+        <h2 className="intro-title">Bonuses</h2>
+        <div className="intro-bonuses">
+          {report.bonuses.map((b, i) => (
+            <div key={i} className="intro-bonus">
+              <BonusSource source={b.source} />
+              {b.stat ? (
+                <span className="intro-gain">
+                  <Icon name={STAT_ICON[b.stat]} size={18} />+{b.amount} {STAT_NAME[b.stat]}
+                </span>
+              ) : (
+                <span className="muted">{PASSIVE_TEXT[b.source]}</span>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="intro-team">
+          {report.player.map((f) => (
+            <div key={f.id} className="intro-fighter">
+              <MerdomonArt size={34} kind={f.kind as MerdomonKind} rarity={f.rarity} />
+              <span className="intro-stats">
+                {STAT_KEYS.map((k) => (
+                  <span key={k} className={boosted.has(k) ? 'boosted' : ''}>
+                    <Icon name={STAT_ICON[k]} size={11} />
+                    <StatValue value={k === 'hp' ? f.maxHp : f[k]} />
+                  </span>
+                ))}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="intro-timer" style={{ animationDuration: `${INTRO_MS}ms` }} />
+      </div>
+    </div>
+  );
 }
 
 function ResultOverlay({ report, onDone }: { report: CombatReport; onDone: () => void }) {

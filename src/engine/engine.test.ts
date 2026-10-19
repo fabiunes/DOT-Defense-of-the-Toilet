@@ -1,19 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { damage, hitsPerTurn, simulateCombat } from './combat';
-import { ITEMS, MAX_STAT, RARITY_POINTS } from './data';
+import { ITEMS, KIND_CURVE, MAX_STAT, SIZE_TOTAL } from './data';
 import * as G from './game';
-import { createWave, rollStats } from './generate';
+import { createEnemy, createMerdomon, createWave, splitStats } from './generate';
 import { Rng } from './rng';
 import { countTraits, traitTier, traitValue } from './traits';
-import type { Enemy, Merdomon, RunState, Stats } from './types';
+import type { Enemy, Merdomon, Rarity, RunState, Stats } from './types';
 
 const mk = (stats: Partial<Stats>, extra: Partial<Merdomon> = {}): Merdomon => {
   const s = { hp: 5, atk: 3, def: 1, spd: 1, ...stats };
-  return { id: Math.random(), rarity: 'common', stats: s, hp: s.hp, traits: [], ability: 'generic', ...extra };
+  return { id: Math.random(), rarity: 'common', kind: 'normal', stats: s, hp: s.hp, traits: [], ability: 'generic', ...extra };
 };
 const foe = (stats: Partial<Stats>, boss = false): Enemy => ({
   id: Math.random(),
   rarity: 'common',
+  kind: 'phone',
   stats: { hp: 5, atk: 3, def: 1, spd: 1, ...stats },
   ability: 'generic',
   boss,
@@ -36,13 +37,47 @@ describe('rng', () => {
 });
 
 describe('generation', () => {
-  it('rolls stats from base 1 with exactly the rarity points, capped at 10', () => {
+  const sorted = (st: Stats) => Object.values(st).sort((x, y) => y - x);
+
+  it('splits stats exactly by the kind curve, within 1..10', () => {
     const rng = new Rng(1);
-    for (const points of Object.values(RARITY_POINTS)) {
-      for (let i = 0; i < 200; i++) {
-        const s = rollStats(rng, points);
-        expect(s.hp + s.atk + s.def + s.spd).toBe(4 + points);
-        for (const v of Object.values(s)) expect(v).toBeGreaterThanOrEqual(1), expect(v).toBeLessThanOrEqual(MAX_STAT);
+    const cases: [keyof typeof KIND_CURVE, number, number[]][] = [
+      ['normal', 10, [3, 3, 2, 2]],
+      ['normal', 15, [5, 4, 3, 3]],
+      ['normal', 20, [6, 6, 4, 4]],
+      ['runny', 10, [4, 3, 2, 1]],
+      ['runny', 15, [6, 5, 3, 1]],
+      ['runny', 20, [8, 6, 4, 2]],
+      ['fart', 10, [5, 3, 1, 1]],
+      ['fart', 15, [8, 5, 1, 1]],
+      ['fart', 20, [10, 7, 2, 1]],
+    ];
+    for (const [kind, total, expected] of cases) expect(sorted(splitStats(rng, total, KIND_CURVE[kind]))).toEqual(expected);
+  });
+
+  it('gives the biggest share to a random stat', () => {
+    const rng = new Rng(2);
+    const tops = new Set<string>();
+    for (let i = 0; i < 50; i++) {
+      const st = splitStats(rng, 10, KIND_CURVE.fart);
+      tops.add(Object.entries(st).find(([, v]) => v === 5)![0]);
+    }
+    expect(tops.size).toBe(4);
+  });
+
+  it('Merdomon are 1 point short of their size total, enemies match it', () => {
+    const rng = new Rng(3);
+    const sum = (st: Stats) => st.hp + st.atk + st.def + st.spd;
+    for (const r of ['common', 'rare', 'epic'] as Rarity[]) {
+      for (let i = 0; i < 30; i++) {
+        const m = createMerdomon(rng, i, r);
+        const e = createEnemy(rng, i, r);
+        expect(sum(m.stats)).toBe(SIZE_TOTAL[r] - 1);
+        expect(sum(e.stats)).toBe(SIZE_TOTAL[r]);
+        for (const v of [...Object.values(m.stats), ...Object.values(e.stats)]) {
+          expect(v).toBeGreaterThanOrEqual(1);
+          expect(v).toBeLessThanOrEqual(MAX_STAT);
+        }
       }
     }
   });
@@ -63,9 +98,10 @@ describe('traits', () => {
     expect(traitValue('paper', 6)).toBe(9);
   });
 
-  it('counts duplicates and item traits', () => {
-    const c = countTraits([mk({}, { traits: ['haste', 'haste'] })], ['window']);
-    expect(c.haste).toBe(3);
+  it('counts duplicates and item traits (some items have two)', () => {
+    const c = countTraits([mk({}, { traits: ['haste', 'haste'] })], ['window', 'flipflops']);
+    expect(c.haste).toBe(4);
+    expect(c.action).toBe(1);
   });
 });
 
@@ -76,11 +112,19 @@ describe('combat', () => {
     expect(damage(5, 2)).toBe(4);
   });
 
-  it('twice the speed means two hits per turn', () => {
-    expect(hitsPerTurn(4, 2)).toBe(2);
-    expect(hitsPerTurn(3, 2)).toBe(1);
-    const r = simulateCombat([mk({ atk: 2, spd: 4 })], [foe({ hp: 10, def: 0, atk: 1, spd: 2 })], [], new Rng(1));
-    expect(r.events.slice(1, 4).map((e) => e.type === 'attack' && e.side)).toEqual(['p', 'p', 'e']);
+  it('speed only decides who starts, unless Flip-Flops give double hits at twice the speed', () => {
+    expect(hitsPerTurn(4, 2, false)).toBe(1);
+    expect(hitsPerTurn(4, 2, true)).toBe(2);
+    expect(hitsPerTurn(3, 2, true)).toBe(1);
+    const team = [mk({ atk: 2, spd: 4 })];
+    const wave = [foe({ hp: 10, def: 0, atk: 1, spd: 2 })];
+    const sides = (items: Parameters<typeof simulateCombat>[2]) =>
+      simulateCombat(team, wave, items, new Rng(1)).events.slice(1, 4).map((e) => e.type === 'attack' && e.side);
+    expect(sides([])).toEqual(['p', 'e', 'p']);
+    expect(sides(['flipflops'])).toEqual(['p', 'p', 'e']);
+    // Enemies never double-hit.
+    const r = simulateCombat([mk({ hp: 9, spd: 1 })], [foe({ hp: 9, spd: 9, atk: 1 })], ['flipflops'], new Rng(1));
+    expect(r.events.slice(1, 3).map((e) => e.type === 'attack' && e.side)).toEqual(['e', 'p']);
   });
 
   it('faster fighter strikes first and a win reports survivors', () => {
@@ -151,14 +195,14 @@ describe('run flow', () => {
     expect(s.phase).toBe('preparation');
     expect(s.team).toHaveLength(1);
     expect(s.wave).toHaveLength(1);
-    expect(s.shopOffer).toHaveLength(3);
+    expect(s.shopOffer).toHaveLength(2);
     const st = s.team[0].stats;
     expect(st.hp + st.atk + st.def + st.spd).toBe(10);
   });
 
-  it('rare enemies get 8 extra points', () => {
+  it('Big enemies have 15 stat points', () => {
     const wave = createWave(new Rng(9), 9, 1);
-    for (const e of wave) expect(e.stats.hp + e.stats.atk + e.stats.def + e.stats.spd).toBe(4 + 8);
+    for (const e of wave) expect(e.stats.hp + e.stats.atk + e.stats.def + e.stats.spd).toBe(15);
   });
 
   it('Concentrate needs more than 2 concentration and caps Merdascore', () => {
@@ -167,15 +211,45 @@ describe('run flow', () => {
     expect(s).toMatchObject({ concentration: 8, merdascore: 20, ap: 0 });
   });
 
-  it('Evacuate spends merdascore and AP, blocked when the team is full', () => {
+  it('Evacuate spends merdascore and AP, offers 2 options, blocked when the team is full', () => {
     let s = G.evacuate(prepRun({ merdascore: 12 }), 'rare');
     expect(s).toMatchObject({ merdascore: 2, ap: 0 });
-    expect(s.pending?.rarity).toBe('rare');
+    expect(s.choices).toHaveLength(2);
+    expect(s.choices.every((m) => m.rarity === 'rare')).toBe(true);
+    expect(G.canFight(s)).toBe(false); // must pick first
+    const picked = s.choices[1];
+    s = G.chooseEvacuated(s, 1);
+    expect(s.pending?.id).toBe(picked.id);
+    expect(s.choices).toEqual([]);
     s = G.assignBonusPoint(s, 'hp');
     expect(s.team).toHaveLength(2);
     const full = prepRun({ merdascore: 20 });
     full.team = Array.from({ length: 6 }, () => mk({}));
     expect(G.canEvacuate(full, 'common')).toBe(false);
+  });
+
+  it('Game Boy gives 3 options in Evacuate and Shop', () => {
+    let s = prepRun({ merdascore: 5, items: ['gameboy'] });
+    s = G.evacuate(s, 'common');
+    expect(s.choices).toHaveLength(3);
+    s = G.continueAfterCombat(G.fight(G.assignBonusPoint(G.chooseEvacuated(s, 0), 'hp')));
+    expect(s.shopOffer).toHaveLength(3);
+  });
+
+  it('Re-Roll costs 2 TP and redraws Evacuate options or the shop', () => {
+    let s = G.evacuate(prepRun({ merdascore: 5, tp: 4 }), 'common');
+    const before = s.choices.map((m) => m.id);
+    s = G.rerollChoices(s);
+    expect(s.tp).toBe(2);
+    expect(s.choices).toHaveLength(2);
+    expect(s.choices.map((m) => m.id)).not.toEqual(before);
+    s = G.rerollChoices(s);
+    expect(s.tp).toBe(0);
+    expect(G.canRerollChoices(s)).toBe(false);
+
+    const shop = G.rerollShop(prepRun({ tp: 2 }));
+    expect(shop.tp).toBe(0);
+    expect(shop.shopOffer).toHaveLength(2);
   });
 
   it('Shop sells only the offered items, which then leave the offer', () => {
@@ -190,7 +264,7 @@ describe('run flow', () => {
   });
 
   it('the next shop offer never contains owned items', () => {
-    let s = prepRun({ items: ['brush', 'magazine', 'bidet', 'shower', 'window'] });
+    let s = prepRun({ items: ['brush', 'magazine', 'bidet', 'shower', 'window', 'flipflops', 'gameboy'] });
     s = G.continueAfterCombat(G.fight(s));
     expect([...s.shopOffer].sort()).toEqual(['toothbrush', 'towel']);
   });
@@ -231,10 +305,14 @@ describe('run flow', () => {
     expect(s.ap).toBe(2); // 1 base + 1 from Action (2 traits)
   });
 
-  it('Toothbrush adds unspent AP as combat HP', () => {
-    const s = prepRun({ items: ['toothbrush'] });
+  it('Toothbrush adds unspent AP as combat HP, listed in the combat bonuses', () => {
+    const s = prepRun({ items: ['toothbrush', 'window'] });
+    s.team[0].traits = ['fighter'];
     const after = G.fight(G.bonusAction({ ...s, tp: 20 }));
     expect(after.lastCombat!.player[0].maxHp).toBe(s.team[0].stats.hp + 2);
+    expect(after.lastCombat!.bonuses).toEqual([{ source: 'toothbrush', stat: 'hp', amount: 2 }, { source: 'window' }]);
+    s.team[0].traits = ['fighter', 'fighter'];
+    expect(G.fight(s).lastCombat!.bonuses[0]).toEqual({ source: 'fighter', stat: 'atk', amount: 1 });
   });
 
   it('a lost wave costs at most 3 concentration and fallen Merdomon return at half HP', () => {

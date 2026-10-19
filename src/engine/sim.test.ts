@@ -14,7 +14,7 @@ function playPreparation(s: RunState): RunState {
     }
     if (s.ap >= 1) {
       const rarity = (['epic', 'rare', 'common'] as Rarity[]).find((r) => G.canEvacuate(s, r));
-      if (rarity) s = G.evacuate(s, rarity);
+      if (rarity) s = G.chooseEvacuated(G.evacuate(s, rarity), 0);
       else if (s.team.some((m) => m.hp * 2 < m.stats.hp)) s = G.heal(s);
       else if (ITEMS.some((i) => G.canBuy(s, i))) s = G.buy(s, ITEMS.find((i) => G.canBuy(s, i))!);
       else if (s.concentration > 6 && s.team.length < MAX_TEAM) s = G.concentrate(s);

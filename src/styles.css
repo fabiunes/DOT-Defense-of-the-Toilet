@@ -1184,3 +1184,182 @@ button:disabled {
   font-size: 13px;
   color: var(--muted);
 }
+
+/* ---------- v0.2 ---------- */
+/* Loot-style stat bands: 1–2 grey, 3–4 green, 5–6 blue, 7–8 purple, 9+ orange. */
+.sv {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 4px;
+  border-radius: 6px;
+  color: #fff;
+  text-align: center;
+  line-height: 1.25;
+}
+.band-1 { background: #9e9a92; }
+.band-2 { background: #3fae4a; }
+.band-3 { background: #3b82f6; }
+.band-4 { background: #8b5cf6; }
+.band-5 { background: #f08c00; }
+
+.kind-label {
+  font-size: 14px;
+  color: #555;
+}
+.detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.inforow .items {
+  margin-left: 0;
+  flex: 1;
+  justify-content: center;
+}
+.ap-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.choice-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.choice-cards.n3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+.reroll-btn {
+  font-size: 19px;
+  min-height: 46px;
+}
+.scout-row {
+  grid-template-columns: 16px 42px 62px 1fr;
+}
+.scout-name {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+.scout-name small {
+  font-size: 12px;
+  color: #555;
+}
+.scout-stats {
+  font-size: 15px;
+}
+
+.intro {
+  cursor: pointer;
+}
+.intro-title {
+  text-align: center;
+  font-size: 26px;
+}
+.intro-bonuses {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.intro-bonus {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  align-items: center;
+  gap: 6px;
+  font-size: 18px;
+  animation: pop 0.3s both;
+}
+.intro-bonus:nth-child(2) { animation-delay: 0.12s; }
+.intro-bonus:nth-child(3) { animation-delay: 0.24s; }
+.intro-bonus:nth-child(4) { animation-delay: 0.36s; }
+.intro-bonus:nth-child(5) { animation-delay: 0.48s; }
+.intro-gain {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--good);
+  font-weight: bold;
+}
+.intro-team {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  border-top: 2px dashed var(--soft);
+  padding-top: 6px;
+}
+.intro-fighter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.intro-stats {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 1px 4px;
+  font-size: 12px;
+}
+.intro-stats > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  border-radius: 6px;
+  padding: 1px;
+}
+.intro-stats .boosted {
+  outline: 2px solid var(--good);
+  animation: glow 0.8s ease-in-out 2 alternate;
+}
+.intro-timer {
+  height: 4px;
+  background: var(--ink);
+  border-radius: 2px;
+  transform-origin: left;
+  animation-name: shrink;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+@keyframes shrink {
+  to {
+    transform: scaleX(0);
+  }
+}
+@keyframes glow {
+  to {
+    background: rgba(46, 125, 50, 0.25);
+  }
+}
+.tut-bands {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+.tut-types {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.tut-type {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 16px;
+}
+.tut-curve {
+  display: grid;
+  grid-template-columns: repeat(4, 8px);
+  align-items: end;
+  gap: 2px;
+  height: 34px;
+}
+.tut-curve span {
+  background: var(--ink);
+  border-radius: 2px 2px 0 0;
+}
+.tut-curve small {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  justify-self: center;
+}

@@ -2,16 +2,21 @@ import { useRef, useState, type ReactNode } from 'react';
 import {
   CONCENTRATE_GAIN,
   COSTS,
-  ENEMY_RARITY_POINTS,
+  ENEMY_KINDS,
   EVACUATE_COST,
   ITEMS,
   ITEM_INFO,
+  KIND_CURVE,
+  KIND_NAME,
   MAX_CONCENTRATION,
   MAX_CONCENTRATION_LOSS,
   MAX_MERDASCORE,
-  RARITY_POINTS,
+  MERDOMON_KINDS,
   RARITY_TRAITS,
+  REROLL_COST,
   ROUNDS,
+  SIZE_NAME,
+  SIZE_TOTAL,
   TRAITS,
   TRAIT_INFO,
   TRAIT_VALUES,
@@ -19,20 +24,20 @@ import {
 } from '../../engine/data';
 import type { Merdomon, Rarity, RunState } from '../../engine/types';
 import { EnemyArt, MerdomonArt } from '../art';
-import { CostBadge, InfoRow, MerdomonCard, Stars, TopBar, TraitsRow } from '../components';
+import { CostBadge, InfoRow, MerdomonCard, Stars, StatValue, TopBar, TraitsRow } from '../components';
 import { Icon, ItemIcon, TraitIcon, type IconName } from '../icons';
 import { PrepScreen } from './PrepScreen';
 
 // ---------- Demo data, shaped like a real run in progress ----------
 
 const demoTeam: Merdomon[] = [
-  { id: 1, rarity: 'rare', stats: { hp: 6, atk: 5, def: 2, spd: 3 }, hp: 4, traits: ['fighter', 'paper'], ability: 'generic' },
-  { id: 2, rarity: 'common', stats: { hp: 4, atk: 2, def: 3, spd: 1 }, hp: 4, traits: ['fighter'], ability: 'generic' },
-  { id: 3, rarity: 'common', stats: { hp: 3, atk: 2, def: 1, spd: 3 }, hp: 3, traits: ['haste'], ability: 'generic' },
+  { id: 1, rarity: 'rare', kind: 'normal', stats: { hp: 6, atk: 5, def: 2, spd: 3 }, hp: 4, traits: ['fighter', 'paper'], ability: 'generic' },
+  { id: 2, rarity: 'common', kind: 'runny', stats: { hp: 4, atk: 2, def: 3, spd: 1 }, hp: 4, traits: ['fighter'], ability: 'generic' },
+  { id: 3, rarity: 'common', kind: 'fart', stats: { hp: 3, atk: 2, def: 1, spd: 3 }, hp: 3, traits: ['haste'], ability: 'generic' },
 ];
 
 const demoRun: RunState = {
-  version: 2,
+  version: 3,
   phase: 'preparation',
   round: 3,
   concentration: 7,
@@ -43,11 +48,12 @@ const demoRun: RunState = {
   items: ['brush', 'window'],
   shopOffer: [],
   starters: [],
+  choices: [],
   pending: null,
   wave: [
-    { id: 10, rarity: 'common', stats: { hp: 3, atk: 2, def: 1, spd: 3 }, ability: 'generic', boss: false },
-    { id: 11, rarity: 'rare', stats: { hp: 5, atk: 4, def: 2, spd: 3 }, ability: 'generic', boss: false },
-    { id: 12, rarity: 'common', stats: { hp: 4, atk: 2, def: 1, spd: 2 }, ability: 'generic', boss: false },
+    { id: 10, rarity: 'common', kind: 'phone', stats: { hp: 3, atk: 2, def: 1, spd: 3 }, ability: 'generic', boss: false },
+    { id: 11, rarity: 'rare', kind: 'book', stats: { hp: 5, atk: 4, def: 2, spd: 3 }, ability: 'generic', boss: false },
+    { id: 12, rarity: 'common', kind: 'console', stats: { hp: 4, atk: 2, def: 1, spd: 2 }, ability: 'generic', boss: false },
   ],
   lastCombat: null,
   rngState: 1,
@@ -105,6 +111,18 @@ function TileDemo({ tiles }: { tiles: { icon: IconName; label: string; cost: Par
         ))}
       </div>
     </Demo>
+  );
+}
+
+/** The stat split of a type, as small bars. */
+function Curve({ kind }: { kind: keyof typeof KIND_CURVE }) {
+  return (
+    <span className="tut-curve">
+      {KIND_CURVE[kind].map((p, i) => (
+        <span key={i} style={{ height: `${Math.max(2, p * 0.5)}px` }} title={`${p}%`} />
+      ))}
+      <small>{KIND_CURVE[kind].join('·')}%</small>
+    </span>
   );
 }
 
@@ -202,7 +220,7 @@ const pages: Page[] = [
           </Demo>
           <div className="tut-legend">
             <span>
-              <Stars rarity="rare" size={13} /> Rarity
+              <Stars rarity="rare" size={13} /> Size
             </span>
             <span>
               <TraitIcon trait="fighter" size={15} />
@@ -229,7 +247,7 @@ const pages: Page[] = [
           <thead>
             <tr>
               <th />
-              <th>Stat pts</th>
+              <th>Stats</th>
               <th>Traits</th>
               <th>Evacuate</th>
             </tr>
@@ -237,10 +255,10 @@ const pages: Page[] = [
           <tbody>
             {(['common', 'rare', 'epic'] as Rarity[]).map((r) => (
               <tr key={r}>
-                <td>
-                  <Stars rarity={r} size={13} />
+                <td className="left">
+                  <Stars rarity={r} size={13} /> {SIZE_NAME[r]}
                 </td>
-                <td>+{RARITY_POINTS[r]}</td>
+                <td>{SIZE_TOTAL[r]}</td>
                 <td>{RARITY_TRAITS[r]}</td>
                 <td>
                   <CostBadge ms={String(EVACUATE_COST[r])} />
@@ -249,8 +267,46 @@ const pages: Page[] = [
             ))}
           </tbody>
         </table>
+        <div className="tut-bands">
+          {[1, 3, 5, 7, 9].map((v) => (
+            <StatValue key={v} value={v} label={`${v}–${v + 1}`} />
+          ))}
+        </div>
         <p className="tut-note">
-          Stats go from 1 to 10. Damage stays between waves. Tap a Merdomon to see its details.
+          Stats go from 1 to 10; colours show how strong each one is. Damage stays between waves.
+        </p>
+      </>
+    ),
+  },
+  {
+    title: 'Types',
+    body: (
+      <>
+        <p className="tut-note">
+          Every creature has a <b>type</b>, in any size. The type decides how its stats are split; the biggest share
+          goes to a random stat.
+        </p>
+        <div className="tut-types">
+          {MERDOMON_KINDS.map((k) => (
+            <div key={k} className="tut-type">
+              <MerdomonArt size={48} kind={k} />
+              <b>{KIND_NAME[k]}</b>
+              <Curve kind={k} />
+            </div>
+          ))}
+        </div>
+        <p className="tut-note">Distractions work the same way:</p>
+        <div className="tut-types">
+          {ENEMY_KINDS.map((k) => (
+            <div key={k} className="tut-type">
+              <EnemyArt size={48} kind={k} rarity="epic" />
+              <b>{KIND_NAME[k]}</b>
+              <Curve kind={k} />
+            </div>
+          ))}
+        </div>
+        <p className="tut-note">
+          Example: a Huge Fart (20 points) gets 10 · 7 · 2 · 1. A Huge Normal gets 6 · 6 · 4 · 4.
         </p>
       </>
     ),
@@ -314,13 +370,16 @@ const pages: Page[] = [
           All Merdomon back to full HP.
         </Row>
         <Row icon={I('toilet')} title="Evacuate">
-          Spend Merdascore to create a new Merdomon (max 6), then give it +1 to a stat.
+          Pick 1 of 2 new Merdomon (max 6), then give it +1 to a stat.
         </Row>
         <Row icon={I('shop')} title="Shop">
-          Buy one of the 3 items on sale this round.
+          Buy one of the 2 items on sale this round.
         </Row>
         <Row icon={I('focus')} title="Concentrate">
           Trade 2 Concentration for {CONCENTRATE_GAIN} Merdascore.
+        </Row>
+        <Row icon={I('dice')} title="Re-Roll">
+          Don't like the options in Evacuate or Shop? Redraw them for {REROLL_COST} {ii('tp')}.
         </Row>
         <Row icon={I('trade')} title="Trade">
           Swap 1 {ii('ap', '#1b1b1b')} for +{TRADE.merdascore} {ii('poop')}, +{TRADE.tp} {ii('tp')} or +{TRADE.stat} to a
@@ -374,14 +433,14 @@ const pages: Page[] = [
           </span>
         </Demo>
         <p className="tut-note">The icons under the button show who is coming:</p>
-        <Row icon={I('phone')} title="Common distraction">
-          Weak, {ENEMY_RARITY_POINTS.common} extra stat points.
+        <Row icon={I('phone')} title="Small distraction">
+          {SIZE_TOTAL.common} stat points.
         </Row>
-        <Row icon={I('phone', '#1b1b1b')} title="Rare distraction">
-          Tougher, {ENEMY_RARITY_POINTS.rare} extra stat points.
+        <Row icon={I('phone', '#1b1b1b')} title="Big distraction">
+          {SIZE_TOTAL.rare} stat points.
         </Row>
         <Row icon={I('crown', '#1b1b1b')} title="The Boss">
-          Epic, only in wave {ROUNDS}, and always last in line.
+          Huge ({SIZE_TOTAL.epic} points), only in wave {ROUNDS}, always last in line.
         </Row>
         <p className="tut-note">
           Use {ii('eye')} Scout to see their stats. When you're ready, tap Next Wave: the fight plays out by itself.
@@ -397,7 +456,7 @@ const pages: Page[] = [
           <div>
             <MerdomonArt size={56} />
             <span className="tut-duel-stats">
-              {ii('fist')}5 {ii('bolt')}6
+              {ii('fist')}5 {ii('bolt')}4
             </span>
           </div>
           <span className="vs">VS</span>
@@ -410,16 +469,17 @@ const pages: Page[] = [
         </div>
         <Row icon={<span className="tut-step">1</span>}>Your first Merdomon faces the first Distraction, one on one.</Row>
         <Row icon={<span className="tut-step">2</span>}>
-          Higher {ii('bolt')} strikes first (tie: faster team, then luck). <b>Twice as fast</b>: two hits per turn!
+          Higher {ii('bolt')} Speed strikes first. Tie: the faster team, then luck.
         </Row>
         <Row icon={<span className="tut-step">3</span>}>
-          Damage = {ii('fist')} − half {ii('shield')} (rounded down), at least 1. Here: 5 − 1 = <b>4</b>, twice.
+          Damage = {ii('fist')} − half {ii('shield')} (rounded down), at least 1. Here: 5 − 1 = <b>4</b>.
         </Row>
         <Row icon={<span className="tut-step">4</span>}>
           They trade hits until one falls. The next in line steps in, until a team is out.
         </Row>
         <p className="tut-note">
-          Use {ii('ff')} to speed up and {ii('skip')} to skip.
+          Before each fight, a recap shows the bonuses from your traits and items. Use {ii('ff')} to speed up and{' '}
+          {ii('skip')} to skip.
         </p>
       </>
     ),
@@ -457,7 +517,7 @@ const pages: Page[] = [
     body: (
       <>
         <p className="tut-note">
-          3 random items are on sale each round. Each one also counts as <b>1 trait</b>.
+          2 random items are on sale each round. Each item also counts for its <b>traits</b>.
         </p>
         {ITEMS.map((it) => (
           <Row
@@ -465,7 +525,10 @@ const pages: Page[] = [
             icon={<ItemIcon item={it} size={24} />}
             title={ITEM_INFO[it].name}
           >
-            <TraitIcon trait={ITEM_INFO[it].trait} size={14} /> {ITEM_INFO[it].desc}
+            {ITEM_INFO[it].traits.map((t) => (
+              <TraitIcon key={t} trait={t} size={14} />
+            ))}{' '}
+            {ITEM_INFO[it].desc}
           </Row>
         ))}
       </>

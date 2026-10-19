@@ -1,4 +1,4 @@
-import type { ItemId, Rarity, StatKey, TraitId } from './types';
+import type { EnemyKind, ItemId, MerdomonKind, Rarity, StatKey, TraitId } from './types';
 
 export const ROUNDS = 10;
 export const MAX_STAT = 10;
@@ -11,15 +11,42 @@ export const STARTING_TP = 5;
 export const STARTING_MERDASCORE = 5;
 /** Max Concentration lost in a single wave. */
 export const MAX_CONCENTRATION_LOSS = 3;
-export const SHOP_OFFER = 3;
+export const SHOP_OFFER = 2;
+export const EVACUATE_CHOICES = 2;
+/** Shop items / Evacuate options with the Game Boy. */
+export const GAMEBOY_CHOICES = 3;
+export const REROLL_COST = 2;
 
 export const STAT_KEYS: readonly StatKey[] = ['hp', 'atk', 'def', 'spd'];
 
-export const RARITY_POINTS: Record<Rarity, number> = { common: 5, rare: 10, epic: 15 };
-/** Distraction-mon get fewer points than Merdomon of the same rarity. */
-export const ENEMY_RARITY_POINTS: Record<Rarity, number> = { common: 5, rare: 8, epic: 15 };
+// Sizes keep the internal ids common / rare / epic.
+export const SIZE_NAME: Record<Rarity, string> = { common: 'Small', rare: 'Big', epic: 'Huge' };
+/** Total stat points (all four stats together). Merdomon get 1 less and add the last point themselves. */
+export const SIZE_TOTAL: Record<Rarity, number> = { common: 10, rare: 15, epic: 20 };
 export const RARITY_TRAITS: Record<Rarity, number> = { common: 1, rare: 2, epic: 3 };
 export const EVACUATE_COST: Record<Rarity, number> = { common: 5, rare: 10, epic: 20 };
+
+export const MERDOMON_KINDS: readonly MerdomonKind[] = ['normal', 'runny', 'fart'];
+export const ENEMY_KINDS: readonly EnemyKind[] = ['phone', 'book', 'console'];
+
+/** How a creature's total is split across its stats (in %), highest share first; shares go to random stats. */
+export const KIND_CURVE: Record<MerdomonKind | EnemyKind, readonly number[]> = {
+  normal: [30, 30, 20, 20],
+  runny: [40, 30, 20, 10],
+  fart: [60, 30, 10, 0],
+  phone: [30, 30, 20, 20],
+  book: [40, 30, 20, 10],
+  console: [60, 30, 10, 0],
+};
+
+export const KIND_NAME: Record<MerdomonKind | EnemyKind, string> = {
+  normal: 'Normal',
+  runny: 'Runny',
+  fart: 'Fart',
+  phone: 'Smartphone',
+  book: 'Book',
+  console: 'Console',
+};
 
 export const COSTS = {
   shop: 10,
@@ -57,16 +84,29 @@ export const TRAIT_INFO: Record<TraitId, { name: string; desc: string }> = {
   action: { name: 'Action', desc: 'Action Points each round' },
 };
 
-export const ITEMS: readonly ItemId[] = ['brush', 'magazine', 'bidet', 'shower', 'window', 'towel', 'toothbrush'];
+export const ITEMS: readonly ItemId[] = [
+  'brush',
+  'magazine',
+  'bidet',
+  'shower',
+  'window',
+  'towel',
+  'toothbrush',
+  'flipflops',
+  'gameboy',
+];
 
-export const ITEM_INFO: Record<ItemId, { name: string; trait: TraitId; desc: string }> = {
-  brush: { name: 'Toilet Brush', trait: 'merdon', desc: '+2 Merdascore after each wave' },
-  magazine: { name: 'Magazine', trait: 'healthy', desc: 'First fallen Merdomon revives at full HP (once per fight)' },
-  bidet: { name: 'Bidet', trait: 'defender', desc: 'Evacuate also gives +1 Concentration' },
-  shower: { name: 'Hand Shower', trait: 'paper', desc: 'Shop, Flush and Bonus Action cost 2 less' },
-  window: { name: 'Window', trait: 'haste', desc: 'Front Merdomon strikes twice on its first attack' },
-  towel: { name: 'Towel', trait: 'fighter', desc: '+5 Toilet Paper after each wave' },
-  toothbrush: { name: 'Toothbrush', trait: 'action', desc: '+1 HP to all in combat for each unspent Action Point' },
+/** Each trait listed counts once towards the trait thresholds. */
+export const ITEM_INFO: Record<ItemId, { name: string; traits: readonly TraitId[]; desc: string }> = {
+  brush: { name: 'Toilet Brush', traits: ['merdon'], desc: '+2 Merdascore after each wave' },
+  magazine: { name: 'Magazine', traits: ['healthy'], desc: 'First fallen Merdomon revives at full HP (once per fight)' },
+  bidet: { name: 'Bidet', traits: ['defender'], desc: 'Evacuate also gives +1 Concentration' },
+  shower: { name: 'Hand Shower', traits: ['paper'], desc: 'Shop, Flush and Bonus Action cost 2 less' },
+  window: { name: 'Window', traits: ['haste'], desc: 'Front Merdomon strikes twice on its first attack' },
+  towel: { name: 'Towel', traits: ['fighter'], desc: '+5 Toilet Paper after each wave' },
+  toothbrush: { name: 'Toothbrush', traits: ['action'], desc: '+1 HP to all in combat for each unspent Action Point' },
+  flipflops: { name: 'Flip-Flops', traits: ['action', 'haste'], desc: 'A Merdomon twice as fast as its foe strikes twice each turn' },
+  gameboy: { name: 'Game Boy', traits: ['paper', 'merdon'], desc: 'Choose among 3 options (instead of 2) in Shop and Evacuate' },
 };
 
 export const BRUSH_MERDASCORE = 2;
@@ -80,7 +120,7 @@ export interface WaveDef {
   boss?: boolean;
 }
 
-/** Level 1 – Home Bathroom. */
+/** Level 1 – Home Bathroom. common = Small, rare = Big, the Boss is Huge. */
 export const WAVES: readonly WaveDef[] = [
   { common: 1, rare: 0 },
   { common: 2, rare: 0 },

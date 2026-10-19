@@ -4,7 +4,7 @@ import type { ItemId, Merdomon, Stats, TraitId } from './types';
 export function countTraits(team: readonly Merdomon[], items: readonly ItemId[]): Record<TraitId, number> {
   const counts = Object.fromEntries(TRAITS.map((t) => [t, 0])) as Record<TraitId, number>;
   for (const m of team) for (const t of m.traits) counts[t]++;
-  for (const i of items) counts[ITEM_INFO[i].trait]++;
+  for (const i of items) for (const t of ITEM_INFO[i].traits) counts[t]++;
   return counts;
 }
 

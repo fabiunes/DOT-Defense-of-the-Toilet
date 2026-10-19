@@ -22,9 +22,9 @@ export function damage(atk: number, def: number): number {
   return Math.max(1, atk - Math.floor(def / 2));
 }
 
-/** At least twice as fast as the opponent → two hits per turn. */
-export function hitsPerTurn(spd: number, opponentSpd: number): number {
-  return spd >= opponentSpd * 2 ? 2 : 1;
+/** With Flip-Flops, a Merdomon at least twice as fast as its opponent hits twice per turn. */
+export function hitsPerTurn(spd: number, opponentSpd: number, flipFlops: boolean): number {
+  return flipFlops && spd >= opponentSpd * 2 ? 2 : 1;
 }
 
 /** `extraHp` is added to every Merdomon for this combat only (Toothbrush). */
@@ -40,6 +40,7 @@ export function simulateCombat(
   const player: Fighter[] = team.map((m) => ({
     id: m.id,
     rarity: m.rarity,
+    kind: m.kind,
     boss: false,
     maxHp: m.stats.hp + bonus.hp,
     hp: m.hp + bonus.hp,
@@ -50,6 +51,7 @@ export function simulateCombat(
   const enemies: Fighter[] = wave.map((e) => ({
     id: e.id,
     rarity: e.rarity,
+    kind: e.kind,
     boss: e.boss,
     ...e.stats,
     maxHp: e.stats.hp,
@@ -60,6 +62,7 @@ export function simulateCombat(
   const events: CombatEvent[] = [];
   let magazineReady = items.includes('magazine');
   let windowReady = items.includes('window');
+  const flipFlops = items.includes('flipflops');
   let damageDealt = 0;
   let merdomonFallen = 0;
   let pi = 0;
@@ -82,7 +85,7 @@ export function simulateCombat(
     let turn = first;
     while (p.hp > 0 && e.hp > 0) {
       if (turn === 'p') {
-        const hits = hitsPerTurn(p.spd, e.spd) + (windowReady && pi === 0 ? 1 : 0);
+        const hits = hitsPerTurn(p.spd, e.spd, flipFlops) + (windowReady && pi === 0 ? 1 : 0);
         if (pi === 0) windowReady = false;
         for (let h = 0; h < hits && e.hp > 0; h++) {
           const dealt = Math.min(damage(p.atk, e.def), e.hp);
@@ -91,12 +94,9 @@ export function simulateCombat(
           events.push({ type: 'attack', side: 'p', damage: dealt, hp: e.hp, double: h > 0 });
         }
       } else {
-        const hits = hitsPerTurn(e.spd, p.spd);
-        for (let h = 0; h < hits && p.hp > 0; h++) {
-          const dealt = Math.min(damage(e.atk, p.def), p.hp);
-          p.hp -= dealt;
-          events.push({ type: 'attack', side: 'e', damage: dealt, hp: p.hp, double: h > 0 });
-        }
+        const dealt = Math.min(damage(e.atk, p.def), p.hp);
+        p.hp -= dealt;
+        events.push({ type: 'attack', side: 'e', damage: dealt, hp: p.hp, double: false });
       }
       turn = turn === 'p' ? 'e' : 'p';
     }

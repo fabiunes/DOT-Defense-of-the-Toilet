@@ -2,7 +2,7 @@ import { STAT_KEYS } from '../../engine/data';
 import { assignBonusPoint, canAssignBonus } from '../../engine/game';
 import type { Merdomon, RunState } from '../../engine/types';
 import { MerdomonArt } from '../art';
-import { Modal, Stars, TraitList } from '../components';
+import { KindLabel, Modal, Stars, StatValue, TraitList } from '../components';
 import { Icon, STAT_ICON } from '../icons';
 import type { Update } from '../update';
 
@@ -11,9 +11,10 @@ export function BonusPointModal({ run, m, update, onCancel }: { run: RunState; m
   return (
     <Modal onClose={onCancel} className="bonus-modal">
       <div className="bonus-head">
-        <MerdomonArt size={84} />
+        <MerdomonArt size={84} kind={m.kind} rarity={m.rarity} />
         <div className="bonus-meta">
           <Stars rarity={m.rarity} size={16} />
+          <KindLabel m={m} />
           <TraitList traits={m.traits} size={20} />
         </div>
       </div>
@@ -29,9 +30,9 @@ export function BonusPointModal({ run, m, update, onCancel }: { run: RunState; m
             onClick={() => update((s) => assignBonusPoint(s, k))}
           >
             <Icon name={STAT_ICON[k]} size={24} />
-            <b>{m.stats[k]}</b>
+            <StatValue value={m.stats[k]} />
             <span className="arrow">→</span>
-            <b>{m.stats[k] + 1}</b>
+            <StatValue value={m.stats[k] + 1} />
           </button>
         ))}
       </div>
