@@ -9,7 +9,7 @@ function playPreparation(s: RunState): RunState {
     const before = s;
     if (s.pending) {
       const stat = STAT_KEYS.find((k) => G.canAssignBonus(s, k))!;
-      s = G.assignBonusPoint(s, stat);
+      s = G.confirmMerdomon(s, stat, s.pendingAbilities[0]);
       continue;
     }
     if (s.ap >= 1) {
@@ -34,6 +34,8 @@ function playPreparation(s: RunState): RunState {
 function playRun(seed: number): RunState {
   let s = G.newRun(seed);
   s = G.chooseStarter(s, 0);
+  s = G.confirmMerdomon(s, 'atk', s.pendingAbilities[0]);
+  s = G.chooseStartBonus(s, 'resources');
   for (let steps = 0; steps < 200; steps++) {
     if (s.phase === 'gameover' || s.phase === 'victory') return s;
     if (s.phase === 'combat') s = G.continueAfterCombat(s);

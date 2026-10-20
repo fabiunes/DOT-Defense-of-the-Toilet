@@ -1,11 +1,31 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ITEM_INFO, ROUNDS, STAT_KEYS, TRAIT_INFO } from '../../engine/data';
-import type { CombatBonus, CombatEvent, CombatReport, EnemyKind, Fighter, MerdomonKind, RewardSource, Side, StatKey } from '../../engine/types';
+import { ABILITY_INFO, ITEM_INFO, MODIFIER_INFO, ROUNDS, STAT_KEYS, TRAIT_INFO } from '../../engine/data';
+import type {
+  AbilityId,
+  CombatBonus,
+  CombatEvent,
+  CombatReport,
+  EnemyKind,
+  Fighter,
+  MerdomonKind,
+  ModifierId,
+  RewardSource,
+  Side,
+  StatKey,
+} from '../../engine/types';
 import { EnemyArt, MerdomonArt } from '../art';
-import { HpBar, Stars, StatValue } from '../components';
+import { AbilityBadge, HpBar, Stars, StatValue } from '../components';
 import { Icon, ItemIcon, RESOURCE_ICON, STAT_ICON, TraitIcon } from '../icons';
 
-const DELAY: Record<CombatEvent['type'], number> = { duel: 450, attack: 420, death: 380, revive: 650, end: 350 };
+const DELAY: Record<CombatEvent['type'], number> = {
+  duel: 450,
+  attack: 420,
+  death: 380,
+  revive: 650,
+  ability: 520,
+  modifier: 520,
+  end: 350,
+};
 const SPEEDS = [1, 2, 4];
 const INTRO_MS = 2600;
 
@@ -38,6 +58,10 @@ function replay(report: CombatReport, upto: number): View {
       if (ev.side === 'p') ehp[e] = ev.hp;
       else php[p] = ev.hp;
     } else if (ev.type === 'revive') php[ev.index] = ev.hp;
+    else if (ev.type === 'ability' && ev.target) {
+      if (ev.target.side === 'p') php[ev.target.index] = ev.target.hp;
+      else ehp[ev.target.index] = ev.target.hp;
+    }
   }
   return { php, ehp, p, e, last: upto > 0 ? report.events[upto - 1] : null };
 }
@@ -45,7 +69,9 @@ function replay(report: CombatReport, upto: number): View {
 export function CombatScreen({ report, onDone }: { report: CombatReport; onDone: () => void }) {
   const [step, setStep] = useState(0);
   const [speedIdx, setSpeedIdx] = useState(0);
-  const [intro, setIntro] = useState(report.bonuses.length > 0);
+  const [intro, setIntro] = useState(
+    report.bonuses.length > 0 || report.modifier !== null || startAbilities(report).length > 0,
+  );
   const total = report.events.length;
   const done = step >= total;
 
@@ -72,6 +98,12 @@ export function CombatScreen({ report, onDone }: { report: CombatReport; onDone:
     return '';
   };
   const dmgOn = (side: Side) => (last?.type === 'attack' && last.side !== side ? last.damage : null);
+  const popup =
+    last?.type === 'ability'
+      ? { side: 'p', text: `${ABILITY_INFO[last.ability].icon} ${ABILITY_INFO[last.ability].name}` }
+      : last?.type === 'modifier'
+        ? { side: 'e', text: `${MODIFIER_INFO[last.modifier].icon} +1 ATK` }
+        : null;
 
   return (
     <div className="screen combat">
@@ -99,6 +131,11 @@ export function CombatScreen({ report, onDone }: { report: CombatReport; onDone:
           )}
         </div>
         <div className="vs">VS</div>
+        {popup && (
+          <span key={`pop-${step}`} className={`ability-pop ${popup.side}`}>
+            {popup.text}
+          </span>
+        )}
         <div className="duel-slot bottom">
           {view.p >= 0 && (
             <BigFighter
@@ -161,7 +198,10 @@ function BigFighter({
         )}
       </div>
       <div className="fighter-info">
-        <Stars rarity={f.rarity} size={11} />
+        <span className="fighter-meta">
+          <Stars rarity={f.rarity} size={11} />
+          {f.ability && <AbilityBadge ability={f.ability} size={18} />}
+        </span>
         <HpBar hp={Math.max(0, hp)} max={f.maxHp} />
         <span className="mini-stats">
           {(['atk', 'def', 'spd'] as const).map((k) => (
@@ -206,6 +246,8 @@ function SourceIcon({ source }: { source: RewardSource }) {
     default:
       if (source in TRAIT_INFO) return <TraitIcon trait={source as keyof typeof TRAIT_INFO} size={22} />;
       if (source in ITEM_INFO) return <ItemIcon item={source as keyof typeof ITEM_INFO} size={22} />;
+      if (source in ABILITY_INFO) return <AbilityBadge ability={source as AbilityId} size={24} />;
+      if (source in MODIFIER_INFO) return <span className="mod-emoji">{MODIFIER_INFO[source as ModifierId].icon}</span>;
       return null;
   }
 }
@@ -215,14 +257,45 @@ function BonusSource({ source }: { source: CombatBonus['source'] }) {
   return <ItemIcon item={source as keyof typeof ITEM_INFO} size={24} />;
 }
 
-/** Combat-start recap: what traits and items change, and the boosted team. Tap or wait to start. */
+/** Abilities that act before the first duel (Frontliner, Rear Guard, Cheerleader). */
+function startAbilities(report: CombatReport) {
+  const firstDuel = report.events.findIndex((e) => e.type === 'duel');
+  return report.events
+    .slice(0, firstDuel < 0 ? report.events.length : firstDuel)
+    .flatMap((e) => (e.type === 'ability' ? [e] : []));
+}
+
+const START_ABILITY_STATS: Partial<Record<AbilityId, StatKey[]>> = {
+  frontliner: ['hp', 'def'],
+  rearGuard: ['def'],
+  cheerleader: ['atk'],
+};
+
+/** Combat-start recap: the wave modifier, what traits/items/abilities change, and the boosted team. */
 function BonusIntro({ report, onStart }: { report: CombatReport; onStart: () => void }) {
   const boosted = new Set(report.bonuses.flatMap((b) => (b.stat ? [b.stat] : [])));
+  const starts = startAbilities(report);
+  for (const e of starts) for (const k of START_ABILITY_STATS[e.ability] ?? []) boosted.add(k);
   return (
     <div className="overlay" onClick={onStart}>
       <div className="modal sk intro">
         <h2 className="intro-title">Bonuses</h2>
+        {report.modifier && (
+          <div className="intro-modifier">
+            <span className="mod-emoji">{MODIFIER_INFO[report.modifier].icon}</span>
+            <span>
+              <b>{MODIFIER_INFO[report.modifier].name}</b>
+              <small>{MODIFIER_INFO[report.modifier].desc}</small>
+            </span>
+          </div>
+        )}
         <div className="intro-bonuses">
+          {starts.map((e, i) => (
+            <div key={`a${i}`} className="intro-bonus">
+              <AbilityBadge ability={e.ability} size={24} />
+              <span className="intro-gain">{ABILITY_INFO[e.ability].name}</span>
+            </div>
+          ))}
           {report.bonuses.map((b, i) => (
             <div key={i} className="intro-bonus">
               <BonusSource source={b.source} />

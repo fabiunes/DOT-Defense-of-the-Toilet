@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import {
+  ABILITY_INFO,
   KIND_NAME,
   MAX_CONCENTRATION,
   MAX_MERDASCORE,
@@ -12,7 +13,7 @@ import {
   TRAIT_VALUES,
 } from '../engine/data';
 import { countTraits, traitTier } from '../engine/traits';
-import type { ItemId, Merdomon, Rarity, RunState, Stats, TraitId } from '../engine/types';
+import type { AbilityId, ItemId, Merdomon, Rarity, RunState, Stats, TraitId } from '../engine/types';
 import { MerdomonArt } from './art';
 import { Icon, ItemIcon, STAT_ICON, TraitIcon } from './icons';
 
@@ -77,6 +78,15 @@ export function StatGrid({ stats, hp, compact = false }: { stats: Stats; hp?: nu
   );
 }
 
+/** An ability's icon in a small round badge. */
+export function AbilityBadge({ ability, size = 16 }: { ability: AbilityId; size?: number }) {
+  return (
+    <span className="ability-badge" style={{ width: size, height: size, fontSize: size * 0.62 }} title={ABILITY_INFO[ability].name}>
+      {ABILITY_INFO[ability].icon}
+    </span>
+  );
+}
+
 export function KindLabel({ m }: { m: Pick<Merdomon, 'rarity' | 'kind'> }) {
   return (
     <span className="kind-label">
@@ -111,7 +121,10 @@ export function MerdomonCard({
   return (
     <button className={`card sk ${selected ? 'selected' : ''} ${dim ? 'dim' : ''} ${big ? 'big' : ''}`} onClick={onClick}>
       <div className="card-top">
-        <Stars rarity={m.rarity} size={big ? 14 : 10} />
+        <span className="card-top-left">
+          <Stars rarity={m.rarity} size={big ? 14 : 10} />
+          {m.ability && <AbilityBadge ability={m.ability} size={big ? 20 : 16} />}
+        </span>
         <TraitList traits={m.traits} size={big ? 18 : 13} />
       </div>
       <MerdomonArt size={big ? 72 : 44} kind={m.kind} rarity={m.rarity} sad={m.hp <= 1 && m.stats.hp > 1} />
@@ -267,9 +280,19 @@ export function MerdomonDetail({ m, children }: { m: Merdomon; children?: ReactN
           </span>
         ))}
       </div>
-      <p className="muted ability">
-        <Icon name="question" size={14} /> Generic Ability
-      </p>
+      {m.ability ? (
+        <div className="ability-line">
+          <AbilityBadge ability={m.ability} size={26} />
+          <span>
+            <b>{ABILITY_INFO[m.ability].name}</b>
+            <small>{ABILITY_INFO[m.ability].desc}</small>
+          </span>
+        </div>
+      ) : (
+        <p className="muted ability">
+          <Icon name="question" size={14} /> Ability chosen when it joins
+        </p>
+      )}
       {children}
     </div>
   );

@@ -1,4 +1,4 @@
-import type { EnemyKind, ItemId, MerdomonKind, Rarity, StatKey, TraitId } from './types';
+import type { AbilityId, EnemyKind, ItemId, MerdomonKind, ModifierId, Rarity, StatKey, TraitId } from './types';
 
 export const ROUNDS = 10;
 export const MAX_STAT = 10;
@@ -7,7 +7,7 @@ export const MAX_MERDASCORE = 20;
 export const MAX_TEAM = 6;
 export const BASE_AP = 1;
 export const STARTER_CHOICES = 3;
-export const STARTING_TP = 5;
+export const STARTING_TP = 2;
 export const STARTING_MERDASCORE = 5;
 /** Max Concentration lost in a single wave. */
 export const MAX_CONCENTRATION_LOSS = 3;
@@ -16,6 +16,10 @@ export const EVACUATE_CHOICES = 2;
 /** Shop items / Evacuate options with the Game Boy. */
 export const GAMEBOY_CHOICES = 3;
 export const REROLL_COST = 2;
+export const ABILITY_CHOICES = 3;
+
+/** Starting bonus "resources" pack (the AP is for round 1 only). */
+export const START_PACK = { tp: 5, merdascore: 3, ap: 1 } as const;
 
 export const STAT_KEYS: readonly StatKey[] = ['hp', 'atk', 'def', 'spd'];
 
@@ -31,12 +35,12 @@ export const ENEMY_KINDS: readonly EnemyKind[] = ['phone', 'book', 'console'];
 
 /** How a creature's total is split across its stats (in %), highest share first; shares go to random stats. */
 export const KIND_CURVE: Record<MerdomonKind | EnemyKind, readonly number[]> = {
-  normal: [30, 30, 20, 20],
-  runny: [40, 30, 20, 10],
-  fart: [60, 30, 10, 0],
-  phone: [30, 30, 20, 20],
-  book: [40, 30, 20, 10],
-  console: [60, 30, 10, 0],
+  normal: [25, 25, 25, 25],
+  runny: [40, 40, 10, 10],
+  fart: [65, 25, 10, 0],
+  phone: [25, 25, 25, 25],
+  book: [40, 40, 10, 10],
+  console: [65, 25, 10, 0],
 };
 
 export const KIND_NAME: Record<MerdomonKind | EnemyKind, string> = {
@@ -109,6 +113,81 @@ export const ITEM_INFO: Record<ItemId, { name: string; traits: readonly TraitId[
   gameboy: { name: 'Game Boy', traits: ['paper', 'merdon'], desc: 'Choose among 3 options (instead of 2) in Shop and Evacuate' },
 };
 
+// ---------- Abilities (flat values, same for every size) ----------
+
+export const ABILITIES: readonly AbilityId[] = [
+  'cheerleader',
+  'frontliner',
+  'rearGuard',
+  'thickSkin',
+  'spiky',
+  'splash',
+  'giantSlayer',
+  'snowball',
+  'leech',
+  'secondWind',
+  'lastGasp',
+  'legacy',
+  'collector',
+  'fertilizer',
+  'stinkyAura',
+];
+
+export const ABILITY = {
+  cheerleaderAtk: 1,
+  frontlinerHp: 2,
+  frontlinerDef: 1,
+  rearGuardDef: 2,
+  thickSkin: 1,
+  spiky: 1,
+  splash: 1,
+  giantSlayerAtk: 2,
+  snowballAtk: 1,
+  leech: 1,
+  secondWindHp: 1,
+  lastGasp: 3,
+  legacyAtk: 2,
+  collectorTp: 2,
+  fertilizerMerdascore: 1,
+  stinkySpd: 1,
+} as const;
+
+export const ABILITY_INFO: Record<AbilityId, { name: string; icon: string; desc: string }> = {
+  cheerleader: { name: 'Cheerleader', icon: '📣', desc: 'The Merdomon behind it gets +1 ATK' },
+  frontliner: { name: 'Frontliner', icon: '🧱', desc: 'If first in line: +2 HP and +1 DEF' },
+  rearGuard: { name: 'Rear Guard', icon: '🛡️', desc: 'If last in line: +2 DEF' },
+  thickSkin: { name: 'Thick Skin', icon: '🦏', desc: 'Takes 1 less damage from every hit (min 1)' },
+  spiky: { name: 'Spiky', icon: '🌵', desc: 'Whoever hits it takes 1 damage' },
+  splash: { name: 'Splash', icon: '💦', desc: 'Its hits also deal 1 damage to the next enemy' },
+  giantSlayer: { name: 'Giant Slayer', icon: '🎯', desc: '+2 ATK against Big and Huge enemies' },
+  snowball: { name: 'Snowball', icon: '⛄', desc: '+1 ATK for each enemy it defeats' },
+  leech: { name: 'Leech', icon: '🩸', desc: 'Heals 1 HP when it deals damage' },
+  secondWind: { name: 'Second Wind', icon: '💨', desc: 'Once per fight, survives a deadly hit with 1 HP' },
+  lastGasp: { name: 'Last Gasp', icon: '💥', desc: 'When it falls, deals 3 damage to its killer' },
+  legacy: { name: 'Legacy', icon: '🎁', desc: 'When it falls, the next Merdomon gets +2 ATK' },
+  collector: { name: 'Collector', icon: '🪙', desc: '+2 Toilet Paper for each enemy it defeats' },
+  fertilizer: { name: 'Fertilizer', icon: '🌱', desc: '+1 Merdascore after the wave if it survived' },
+  stinkyAura: { name: 'Stinky Aura', icon: '🤢', desc: 'The enemy it faces has −1 SPD' },
+};
+
+// ---------- Wave modifiers ----------
+
+export const MODIFIERS: readonly ModifierId[] = ['groupChat', 'wifiDown', 'rushHour', 'doomscrolling', 'silentMode', 'jackpot'];
+export const MODIFIER_WAVES: readonly number[] = [3, 6, 9, 10];
+export const MODIFIER_DISABLE_COST = 3;
+/** AP added next round when a wave with an active modifier is won. */
+export const MODIFIER_AP_REWARD = 1;
+export const JACKPOT = { atk: 1, hp: 1 } as const;
+
+export const MODIFIER_INFO: Record<ModifierId, { name: string; icon: string; desc: string }> = {
+  groupChat: { name: 'Group Chat', icon: '💬', desc: 'One extra Small enemy joins at the front' },
+  wifiDown: { name: 'Wi-Fi Down', icon: '📵', desc: 'Your trait combat bonuses do not work' },
+  rushHour: { name: 'Rush Hour', icon: '⏰', desc: 'Enemies always strike first' },
+  doomscrolling: { name: 'Doomscrolling', icon: '📱', desc: 'Each time a Merdomon falls, all enemies get +1 ATK' },
+  silentMode: { name: 'Silent Mode', icon: '🔕', desc: 'Your Merdomon abilities do not trigger' },
+  jackpot: { name: 'Jackpot', icon: '🎰', desc: 'Enemies +1 ATK and +1 HP, but this wave\'s TP and Merdascore are doubled' },
+};
+
 export const BRUSH_MERDASCORE = 2;
 export const TOWEL_TP = 5;
 export const BIDET_CONCENTRATION = 1;
@@ -123,9 +202,9 @@ export interface WaveDef {
 /** Level 1 – Home Bathroom. common = Small, rare = Big, the Boss is Huge. */
 export const WAVES: readonly WaveDef[] = [
   { common: 1, rare: 0 },
-  { common: 2, rare: 0 },
-  { common: 2, rare: 1 },
+  { common: 3, rare: 0 },
   { common: 3, rare: 1 },
+  { common: 4, rare: 1 },
   { common: 4, rare: 1 },
   { common: 3, rare: 2 },
   { common: 3, rare: 3 },

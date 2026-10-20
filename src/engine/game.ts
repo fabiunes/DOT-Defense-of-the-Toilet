@@ -1,5 +1,8 @@
 import { simulateCombat } from './combat';
 import {
+  ABILITIES,
+  ABILITY,
+  ABILITY_CHOICES,
   BASE_AP,
   BIDET_CONCENTRATION,
   BRUSH_MERDASCORE,
@@ -15,6 +18,10 @@ import {
   MAX_MERDASCORE,
   MAX_STAT,
   MAX_TEAM,
+  MODIFIERS,
+  MODIFIER_AP_REWARD,
+  MODIFIER_DISABLE_COST,
+  MODIFIER_WAVES,
   REROLL_COST,
   ROUNDS,
   SHOP_OFFER,
@@ -23,13 +30,26 @@ import {
   STARTING_MERDASCORE,
   STAT_KEYS,
   STARTING_TP,
+  START_PACK,
   TOWEL_TP,
   TRADE,
 } from './data';
-import { createMerdomon, createWave } from './generate';
+import { createEnemy, createMerdomon, createWave } from './generate';
 import { Rng } from './rng';
 import { apBonus, combatBonus, countTraits, traitValue } from './traits';
-import type { CombatBonus, ItemId, Merdomon, Rarity, Reward, RunState, RunStats, StatKey } from './types';
+import type {
+  AbilityId,
+  CombatBonus,
+  ItemId,
+  Merdomon,
+  ModifierId,
+  Rarity,
+  Reward,
+  RunState,
+  RunStats,
+  StartBonusId,
+  StatKey,
+} from './types';
 
 // Every action is a pure function: it returns a new state, or the same state if the action isn't allowed.
 
@@ -60,19 +80,24 @@ function emptyStats(): RunStats {
 
 export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
   const s: RunState = {
-    version: 3,
+    version: 4,
     phase: 'starter',
     round: 1,
     concentration: MAX_CONCENTRATION,
     tp: STARTING_TP,
     merdascore: STARTING_MERDASCORE,
     ap: BASE_AP,
+    bonusAp: 0,
     team: [],
     items: [],
     shopOffer: [],
     starters: [],
+    startOptions: null,
     choices: [],
     pending: null,
+    pendingAbilities: [],
+    modifiers: {},
+    modifierDisabled: false,
     wave: [],
     lastCombat: null,
     rngState: seed,
@@ -82,14 +107,34 @@ export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
   s.starters = withRng(s, (rng) =>
     Array.from({ length: STARTER_CHOICES }, () => createMerdomon(rng, s.nextId++, 'common')),
   );
+  s.modifiers = withRng(s, (rng) => planModifiers(rng));
   return s;
+}
+
+/** One distinct modifier for each modifier wave; Jackpot never on the last wave. */
+function planModifiers(rng: Rng): Partial<Record<number, ModifierId>> {
+  const picks = rng.shuffle([...MODIFIERS]).slice(0, MODIFIER_WAVES.length);
+  const last = picks.length - 1;
+  if (picks[last] === 'jackpot') [picks[0], picks[last]] = [picks[last], picks[0]];
+  return Object.fromEntries(MODIFIER_WAVES.map((w, i) => [w, picks[i]]));
+}
+
+/** The modifier affecting the current wave (null if none or paid off). */
+export function activeModifier(s: RunState): ModifierId | null {
+  return s.modifierDisabled ? null : (s.modifiers[s.round] ?? null);
 }
 
 function startPreparation(s: RunState) {
   s.phase = 'preparation';
-  s.ap = BASE_AP + apBonus(s.team, s.items);
+  s.ap = BASE_AP + apBonus(s.team, s.items) + s.bonusAp;
+  s.bonusAp = 0;
+  s.modifierDisabled = false;
   s.wave = withRng(s, (rng) => createWave(rng, s.round, s.nextId));
   s.nextId += s.wave.length;
+  if (s.modifiers[s.round] === 'groupChat') {
+    const extra = withRng(s, (rng) => createEnemy(rng, s.nextId++, 'common'));
+    s.wave.unshift({ ...extra, extra: true });
+  }
   drawShop(s);
 }
 
@@ -111,12 +156,18 @@ function drawChoices(s: RunState, rarity: Rarity) {
 
 const inPreparation = (s: RunState) => s.phase === 'preparation' && !s.pending && s.choices.length === 0;
 
-// ---------- Starter & bonus point ----------
+/** A new Merdomon waits for its ability (1 of 3) and its +1 point. */
+function setPending(s: RunState, m: Merdomon) {
+  s.pending = m;
+  s.pendingAbilities = withRng(s, (rng) => rng.shuffle([...ABILITIES]).slice(0, ABILITY_CHOICES));
+}
+
+// ---------- Starter, new Merdomon, starting bonus ----------
 
 export function chooseStarter(prev: RunState, index: number): RunState {
   if (prev.phase !== 'starter' || prev.pending || !prev.starters[index]) return prev;
   const s = clone(prev);
-  s.pending = s.starters[index];
+  setPending(s, s.starters[index]);
   return s;
 }
 
@@ -125,6 +176,7 @@ export function cancelPending(prev: RunState): RunState {
   if (prev.phase !== 'starter' || !prev.pending) return prev;
   const s = clone(prev);
   s.pending = null;
+  s.pendingAbilities = [];
   return s;
 }
 
@@ -132,19 +184,53 @@ export function canAssignBonus(s: RunState, stat: StatKey): boolean {
   return !!s.pending && s.pending.stats[stat] < MAX_STAT;
 }
 
-export function assignBonusPoint(prev: RunState, stat: StatKey): RunState {
-  if (!canAssignBonus(prev, stat)) return prev;
+export function canConfirm(s: RunState, stat: StatKey, ability: AbilityId): boolean {
+  return canAssignBonus(s, stat) && s.pendingAbilities.includes(ability);
+}
+
+/** Gives the pending Merdomon its ability and +1 point, and adds it to the team. */
+export function confirmMerdomon(prev: RunState, stat: StatKey, ability: AbilityId): RunState {
+  if (!canConfirm(prev, stat, ability)) return prev;
   const s = clone(prev);
   const m = s.pending!;
   m.stats[stat]++;
   if (stat === 'hp') m.hp++;
+  m.ability = ability;
   s.pending = null;
+  s.pendingAbilities = [];
   s.team.push(m);
   s.stats.merdomonCreated++;
   if (s.phase === 'starter') {
     s.starters = [];
+    s.phase = 'startBonus';
+    s.startOptions = withRng(s, (rng) => ({
+      item: rng.pick(ITEMS),
+      merdomon: createMerdomon(rng, s.nextId++, 'common'),
+    }));
+  } else if (s.phase === 'startBonus') {
+    s.startOptions = null;
     startPreparation(s);
   }
+  return s;
+}
+
+/** Starting bonus: an item, a Small Merdomon (then ability + +1), or a resources pack. */
+export function chooseStartBonus(prev: RunState, choice: StartBonusId): RunState {
+  if (prev.phase !== 'startBonus' || !prev.startOptions || prev.pending) return prev;
+  const s = clone(prev);
+  const options = s.startOptions!;
+  if (choice === 'merdomon') {
+    setPending(s, options.merdomon);
+    return s;
+  }
+  if (choice === 'item') s.items.push(options.item);
+  else {
+    s.tp += START_PACK.tp;
+    s.merdascore = Math.min(MAX_MERDASCORE, s.merdascore + START_PACK.merdascore);
+    s.bonusAp += START_PACK.ap;
+  }
+  s.startOptions = null;
+  startPreparation(s);
   return s;
 }
 
@@ -187,7 +273,7 @@ export function evacuate(prev: RunState, rarity: Rarity): RunState {
 export function chooseEvacuated(prev: RunState, index: number): RunState {
   if (prev.phase !== 'preparation' || !prev.choices[index]) return prev;
   const s = clone(prev);
-  s.pending = s.choices[index];
+  setPending(s, s.choices[index]);
   s.choices = [];
   return s;
 }
@@ -318,6 +404,28 @@ export function tradeStat(prev: RunState, id: number, stat: StatKey): RunState {
   return s;
 }
 
+// ---------- Wave modifier ----------
+
+export function canDisableModifier(s: RunState): boolean {
+  return (
+    inPreparation(s) &&
+    !!s.modifiers[s.round] &&
+    !s.modifierDisabled &&
+    s.round < ROUNDS &&
+    s.tp >= MODIFIER_DISABLE_COST
+  );
+}
+
+/** Pays to skip the modifier; its reward is lost too. */
+export function disableModifier(prev: RunState): RunState {
+  if (!canDisableModifier(prev)) return prev;
+  const s = clone(prev);
+  s.tp -= MODIFIER_DISABLE_COST;
+  s.modifierDisabled = true;
+  s.wave = s.wave.filter((e) => !e.extra);
+  return s;
+}
+
 // ---------- Combat ----------
 
 export function canFight(s: RunState): boolean {
@@ -338,6 +446,9 @@ function applyReward(s: RunState, r: Reward) {
       s.concentration = clamp(s.concentration + r.amount, 0, MAX_CONCENTRATION);
       if (r.amount < 0) s.stats.concentrationLost -= r.amount;
       break;
+    case 'ap':
+      s.bonusAp += r.amount;
+      break;
   }
 }
 
@@ -347,11 +458,13 @@ export function fight(prev: RunState): RunState {
   const s = clone(prev);
   const traits = countTraits(s.team, s.items);
   const toothbrushHp = s.items.includes('toothbrush') ? s.ap : 0;
-  const result = withRng(s, (rng) => simulateCombat(s.team, s.wave, s.items, rng, toothbrushHp));
+  const modifier = activeModifier(s);
+  const result = withRng(s, (rng) => simulateCombat(s.team, s.wave, s.items, rng, { extraHp: toothbrushHp, modifier }));
 
   // What changes at combat start, for the pre-fight recap.
   const bonuses: CombatBonus[] = [];
-  const statBonus = combatBonus(s.team, s.items);
+  const statBonus =
+    modifier === 'wifiDown' ? { hp: 0, atk: 0, def: 0, spd: 0 } : combatBonus(s.team, s.items);
   const BONUS_TRAIT = { hp: 'healthy', atk: 'fighter', def: 'defender', spd: 'haste' } as const;
   for (const k of STAT_KEYS) if (statBonus[k] > 0) bonuses.push({ source: BONUS_TRAIT[k], stat: k, amount: statBonus[k] });
   if (toothbrushHp > 0) bonuses.push({ source: 'toothbrush', stat: 'hp', amount: toothbrushHp });
@@ -367,6 +480,22 @@ export function fight(prev: RunState): RunState {
   if (merdon > 0) rewards.push({ source: 'merdon', resource: 'merdascore', amount: merdon });
   if (s.items.includes('brush')) rewards.push({ source: 'brush', resource: 'merdascore', amount: BRUSH_MERDASCORE });
   if (s.items.includes('towel')) rewards.push({ source: 'towel', resource: 'tp', amount: TOWEL_TP });
+  if (modifier !== 'silentMode') {
+    s.team.forEach((m, i) => {
+      if (m.ability === 'collector' && result.kills[i] > 0)
+        rewards.push({ source: 'collector', resource: 'tp', amount: ABILITY.collectorTp * result.kills[i] });
+      if (m.ability === 'fertilizer' && result.hpAfter[i] > 0)
+        rewards.push({ source: 'fertilizer', resource: 'merdascore', amount: ABILITY.fertilizerMerdascore });
+    });
+  }
+  if (modifier === 'jackpot') {
+    for (const res of ['tp', 'merdascore'] as const) {
+      const extra = rewards.filter((r) => r.resource === res && r.amount > 0).reduce((t, r) => t + r.amount, 0);
+      if (extra > 0) rewards.push({ source: 'jackpot', resource: res, amount: extra });
+    }
+  }
+  if (modifier && result.won && s.round < ROUNDS)
+    rewards.push({ source: modifier, resource: 'ap', amount: MODIFIER_AP_REWARD });
   for (const r of rewards) applyReward(s, r);
 
   // Combat-only bonus HP is dropped; fallen Merdomon come back with half their max HP.
@@ -385,6 +514,7 @@ export function fight(prev: RunState): RunState {
   s.lastCombat = {
     round: s.round,
     bonuses,
+    modifier,
     won: result.won,
     events: result.events,
     player: result.player,

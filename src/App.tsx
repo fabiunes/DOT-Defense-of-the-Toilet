@@ -7,6 +7,7 @@ import { CombatScreen } from './ui/screens/CombatScreen';
 import { EndScreen } from './ui/screens/EndScreen';
 import { HomeScreen } from './ui/screens/HomeScreen';
 import { PrepScreen } from './ui/screens/PrepScreen';
+import { StartBonusScreen } from './ui/screens/StartBonusScreen';
 import { StarterScreen } from './ui/screens/StarterScreen';
 import { TutorialScreen } from './ui/screens/TutorialScreen';
 import type { Update } from './ui/update';
@@ -44,6 +45,8 @@ export default function App() {
     );
   } else if (run.phase === 'starter') {
     content = <StarterScreen run={run} update={update} />;
+  } else if (run.phase === 'startBonus') {
+    content = <StartBonusScreen run={run} update={update} />;
   } else if (run.phase === 'preparation') {
     content = <PrepScreen run={run} update={update} />;
   } else if (run.phase === 'combat' && run.lastCombat) {

@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.3
+
+### Nuove funzioni
+- **15 abilità dei Merdomon**: ogni nuovo Merdomon (starter, Evacuate, bonus di partenza) sceglie **1 abilità tra 3** nella stessa schermata del +1, poi *Confirm*. Cheerleader, Frontliner, Rear Guard, Thick Skin, Spiky, Splash, Giant Slayer, Snowball, Leech, Second Wind, Last Gasp, Legacy, Collector, Fertilizer, Stinky Aura. Valori fissi per tutte le grandezze.
+- **Modificatori delle wave** sulle wave 3, 6, 9 e 10: Group Chat, Wi-Fi Down, Rush Hour, Doomscrolling, Silent Mode, Jackpot.
+  - Vincere una wave con il modificatore attivo dà **+1 AP** nel round successivo.
+  - Si può disattivare per **3 TP** (perdendo la ricompensa), tranne alla wave 10.
+- **Bonus di partenza**: dopo lo starter scegli tra un oggetto casuale, un Merdomon Small casuale o un pacchetto Supplies (+5 TP, +3 Merdascore, +1 AP nel round 1).
+- In combattimento compaiono **fumetti** quando un'abilità si attiva; la schermata Bonuses mostra anche modificatore e abilità di inizio combattimento.
+- Tutorial: nuove pagine **Starting a run**, **Abilities (1/2, 2/2)** e **Wave modifiers**.
+
+### Modifiche alle regole
+- Nuove curve delle statistiche, uguali per Merdomon e nemici:
+  - Normal / Smartphone **25·25·25·25** (tuttofare);
+  - Runny / Book **40·40·10·10** (due statistiche forti);
+  - Fart / Console **65·25·10·0** (una statistica fortissima).
+- Si parte con **2 TP** e 5 Merdascore.
+- Un nemico Small in più nelle **wave 2, 3 e 4**.
+
+> I salvataggi della v0.2 non sono compatibili: il tasto Continue li ignora.
+
 ## v0.2
 
 ### Nuove funzioni

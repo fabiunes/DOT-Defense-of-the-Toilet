@@ -4,7 +4,24 @@ export type TraitId = 'paper' | 'merdon' | 'healthy' | 'haste' | 'fighter' | 'de
 export type ItemId = 'brush' | 'magazine' | 'bidet' | 'shower' | 'window' | 'towel' | 'toothbrush' | 'flipflops' | 'gameboy';
 export type MerdomonKind = 'normal' | 'runny' | 'fart';
 export type EnemyKind = 'phone' | 'book' | 'console';
-export type AbilityId = 'generic';
+export type AbilityId =
+  | 'cheerleader'
+  | 'frontliner'
+  | 'rearGuard'
+  | 'thickSkin'
+  | 'spiky'
+  | 'splash'
+  | 'giantSlayer'
+  | 'snowball'
+  | 'leech'
+  | 'secondWind'
+  | 'lastGasp'
+  | 'legacy'
+  | 'collector'
+  | 'fertilizer'
+  | 'stinkyAura';
+export type ModifierId = 'groupChat' | 'wifiDown' | 'rushHour' | 'doomscrolling' | 'silentMode' | 'jackpot';
+export type StartBonusId = 'item' | 'merdomon' | 'resources';
 
 export interface Stats {
   hp: number;
@@ -23,7 +40,8 @@ export interface Merdomon {
   /** Current HP, persists between rounds. */
   hp: number;
   traits: TraitId[];
-  ability: AbilityId;
+  /** Chosen together with the +1 point; null until then. */
+  ability: AbilityId | null;
 }
 
 export interface Enemy {
@@ -31,18 +49,20 @@ export interface Enemy {
   rarity: Rarity;
   kind: EnemyKind;
   stats: Stats;
-  ability: AbilityId;
   boss: boolean;
+  /** Added by the Group Chat modifier (removed if the modifier is disabled). */
+  extra?: boolean;
 }
 
 export type Side = 'p' | 'e';
 
-/** Snapshot of a combatant with combat-time stats (trait bonuses applied). */
+/** Snapshot of a combatant with combat-time stats (trait and start-of-fight bonuses applied). */
 export interface Fighter {
   id: number;
   rarity: Rarity;
   kind: MerdomonKind | EnemyKind;
   boss: boolean;
+  ability: AbilityId | null;
   maxHp: number;
   hp: number;
   atk: number;
@@ -56,10 +76,13 @@ export type CombatEvent =
   | { type: 'attack'; side: Side; damage: number; hp: number; double: boolean }
   | { type: 'death'; side: Side; index: number }
   | { type: 'revive'; index: number; hp: number }
+  /** Merdomon `p` triggers its ability; `target` (if any) is who it changed, with the HP after. */
+  | { type: 'ability'; ability: AbilityId; p: number; target?: { side: Side; index: number; hp: number } }
+  | { type: 'modifier'; modifier: ModifierId }
   | { type: 'end'; won: boolean };
 
-export type Resource = 'tp' | 'merdascore' | 'concentration';
-export type RewardSource = 'survivors' | 'enemies' | 'damage' | TraitId | ItemId;
+export type Resource = 'tp' | 'merdascore' | 'concentration' | 'ap';
+export type RewardSource = 'survivors' | 'enemies' | 'damage' | TraitId | ItemId | AbilityId | ModifierId;
 
 export interface Reward {
   source: RewardSource;
@@ -77,6 +100,7 @@ export interface CombatBonus {
 export interface CombatReport {
   round: number;
   bonuses: CombatBonus[];
+  modifier: ModifierId | null;
   won: boolean;
   events: CombatEvent[];
   player: Fighter[];
@@ -99,26 +123,36 @@ export interface RunStats {
   itemsBought: number;
 }
 
-export type Phase = 'starter' | 'preparation' | 'combat' | 'gameover' | 'victory';
+export type Phase = 'starter' | 'startBonus' | 'preparation' | 'combat' | 'gameover' | 'victory';
 
 export interface RunState {
-  version: 3;
+  version: 4;
   phase: Phase;
   round: number;
   concentration: number;
   tp: number;
   merdascore: number;
   ap: number;
+  /** AP added at the next preparation (modifier reward, starting pack). */
+  bonusAp: number;
   team: Merdomon[];
   items: ItemId[];
   /** Items on sale this round (random, never already owned). */
   shopOffer: ItemId[];
   /** Starter choices (only during the 'starter' phase). */
   starters: Merdomon[];
+  /** Starting bonus options (only during the 'startBonus' phase). */
+  startOptions: { item: ItemId; merdomon: Merdomon } | null;
   /** Evacuate options to pick one from (empty when none is pending). */
   choices: Merdomon[];
-  /** A freshly generated Merdomon waiting for its +1 bonus point. */
+  /** A freshly generated Merdomon waiting for its ability and +1 point. */
   pending: Merdomon | null;
+  /** The 3 abilities offered to the pending Merdomon. */
+  pendingAbilities: AbilityId[];
+  /** Wave modifiers planned for this run, by round. */
+  modifiers: Partial<Record<number, ModifierId>>;
+  /** The current round's modifier was paid off. */
+  modifierDisabled: boolean;
   /** The upcoming wave, generated at the start of each preparation. */
   wave: Enemy[];
   lastCombat: CombatReport | null;

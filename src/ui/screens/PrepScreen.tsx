@@ -5,7 +5,11 @@ import {
   ITEM_INFO,
   KIND_NAME,
   MAX_TEAM,
+  MODIFIER_AP_REWARD,
+  MODIFIER_DISABLE_COST,
+  MODIFIER_INFO,
   REROLL_COST,
+  ROUNDS,
   SIZE_NAME,
   STAT_KEYS,
   CONCENTRATE_GAIN,
@@ -30,7 +34,7 @@ import {
 } from '../components';
 import { Icon, ItemIcon, STAT_ICON, TraitIcon, type IconName } from '../icons';
 import type { Update } from '../update';
-import { BonusPointModal } from './BonusPointModal';
+import { NewMerdomonModal } from './NewMerdomonModal';
 
 type Panel =
   | { kind: 'actions' }
@@ -136,7 +140,7 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       )}
       {panel?.kind === 'evacuate' && <EvacuatePanel run={run} update={update} onClose={close} />}
       {panel?.kind === 'shop' && <ShopPanel run={run} update={update} onClose={close} />}
-      {panel?.kind === 'scout' && <ScoutPanel run={run} onClose={close} />}
+      {panel?.kind === 'scout' && <ScoutPanel run={run} update={update} onClose={close} />}
       {panel?.kind === 'trade' && (
         <TradePanel
           run={run}
@@ -221,14 +225,18 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       )}
 
       {run.choices.length > 0 && <ChoicesModal run={run} update={update} />}
-      {run.pending && <BonusPointModal run={run} m={run.pending} update={update} />}
+      {run.pending && <NewMerdomonModal key={run.pending.id} run={run} m={run.pending} update={update} />}
     </div>
   );
 }
 
 export function WavePreview({ run }: { run: RunState }) {
+  const planned = run.modifiers[run.round];
   return (
     <span className="wave-preview">
+      {planned && (
+        <span className={`wave-mod ${run.modifierDisabled ? 'off' : ''}`}>{MODIFIER_INFO[planned].icon}</span>
+      )}
       {run.wave.map((e) =>
         e.boss ? (
           <Icon key={e.id} name="crown" size={16} fill="#1b1b1b" />
@@ -511,15 +519,47 @@ function ShopPanel({ run, update, onClose }: { run: RunState; update: Update; on
   );
 }
 
+/** This wave's modifier: effect, reward, and the option to pay it off. */
+function ModifierBox({ run, update }: { run: RunState; update: Update }) {
+  const id = run.modifiers[run.round];
+  if (!id) return null;
+  const info = MODIFIER_INFO[id];
+  const lastWave = run.round >= ROUNDS;
+  return (
+    <div className={`modifier-box ${run.modifierDisabled ? 'off' : ''}`}>
+      <span className="modifier-icon">{info.icon}</span>
+      <span className="modifier-text">
+        <b>{info.name}</b>
+        <small>{info.desc}</small>
+        {!run.modifierDisabled && !lastWave && (
+          <small className="modifier-reward">
+            Win: +{MODIFIER_AP_REWARD} <Icon name="ap" size={11} fill="#1b1b1b" /> next round
+          </small>
+        )}
+      </span>
+      {run.modifierDisabled ? (
+        <span className="muted">Off</span>
+      ) : (
+        !lastWave && (
+          <button className="disable-btn" disabled={!G.canDisableModifier(run)} onClick={() => update(G.disableModifier)}>
+            Disable <CostBadge tp={MODIFIER_DISABLE_COST} />
+          </button>
+        )
+      )}
+    </div>
+  );
+}
+
 /** Preview of the incoming wave, in fighting order. */
-function ScoutPanel({ run, onClose }: { run: RunState; onClose: () => void }) {
+function ScoutPanel({ run, update, onClose }: { run: RunState; update: Update; onClose: () => void }) {
   return (
     <Modal onClose={onClose} className="scout-panel">
       <div className="panel-head">
         <Icon name="eye" size={28} fill="#fff" />
         <WavePreview run={run} />
       </div>
-      <div className="scout-list">
+      <ModifierBox run={run} update={update} />
+      <div className={`scout-list ${run.wave.length > 6 ? 'tight' : ''}`}>
         {run.wave.map((e, i) => (
           <div key={e.id} className={`scout-row ${e.boss ? 'boss' : ''}`}>
             <span className="scout-index">{i + 1}</span>

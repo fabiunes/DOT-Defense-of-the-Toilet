@@ -31,10 +31,12 @@ export function splitStats(rng: Rng, total: number, curve: readonly number[]): S
   for (let i = 0; i < vals.length; i++) {
     let excess = vals[i] - MAX_STAT;
     for (let j = 0; excess > 0 && j < vals.length; j++) {
-      if (j === i || vals[j] >= MAX_STAT) continue;
-      vals[j]++;
-      vals[i]--;
-      excess--;
+      if (j === i) continue;
+      while (excess > 0 && vals[j] < MAX_STAT) {
+        vals[j]++;
+        vals[i]--;
+        excess--;
+      }
     }
   }
 
@@ -44,17 +46,17 @@ export function splitStats(rng: Rng, total: number, curve: readonly number[]): S
   return stats;
 }
 
-/** Merdomon are created 1 point short: the player adds the last one (see assignBonusPoint). */
+/** Merdomon are created 1 point short: the player adds the last one (see confirmMerdomon). */
 export function createMerdomon(rng: Rng, id: number, rarity: Rarity): Merdomon {
   const kind = rng.pick(MERDOMON_KINDS);
   const stats = splitStats(rng, SIZE_TOTAL[rarity] - 1, KIND_CURVE[kind]);
   const traits = Array.from({ length: RARITY_TRAITS[rarity] }, () => rng.pick(TRAITS));
-  return { id, rarity, kind, stats, hp: stats.hp, traits, ability: 'generic' };
+  return { id, rarity, kind, stats, hp: stats.hp, traits, ability: null };
 }
 
 export function createEnemy(rng: Rng, id: number, rarity: Rarity, boss = false): Enemy {
   const kind = rng.pick(ENEMY_KINDS);
-  return { id, rarity, kind, stats: splitStats(rng, SIZE_TOTAL[rarity], KIND_CURVE[kind]), ability: 'generic', boss };
+  return { id, rarity, kind, stats: splitStats(rng, SIZE_TOTAL[rarity], KIND_CURVE[kind]), boss };
 }
 
 /** Enemies in random order; the Boss (if any) is always last. */

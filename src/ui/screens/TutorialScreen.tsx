@@ -1,5 +1,7 @@
 import { useRef, useState, type ReactNode } from 'react';
 import {
+  ABILITIES,
+  ABILITY_INFO,
   CONCENTRATE_GAIN,
   COSTS,
   ENEMY_KINDS,
@@ -12,11 +14,17 @@ import {
   MAX_CONCENTRATION_LOSS,
   MAX_MERDASCORE,
   MERDOMON_KINDS,
+  MODIFIERS,
+  MODIFIER_AP_REWARD,
+  MODIFIER_DISABLE_COST,
+  MODIFIER_INFO,
+  MODIFIER_WAVES,
   RARITY_TRAITS,
   REROLL_COST,
   ROUNDS,
   SIZE_NAME,
   SIZE_TOTAL,
+  START_PACK,
   TRAITS,
   TRAIT_INFO,
   TRAIT_VALUES,
@@ -24,36 +32,41 @@ import {
 } from '../../engine/data';
 import type { Merdomon, Rarity, RunState } from '../../engine/types';
 import { EnemyArt, MerdomonArt } from '../art';
-import { CostBadge, InfoRow, MerdomonCard, Stars, StatValue, TopBar, TraitsRow } from '../components';
+import { AbilityBadge, CostBadge, InfoRow, MerdomonCard, Stars, StatValue, TopBar, TraitsRow } from '../components';
 import { Icon, ItemIcon, TraitIcon, type IconName } from '../icons';
 import { PrepScreen } from './PrepScreen';
 
 // ---------- Demo data, shaped like a real run in progress ----------
 
 const demoTeam: Merdomon[] = [
-  { id: 1, rarity: 'rare', kind: 'normal', stats: { hp: 6, atk: 5, def: 2, spd: 3 }, hp: 4, traits: ['fighter', 'paper'], ability: 'generic' },
-  { id: 2, rarity: 'common', kind: 'runny', stats: { hp: 4, atk: 2, def: 3, spd: 1 }, hp: 4, traits: ['fighter'], ability: 'generic' },
-  { id: 3, rarity: 'common', kind: 'fart', stats: { hp: 3, atk: 2, def: 1, spd: 3 }, hp: 3, traits: ['haste'], ability: 'generic' },
+  { id: 1, rarity: 'rare', kind: 'normal', stats: { hp: 6, atk: 5, def: 2, spd: 3 }, hp: 4, traits: ['fighter', 'paper'], ability: 'cheerleader' },
+  { id: 2, rarity: 'common', kind: 'runny', stats: { hp: 4, atk: 2, def: 3, spd: 1 }, hp: 4, traits: ['fighter'], ability: 'snowball' },
+  { id: 3, rarity: 'common', kind: 'fart', stats: { hp: 3, atk: 2, def: 1, spd: 3 }, hp: 3, traits: ['haste'], ability: 'spiky' },
 ];
 
 const demoRun: RunState = {
-  version: 3,
+  version: 4,
   phase: 'preparation',
   round: 3,
   concentration: 7,
   tp: 24,
   merdascore: 12,
   ap: 1,
+  bonusAp: 0,
   team: demoTeam,
   items: ['brush', 'window'],
   shopOffer: [],
   starters: [],
+  startOptions: null,
   choices: [],
   pending: null,
+  pendingAbilities: [],
+  modifiers: { 3: 'rushHour' },
+  modifierDisabled: false,
   wave: [
-    { id: 10, rarity: 'common', kind: 'phone', stats: { hp: 3, atk: 2, def: 1, spd: 3 }, ability: 'generic', boss: false },
-    { id: 11, rarity: 'rare', kind: 'book', stats: { hp: 5, atk: 4, def: 2, spd: 3 }, ability: 'generic', boss: false },
-    { id: 12, rarity: 'common', kind: 'console', stats: { hp: 4, atk: 2, def: 1, spd: 2 }, ability: 'generic', boss: false },
+    { id: 10, rarity: 'common', kind: 'phone', stats: { hp: 3, atk: 2, def: 1, spd: 3 }, boss: false },
+    { id: 11, rarity: 'rare', kind: 'book', stats: { hp: 5, atk: 4, def: 2, spd: 3 }, boss: false },
+    { id: 12, rarity: 'common', kind: 'console', stats: { hp: 4, atk: 2, def: 1, spd: 2 }, boss: false },
   ],
   lastCombat: null,
   rngState: 1,
@@ -161,6 +174,39 @@ const pages: Page[] = [
     ),
   },
   {
+    title: 'Starting a run',
+    body: (
+      <>
+        <Row icon={<span className="tut-step">1</span>} title="Pick a starter">
+          Choose 1 of 3 Small Merdomon.
+        </Row>
+        <Row icon={<span className="tut-step">2</span>} title="Ability and +1">
+          Every new Merdomon picks <b>1 of 3 abilities</b> and a stat for its +1 point, then Confirm.
+        </Row>
+        <Row icon={<span className="tut-step">3</span>} title="Starting bonus">
+          Choose one:
+        </Row>
+        <div className="tut-starts">
+          <span className="sk">
+            <ItemIcon item="towel" size={26} />
+            <small>A random item</small>
+          </span>
+          <span className="sk">
+            <MerdomonArt size={30} rarity="common" />
+            <small>A Small Merdomon</small>
+          </span>
+          <span className="sk">
+            <Icon name="shop" size={26} fill="#fff" />
+            <small>
+              +{START_PACK.tp} {ii('tp')} +{START_PACK.merdascore} {ii('poop')} +{START_PACK.ap} {ii('ap', '#1b1b1b')}
+            </small>
+          </span>
+        </div>
+        <p className="tut-note">The pack's extra Action Point is for round 1 only.</p>
+      </>
+    ),
+  },
+  {
     title: 'Top bar',
     body: (
       <>
@@ -221,6 +267,9 @@ const pages: Page[] = [
           <div className="tut-legend">
             <span>
               <Stars rarity="rare" size={13} /> Size
+            </span>
+            <span>
+              <AbilityBadge ability="cheerleader" size={16} /> Ability
             </span>
             <span>
               <TraitIcon trait="fighter" size={15} />
@@ -306,8 +355,34 @@ const pages: Page[] = [
           ))}
         </div>
         <p className="tut-note">
-          Example: a Huge Fart (20 points) gets 10 · 7 · 2 · 1. A Huge Normal gets 6 · 6 · 4 · 4.
+          With 20 points: Normal 5 · 5 · 5 · 5, Runny 8 · 8 · 2 · 2, Fart 10 · 7 · 2 · 1.
         </p>
+      </>
+    ),
+  },
+  {
+    title: 'Abilities (1/2)',
+    body: (
+      <>
+        <p className="tut-note">Chosen when a Merdomon joins. Same strength for every size.</p>
+        {ABILITIES.slice(0, 8).map((a) => (
+          <Row key={a} icon={<AbilityBadge ability={a} size={26} />} title={ABILITY_INFO[a].name}>
+            {ABILITY_INFO[a].desc}
+          </Row>
+        ))}
+      </>
+    ),
+  },
+  {
+    title: 'Abilities (2/2)',
+    body: (
+      <>
+        <p className="tut-note">Chosen when a Merdomon joins. Same strength for every size.</p>
+        {ABILITIES.slice(8).map((a) => (
+          <Row key={a} icon={<AbilityBadge ability={a} size={26} />} title={ABILITY_INFO[a].name}>
+            {ABILITY_INFO[a].desc}
+          </Row>
+        ))}
       </>
     ),
   },
@@ -370,7 +445,7 @@ const pages: Page[] = [
           All Merdomon back to full HP.
         </Row>
         <Row icon={I('toilet')} title="Evacuate">
-          Pick 1 of 2 new Merdomon (max 6), then give it +1 to a stat.
+          Pick 1 of 2 new Merdomon (max 6), then its ability and +1.
         </Row>
         <Row icon={I('shop')} title="Shop">
           Buy one of the 2 items on sale this round.
@@ -443,8 +518,28 @@ const pages: Page[] = [
           Huge ({SIZE_TOTAL.epic} points), only in wave {ROUNDS}, always last in line.
         </Row>
         <p className="tut-note">
-          Use {ii('eye')} Scout to see their stats. When you're ready, tap Next Wave: the fight plays out by itself.
+          Use {ii('eye')} Scout to see their stats and the wave modifier. Then tap Next Wave: the fight plays out by itself.
         </p>
+      </>
+    ),
+  },
+  {
+    title: 'Wave modifiers',
+    body: (
+      <>
+        <p className="tut-note">
+          Waves {MODIFIER_WAVES.join(', ')} come with a twist, shown on Next Wave and in Scout. Win it for{' '}
+          <b>
+            +{MODIFIER_AP_REWARD} {ii('ap', '#1b1b1b')}
+          </b>{' '}
+          next round, or pay {MODIFIER_DISABLE_COST} {ii('tp')} to switch it off (and lose the reward). Wave 10 can't be
+          switched off.
+        </p>
+        {MODIFIERS.map((m) => (
+          <Row key={m} icon={<span className="mod-emoji">{MODIFIER_INFO[m].icon}</span>} title={MODIFIER_INFO[m].name}>
+            {MODIFIER_INFO[m].desc}
+          </Row>
+        ))}
       </>
     ),
   },

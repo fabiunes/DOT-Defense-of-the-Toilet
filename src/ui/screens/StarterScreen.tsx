@@ -3,7 +3,7 @@ import type { RunState } from '../../engine/types';
 import { PlayerArt } from '../art';
 import { MerdomonCard } from '../components';
 import type { Update } from '../update';
-import { BonusPointModal } from './BonusPointModal';
+import { NewMerdomonModal } from './NewMerdomonModal';
 
 export function StarterScreen({ run, update }: { run: RunState; update: Update }) {
   return (
@@ -17,7 +17,9 @@ export function StarterScreen({ run, update }: { run: RunState; update: Update }
       <div className="home-art">
         <PlayerArt />
       </div>
-      {run.pending && <BonusPointModal run={run} m={run.pending} update={update} onCancel={() => update(cancelPending)} />}
+      {run.pending && (
+        <NewMerdomonModal key={run.pending.id} run={run} m={run.pending} update={update} onCancel={() => update(cancelPending)} />
+      )}
     </div>
   );
 }

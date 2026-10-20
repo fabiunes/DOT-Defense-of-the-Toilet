@@ -9,23 +9,28 @@ import type { Enemy, Merdomon, Rarity, RunState, Stats } from './types';
 
 const mk = (stats: Partial<Stats>, extra: Partial<Merdomon> = {}): Merdomon => {
   const s = { hp: 5, atk: 3, def: 1, spd: 1, ...stats };
-  return { id: Math.random(), rarity: 'common', kind: 'normal', stats: s, hp: s.hp, traits: [], ability: 'generic', ...extra };
+  return { id: Math.random(), rarity: 'common', kind: 'normal', stats: s, hp: s.hp, traits: [], ability: null, ...extra };
 };
 const foe = (stats: Partial<Stats>, boss = false): Enemy => ({
   id: Math.random(),
   rarity: 'common',
   kind: 'phone',
   stats: { hp: 5, atk: 3, def: 1, spd: 1, ...stats },
-  ability: 'generic',
   boss,
 });
+
+/** Confirms the pending Merdomon with the given stat and its first ability option. */
+const confirm = (s: RunState, stat: Parameters<typeof G.confirmMerdomon>[1] = 'hp') =>
+  G.confirmMerdomon(s, stat, s.pendingAbilities[0]);
 
 /** A run in preparation with a known team. */
 function prepRun(patch: Partial<RunState> = {}): RunState {
   let s = G.newRun(42);
   s = G.chooseStarter(s, 0);
-  s = G.assignBonusPoint(s, 'atk');
-  return { ...s, ...patch };
+  s = confirm(s, 'atk');
+  s = G.chooseStartBonus(s, 'resources');
+  // Neutralise the starting pack so tests start from the base values.
+  return { ...s, ap: 1, items: [], ...patch };
 }
 
 describe('rng', () => {
@@ -42,14 +47,18 @@ describe('generation', () => {
   it('splits stats exactly by the kind curve, within 1..10', () => {
     const rng = new Rng(1);
     const cases: [keyof typeof KIND_CURVE, number, number[]][] = [
+      ['normal', 9, [3, 2, 2, 2]],
       ['normal', 10, [3, 3, 2, 2]],
-      ['normal', 15, [5, 4, 3, 3]],
-      ['normal', 20, [6, 6, 4, 4]],
-      ['runny', 10, [4, 3, 2, 1]],
-      ['runny', 15, [6, 5, 3, 1]],
-      ['runny', 20, [8, 6, 4, 2]],
-      ['fart', 10, [5, 3, 1, 1]],
-      ['fart', 15, [8, 5, 1, 1]],
+      ['normal', 15, [4, 4, 4, 3]],
+      ['normal', 20, [5, 5, 5, 5]],
+      ['runny', 9, [4, 3, 1, 1]],
+      ['runny', 10, [4, 4, 1, 1]],
+      ['runny', 15, [6, 6, 2, 1]],
+      ['runny', 20, [8, 8, 2, 2]],
+      ['fart', 9, [5, 2, 1, 1]],
+      ['fart', 10, [6, 2, 1, 1]],
+      ['fart', 15, [9, 4, 1, 1]],
+      ['fart', 19, [10, 6, 2, 1]],
       ['fart', 20, [10, 7, 2, 1]],
     ];
     for (const [kind, total, expected] of cases) expect(sorted(splitStats(rng, total, KIND_CURVE[kind]))).toEqual(expected);
@@ -60,7 +69,7 @@ describe('generation', () => {
     const tops = new Set<string>();
     for (let i = 0; i < 50; i++) {
       const st = splitStats(rng, 10, KIND_CURVE.fart);
-      tops.add(Object.entries(st).find(([, v]) => v === 5)![0]);
+      tops.add(Object.entries(st).find(([, v]) => v === 6)![0]);
     }
     expect(tops.size).toBe(4);
   });
@@ -88,7 +97,7 @@ describe('generation', () => {
     expect(wave[5].boss).toBe(true);
     expect(wave[5].rarity).toBe('epic');
     expect(wave.slice(0, 5).every((e) => e.rarity === 'rare' && !e.boss)).toBe(true);
-    expect(createWave(new Rng(3), 4, 1).map((e) => e.rarity).sort()).toEqual(['common', 'common', 'common', 'rare']);
+    expect(createWave(new Rng(3), 4, 1).map((e) => e.rarity).sort()).toEqual(['common', 'common', 'common', 'common', 'rare']);
   });
 });
 
@@ -156,7 +165,7 @@ describe('combat', () => {
 
   it('applies trait bonuses and Toothbrush HP for combat only', () => {
     const team = [mk({ hp: 3, atk: 1 }, { traits: ['fighter', 'fighter'] })];
-    const r = simulateCombat(team, [foe({ hp: 10, def: 0 })], [], new Rng(1), 2);
+    const r = simulateCombat(team, [foe({ hp: 10, def: 0 })], [], new Rng(1), { extraHp: 2 });
     expect(r.player[0].atk).toBe(2);
     expect(r.player[0].maxHp).toBe(5);
     expect(team[0].stats.atk).toBe(1);
@@ -183,9 +192,9 @@ describe('combat', () => {
 });
 
 describe('run flow', () => {
-  it('starts with 5 TP, 5 Merdascore and 3 common starters', () => {
+  it('starts with 2 TP, 5 Merdascore and 3 small starters', () => {
     const s = G.newRun(1);
-    expect(s).toMatchObject({ phase: 'starter', concentration: 10, tp: 5, merdascore: 5, ap: 1 });
+    expect(s).toMatchObject({ phase: 'starter', concentration: 10, tp: 2, merdascore: 5, ap: 1 });
     expect(s.starters).toHaveLength(3);
     expect(s.starters.every((m) => m.rarity === 'common' && m.traits.length === 1)).toBe(true);
   });
@@ -221,7 +230,7 @@ describe('run flow', () => {
     s = G.chooseEvacuated(s, 1);
     expect(s.pending?.id).toBe(picked.id);
     expect(s.choices).toEqual([]);
-    s = G.assignBonusPoint(s, 'hp');
+    s = confirm(s, 'hp');
     expect(s.team).toHaveLength(2);
     const full = prepRun({ merdascore: 20 });
     full.team = Array.from({ length: 6 }, () => mk({}));
@@ -232,7 +241,7 @@ describe('run flow', () => {
     let s = prepRun({ merdascore: 5, items: ['gameboy'] });
     s = G.evacuate(s, 'common');
     expect(s.choices).toHaveLength(3);
-    s = G.continueAfterCombat(G.fight(G.assignBonusPoint(G.chooseEvacuated(s, 0), 'hp')));
+    s = G.continueAfterCombat(G.fight(confirm(G.chooseEvacuated(s, 0))));
     expect(s.shopOffer).toHaveLength(3);
   });
 
@@ -324,6 +333,6 @@ describe('run flow', () => {
     expect(after.lastCombat?.won).toBe(false);
     expect(after.concentration).toBe(7);
     expect(after.team[0].hp).toBe(3);
-    expect(after.tp).toBe(5); // only the starting TP: the faster enemy kills before the Merdomon can strike
+    expect(after.tp).toBe(s.tp); // no damage: the faster enemy kills before the Merdomon can strike
   });
 });

@@ -29,7 +29,7 @@ export const TRAIT_ICON: Record<TraitId, IconName> = {
 };
 
 export const STAT_ICON: Record<StatKey, IconName> = { hp: 'heart', atk: 'fist', def: 'shield', spd: 'bolt' };
-export const RESOURCE_ICON: Record<Resource, IconName> = { tp: 'tp', merdascore: 'poop', concentration: 'focus' };
+export const RESOURCE_ICON: Record<Resource, IconName> = { tp: 'tp', merdascore: 'poop', concentration: 'focus', ap: 'ap' };
 
 function shapes(name: IconName, fill: string): ReactNode {
   switch (name) {
