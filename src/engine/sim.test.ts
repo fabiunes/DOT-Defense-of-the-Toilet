@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ITEMS, MAX_TEAM, STAT_KEYS } from './data';
+import { ITEMS, STAT_KEYS } from './data';
 import * as G from './game';
 import type { Rarity, RunState } from './types';
 
@@ -17,8 +17,8 @@ function playPreparation(s: RunState): RunState {
       if (rarity) s = G.chooseEvacuated(G.evacuate(s, rarity), 0);
       else if (s.team.some((m) => m.hp * 2 < m.stats.hp)) s = G.heal(s);
       else if (ITEMS.some((i) => G.canBuy(s, i))) s = G.buy(s, ITEMS.find((i) => G.canBuy(s, i))!);
-      else if (s.concentration > 6 && s.team.length < MAX_TEAM) s = G.concentrate(s);
-      else if (s.team.length < MAX_TEAM) s = G.trade(s, 'merdascore');
+      else if (s.concentration > 6 && s.team.length < G.teamCap(s)) s = G.concentrate(s);
+      else if (s.team.length < G.teamCap(s)) s = G.trade(s, 'merdascore');
       else {
         const m = s.team[0];
         const stat = (['atk', 'hp', 'def', 'spd'] as const).find((k) => G.canTradeStat(s, m.id, k));
@@ -32,7 +32,7 @@ function playPreparation(s: RunState): RunState {
 }
 
 function playRun(seed: number): RunState {
-  let s = G.newRun(seed);
+  let s = G.beginRun(G.newRun(seed));
   s = G.chooseStarter(s, 0);
   s = G.confirmMerdomon(s, 'atk', s.pendingAbilities[0]);
   s = G.chooseStartBonus(s, 'resources');

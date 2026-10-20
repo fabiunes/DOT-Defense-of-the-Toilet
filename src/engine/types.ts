@@ -1,8 +1,20 @@
 export type Rarity = 'common' | 'rare' | 'epic';
 export type StatKey = 'hp' | 'atk' | 'def' | 'spd';
 export type TraitId = 'paper' | 'merdon' | 'healthy' | 'haste' | 'fighter' | 'defender' | 'action';
-export type ItemId = 'brush' | 'magazine' | 'bidet' | 'shower' | 'window' | 'towel' | 'toothbrush' | 'flipflops' | 'gameboy';
-export type MerdomonKind = 'normal' | 'runny' | 'fart';
+export type ItemId =
+  | 'brush'
+  | 'magazine'
+  | 'waterJet'
+  | 'shower'
+  | 'window'
+  | 'towel'
+  | 'toothbrush'
+  | 'flipflops'
+  | 'gameboy'
+  | 'brownTowel'
+  | 'yellowTowel'
+  | 'whiteTowel';
+export type MerdomonKind = 'normal' | 'liquid' | 'fart';
 export type EnemyKind = 'phone' | 'book' | 'console';
 export type AbilityId =
   | 'cheerleader'
@@ -22,6 +34,10 @@ export type AbilityId =
   | 'stinkyAura';
 export type ModifierId = 'groupChat' | 'wifiDown' | 'rushHour' | 'doomscrolling' | 'silentMode' | 'jackpot';
 export type StartBonusId = 'item' | 'merdomon' | 'resources';
+export type StructureId = 'sink' | 'bidet' | 'holder' | 'toilet';
+export type BossId = 'demonScroller' | 'bestseller' | 'streamDeck';
+/** Bosses show up twice: a medium form on wave 5 and the final form on wave 10. */
+export type BossForm = 'mid' | 'final';
 
 export interface Stats {
   hp: number;
@@ -50,6 +66,8 @@ export interface Enemy {
   kind: EnemyKind;
   stats: Stats;
   boss: boolean;
+  /** Set on the run's Boss (both forms). */
+  bossForm?: BossForm;
   /** Added by the Group Chat modifier (removed if the modifier is disabled). */
   extra?: boolean;
 }
@@ -62,6 +80,7 @@ export interface Fighter {
   rarity: Rarity;
   kind: MerdomonKind | EnemyKind;
   boss: boolean;
+  bossForm?: BossForm;
   ability: AbilityId | null;
   maxHp: number;
   hp: number;
@@ -79,10 +98,12 @@ export type CombatEvent =
   /** Merdomon `p` triggers its ability; `target` (if any) is who it changed, with the HP after. */
   | { type: 'ability'; ability: AbilityId; p: number; target?: { side: Side; index: number; hp: number } }
   | { type: 'modifier'; modifier: ModifierId }
+  /** The Boss uses its ability; `hp` is its HP afterwards (Extra Life). */
+  | { type: 'boss'; boss: BossId; index: number; hp?: number }
   | { type: 'end'; won: boolean };
 
 export type Resource = 'tp' | 'merdascore' | 'concentration' | 'ap';
-export type RewardSource = 'survivors' | 'enemies' | 'damage' | TraitId | ItemId | AbilityId | ModifierId;
+export type RewardSource = 'survivors' | 'enemies' | 'damage' | TraitId | ItemId | AbilityId | ModifierId | StructureId;
 
 export interface Reward {
   source: RewardSource;
@@ -121,20 +142,27 @@ export interface RunStats {
   merdascoreEarned: number;
   concentrationLost: number;
   itemsBought: number;
+  modifierWavesWon: number;
+  midBossDefeated: boolean;
+  finalBossDefeated: boolean;
 }
 
-export type Phase = 'starter' | 'startBonus' | 'preparation' | 'combat' | 'gameover' | 'victory';
+export type Phase = 'boss' | 'starter' | 'startBonus' | 'preparation' | 'combat' | 'gameover' | 'victory';
 
 export interface RunState {
-  version: 4;
+  version: 5;
   phase: Phase;
   round: number;
   concentration: number;
   tp: number;
   merdascore: number;
   ap: number;
-  /** AP added at the next preparation (modifier reward, starting pack). */
+  /** AP added at the next preparation (modifier reward, Sink, starting pack). Unspent AP carry over (max 5). */
   bonusAp: number;
+  /** This run's Boss: a run-wide modifier, then a medium form on wave 5 and the final form on wave 10. */
+  boss: BossId;
+  /** Bathroom structures' tiers (1..3). */
+  structures: Record<StructureId, number>;
   team: Merdomon[];
   items: ItemId[];
   /** Items on sale this round (random, never already owned). */

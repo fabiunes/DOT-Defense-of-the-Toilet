@@ -1,6 +1,19 @@
-import { ENEMY_KINDS, KIND_CURVE, MAX_STAT, MERDOMON_KINDS, RARITY_TRAITS, SIZE_TOTAL, STAT_KEYS, TRAITS, WAVES } from './data';
+import {
+  BOSS_INFO,
+  BOSS_TOTAL,
+  BOSS_TYPE_ATK,
+  ENEMY_KINDS,
+  KIND_CURVE,
+  MAX_STAT,
+  MERDOMON_KINDS,
+  RARITY_TRAITS,
+  SIZE_TOTAL,
+  STAT_KEYS,
+  TRAITS,
+  WAVES,
+} from './data';
 import type { Rng } from './rng';
-import type { Enemy, Merdomon, Rarity, Stats } from './types';
+import type { BossForm, BossId, Enemy, Merdomon, Rarity, Stats } from './types';
 
 /**
  * Splits `total` points exactly by `curve` (in %, highest share first), then gives each share to a random stat.
@@ -54,19 +67,35 @@ export function createMerdomon(rng: Rng, id: number, rarity: Rarity): Merdomon {
   return { id, rarity, kind, stats, hp: stats.hp, traits, ability: null };
 }
 
-export function createEnemy(rng: Rng, id: number, rarity: Rarity, boss = false): Enemy {
+export function createEnemy(rng: Rng, id: number, rarity: Rarity, bossId?: BossId): Enemy {
   const kind = rng.pick(ENEMY_KINDS);
-  return { id, rarity, kind, stats: splitStats(rng, SIZE_TOTAL[rarity], KIND_CURVE[kind]), boss };
+  const enemy: Enemy = { id, rarity, kind, stats: splitStats(rng, SIZE_TOTAL[rarity], KIND_CURVE[kind]), boss: false };
+  return bossId ? withBossAura(enemy, bossId) : enemy;
+}
+
+/** Run-wide Boss modifier: enemies of the Boss's type get extra ATK. */
+export function withBossAura(e: Enemy, bossId: BossId): Enemy {
+  if (e.kind === BOSS_INFO[bossId].kind) e.stats.atk += BOSS_TYPE_ATK;
+  return e;
+}
+
+/** The run's Boss in its medium (wave 5) or final (wave 10) form. */
+export function createBoss(rng: Rng, id: number, bossId: BossId, form: BossForm, concentrationLost: number): Enemy {
+  const { kind } = BOSS_INFO[bossId];
+  const stats = splitStats(rng, BOSS_TOTAL[form], KIND_CURVE[kind]);
+  if (bossId === 'demonScroller') stats.hp += concentrationLost;
+  const boss: Enemy = { id, rarity: form === 'mid' ? 'rare' : 'epic', kind, stats, boss: true, bossForm: form };
+  return withBossAura(boss, bossId);
 }
 
 /** Enemies in random order; the Boss (if any) is always last. */
-export function createWave(rng: Rng, round: number, firstId: number): Enemy[] {
+export function createWave(rng: Rng, round: number, firstId: number, bossId: BossId, concentrationLost = 0): Enemy[] {
   const def = WAVES[round - 1];
   let id = firstId;
   const wave: Enemy[] = [];
-  for (let i = 0; i < def.common; i++) wave.push(createEnemy(rng, id++, 'common'));
-  for (let i = 0; i < def.rare; i++) wave.push(createEnemy(rng, id++, 'rare'));
+  for (let i = 0; i < def.common; i++) wave.push(createEnemy(rng, id++, 'common', bossId));
+  for (let i = 0; i < def.rare; i++) wave.push(createEnemy(rng, id++, 'rare', bossId));
   rng.shuffle(wave);
-  if (def.boss) wave.push(createEnemy(rng, id++, 'epic', true));
+  if (def.boss) wave.push(createBoss(rng, id++, bossId, def.boss, concentrationLost));
   return wave;
 }

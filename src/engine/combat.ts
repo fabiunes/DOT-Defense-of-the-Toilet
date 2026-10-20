@@ -1,7 +1,7 @@
-import { ABILITY, JACKPOT } from './data';
+import { ABILITY, JACKPOT, TOWEL_BONUS, TOWEL_KIND } from './data';
 import type { Rng } from './rng';
 import { combatBonus } from './traits';
-import type { AbilityId, CombatEvent, Enemy, Fighter, ItemId, Merdomon, ModifierId, Side } from './types';
+import type { AbilityId, BossId, CombatEvent, Enemy, Fighter, ItemId, Merdomon, ModifierId, Side } from './types';
 
 export interface CombatResult {
   won: boolean;
@@ -11,6 +11,8 @@ export interface CombatResult {
   enemies: Fighter[];
   /** Combat HP of each Merdomon at the end (0 = fallen). */
   hpAfter: number[];
+  /** HP of each enemy at the end (0 = defeated). */
+  enemyHpAfter: number[];
   /** Enemies defeated by each Merdomon (any of its damage). */
   kills: number[];
   survivors: number;
@@ -24,6 +26,8 @@ export interface CombatOptions {
   /** Added to every Merdomon's HP for this combat only (Toothbrush). */
   extraHp?: number;
   modifier?: ModifierId | null;
+  /** The run's Boss, for its in-fight ability. */
+  bossId?: BossId;
 }
 
 /** Defense blocks half its value (rounded down); at least 1 damage always goes through. */
@@ -41,7 +45,7 @@ export function simulateCombat(
   wave: readonly Enemy[],
   items: readonly ItemId[],
   rng: Rng,
-  { extraHp = 0, modifier = null }: CombatOptions = {},
+  { extraHp = 0, modifier = null, bossId }: CombatOptions = {},
 ): CombatResult {
   const events: CombatEvent[] = [];
   const silent = modifier === 'silentMode';
@@ -50,24 +54,29 @@ export function simulateCombat(
   const bonus =
     modifier === 'wifiDown' ? { hp: 0, atk: 0, def: 0, spd: 0 } : combatBonus(team, items);
   bonus.hp += extraHp;
-  const ps: Fighter[] = team.map((m) => ({
-    id: m.id,
-    rarity: m.rarity,
-    kind: m.kind,
-    boss: false,
-    ability: m.ability,
-    maxHp: m.stats.hp + bonus.hp,
-    hp: m.hp + bonus.hp,
-    atk: m.stats.atk + bonus.atk,
-    def: m.stats.def + bonus.def,
-    spd: m.stats.spd + bonus.spd,
-  }));
+  const towel = (m: Merdomon) => items.some((i) => TOWEL_KIND[i] === m.kind);
+  const ps: Fighter[] = team.map((m) => {
+    const t = towel(m);
+    return {
+      id: m.id,
+      rarity: m.rarity,
+      kind: m.kind,
+      boss: false,
+      ability: m.ability,
+      maxHp: m.stats.hp + bonus.hp + (t ? TOWEL_BONUS.hp : 0),
+      hp: m.hp + bonus.hp + (t ? TOWEL_BONUS.hp : 0),
+      atk: m.stats.atk + bonus.atk + (t ? TOWEL_BONUS.atk : 0),
+      def: m.stats.def + bonus.def,
+      spd: m.stats.spd + bonus.spd,
+    };
+  });
   const jackpot = modifier === 'jackpot';
   const es: Fighter[] = wave.map((e) => ({
     id: e.id,
     rarity: e.rarity,
     kind: e.kind,
     boss: e.boss,
+    bossForm: e.bossForm,
     ability: null,
     hp: e.stats.hp + (jackpot ? JACKPOT.hp : 0),
     maxHp: e.stats.hp + (jackpot ? JACKPOT.hp : 0),
@@ -100,6 +109,7 @@ export function simulateCombat(
   let windowReady = items.includes('window');
   const flipFlops = items.includes('flipflops');
   const secondWindUsed = ps.map(() => false);
+  let extraLifeUsed = false;
   const kills = ps.map(() => 0);
   let damageDealt = 0;
   let merdomonFallen = 0;
@@ -114,6 +124,17 @@ export function simulateCombat(
     target.hp -= dealt;
     damageDealt += dealt;
     return dealt;
+  };
+  /** Enemy `idx` is at 0 HP: the StreamDeck may come back (Extra Life), otherwise it falls. */
+  const enemyDown = (idx: number, from: number) => {
+    const x = es[idx];
+    if (x.boss && bossId === 'streamDeck' && !extraLifeUsed) {
+      extraLifeUsed = true;
+      x.hp = x.bossForm === 'final' ? x.maxHp : Math.ceil(x.maxHp / 2);
+      events.push({ type: 'boss', boss: bossId, index: idx, hp: x.hp });
+      return;
+    }
+    enemyFalls(idx, from);
   };
   /** Enemy `idx` falls to Merdomon `from`: counts the kill and triggers Snowball. */
   const enemyFalls = (idx: number, from: number) => {
@@ -152,7 +173,7 @@ export function simulateCombat(
         for (let h = 0; h < hits && e.hp > 0; h++) {
           const dealt = hitEnemy(ei, damage(atk, e.def));
           events.push({ type: 'attack', side: 'p', damage: dealt, hp: e.hp, double: h > 0 });
-          if (e.hp <= 0) enemyFalls(ei, pi);
+          if (e.hp <= 0) enemyDown(ei, pi);
           if (has(pi, 'leech') && dealt > 0 && p.hp < p.maxHp) {
             p.hp = Math.min(p.maxHp, p.hp + ABILITY.leech);
             events.push({ type: 'ability', ability: 'leech', p: pi, target: { side: 'p', index: pi, hp: p.hp } });
@@ -162,7 +183,7 @@ export function simulateCombat(
             if (next >= 0) {
               hitEnemy(next, ABILITY.splash);
               events.push({ type: 'ability', ability: 'splash', p: pi, target: { side: 'e', index: next, hp: es[next].hp } });
-              if (es[next].hp <= 0) enemyFalls(next, pi);
+              if (es[next].hp <= 0) enemyDown(next, pi);
             }
           }
         }
@@ -171,10 +192,15 @@ export function simulateCombat(
         const dealt = Math.min(damage(e.atk, p.def, reduction), p.hp);
         p.hp -= dealt;
         events.push({ type: 'attack', side: 'e', damage: dealt, hp: p.hp, double: false });
+        if (e.boss && bossId === 'bestseller') {
+          e.def += 1;
+          if (e.bossForm === 'final') e.atk += 1;
+          events.push({ type: 'boss', boss: bossId, index: ei });
+        }
         if (has(pi, 'spiky')) {
           hitEnemy(ei, ABILITY.spiky);
           events.push({ type: 'ability', ability: 'spiky', p: pi, target: { side: 'e', index: ei, hp: e.hp } });
-          if (e.hp <= 0) enemyFalls(ei, pi);
+          if (e.hp <= 0) enemyDown(ei, pi);
         }
       }
       turn = turn === 'p' ? 'e' : 'p';
@@ -190,7 +216,7 @@ export function simulateCombat(
       if (has(pi, 'lastGasp') && e.hp > 0) {
         hitEnemy(ei, ABILITY.lastGasp);
         events.push({ type: 'ability', ability: 'lastGasp', p: pi, target: { side: 'e', index: ei, hp: e.hp } });
-        if (e.hp <= 0) enemyFalls(ei, pi);
+        if (e.hp <= 0) enemyDown(ei, pi);
       }
       if (magazineReady) {
         magazineReady = false;
@@ -221,6 +247,7 @@ export function simulateCombat(
     player,
     enemies,
     hpAfter: ps.map((f) => Math.max(0, f.hp)),
+    enemyHpAfter: es.map((f) => Math.max(0, f.hp)),
     kills,
     survivors: ps.filter((f) => f.hp > 0).length,
     enemySurvivors,

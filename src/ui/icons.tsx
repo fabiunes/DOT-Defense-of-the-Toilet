@@ -6,7 +6,7 @@ export type IconName =
   | 'heal' | 'toilet' | 'shop' | 'swap' | 'flush' | 'bonus' | 'upgrade' | 'fight'
   | 'close' | 'check' | 'star' | 'ff' | 'skip' | 'home' | 'trophy' | 'skull' | 'crown' | 'question' | 'phone' | 'play'
   | 'trade' | 'eye'
-  | 'brush' | 'magazine' | 'bidet' | 'shower' | 'window' | 'towel' | 'toothbrush' | 'flipflops' | 'gameboy' | 'dice';
+  | 'brush' | 'magazine' | 'waterJet' | 'shower' | 'window' | 'towel' | 'toothbrush' | 'flipflops' | 'gameboy' | 'dice';
 
 export const TRAIT_COLOR: Record<TraitId, string> = {
   paper: '#4f8fe8',
@@ -221,7 +221,7 @@ function shapes(name: IconName, fill: string): ReactNode {
           <path d="M8 7.5h8M8 11h8M8 14.5h5" />
         </>
       );
-    case 'bidet':
+    case 'waterJet':
       return (
         <>
           <path fill={fill} d="M3.5 13h17a8.5 7 0 0 1-17 0z" />
@@ -284,6 +284,14 @@ export function TraitIcon({ trait, size = 18 }: { trait: TraitId; size?: number 
   return <Icon name={TRAIT_ICON[trait]} fill={TRAIT_COLOR[trait]} size={size} className="trait-icon" />;
 }
 
+/** Coloured towels share the towel drawing. */
+const ITEM_DRAWING: Partial<Record<ItemId, { icon: IconName; fill: string }>> = {
+  brownTowel: { icon: 'towel', fill: '#a8703f' },
+  yellowTowel: { icon: 'towel', fill: '#ecd36f' },
+  whiteTowel: { icon: 'towel', fill: '#f4f4f4' },
+};
+
 export function ItemIcon({ item, size = 20 }: { item: ItemId; size?: number }) {
-  return <Icon name={item} fill="#fff" size={size} />;
+  const d = ITEM_DRAWING[item];
+  return <Icon name={d ? d.icon : (item as IconName)} fill={d ? d.fill : '#fff'} size={size} />;
 }

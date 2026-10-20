@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
 import {
   ABILITY_INFO,
+  BOSS_INFO,
   KIND_NAME,
+  MAX_AP,
   MAX_CONCENTRATION,
-  MAX_MERDASCORE,
   ROUNDS,
   SIZE_NAME,
   STAT_KEYS,
@@ -12,10 +13,11 @@ import {
   TRAIT_THRESHOLDS,
   TRAIT_VALUES,
 } from '../engine/data';
+import { itemCap, poopCap, tpCap } from '../engine/game';
 import { countTraits, traitTier } from '../engine/traits';
-import type { AbilityId, ItemId, Merdomon, Rarity, RunState, Stats, TraitId } from '../engine/types';
-import { MerdomonArt } from './art';
-import { Icon, ItemIcon, STAT_ICON, TraitIcon } from './icons';
+import type { AbilityId, BossId, Merdomon, Rarity, RunState, Stats, TraitId } from '../engine/types';
+import { EnemyArt, MerdomonArt } from './art';
+import { Icon, STAT_ICON, TraitIcon } from './icons';
 
 export function Modal({ children, onClose, className = '' }: { children: ReactNode; onClose?: () => void; className?: string }) {
   return (
@@ -179,6 +181,7 @@ export function TopBar({ run }: { run: RunState }) {
       <div className="res" aria-label="Toilet Paper">
         <Icon name="tp" size={24} fill="#fff" />
         <b>{run.tp}</b>
+        <small>/{tpCap(run)}</small>
       </div>
       <div className="conc" aria-label={`Concentration ${run.concentration} of ${MAX_CONCENTRATION}`}>
         <Icon name="focus" size={18} fill="#fff" />
@@ -188,34 +191,67 @@ export function TopBar({ run }: { run: RunState }) {
           ))}
         </div>
       </div>
-      <div className="res right" aria-label="Merdascore">
+      <div className="res right" aria-label="Poop">
         <b>{run.merdascore}</b>
-        <small>/{MAX_MERDASCORE}</small>
+        <small>/{poopCap(run)}</small>
         <Icon name="poop" size={24} fill="#fff" />
       </div>
     </div>
   );
 }
 
-export function InfoRow({ run, onItem }: { run: RunState; onItem: (item: ItemId) => void }) {
+export function InfoRow({ run, onItems, onBoss }: { run: RunState; onItems: () => void; onBoss: () => void }) {
   return (
     <div className="inforow">
       <span className="round-badge">
         Round {run.round}/{ROUNDS}
       </span>
-      <span className="items">
-        {run.items.map((it) => (
-          <button key={it} className="icon-btn item-btn" onClick={() => onItem(it)} aria-label={it}>
-            <ItemIcon item={it} size={20} />
-          </button>
-        ))}
-      </span>
+      <button className="info-chip" onClick={onItems} aria-label="Items">
+        <Icon name="shop" size={16} fill="#fff" />
+        {run.items.length}/{itemCap(run)}
+      </button>
+      <button className="info-chip boss-chip" onClick={onBoss} aria-label={BOSS_INFO[run.boss].name}>
+        {BOSS_INFO[run.boss].icon}
+      </button>
       <span className="round-badge ap-badge" aria-label={`${run.ap} action points`}>
         Actions
         {Array.from({ length: Math.max(run.ap, 1) }, (_, i) => (
-          <Icon key={i} name="ap" size={14} fill={i < run.ap ? '#1b1b1b' : '#fff'} />
+          <Icon key={i} name="ap" size={12} fill={i < run.ap ? '#1b1b1b' : '#fff'} />
         ))}
+        <small className="muted">/{MAX_AP}</small>
       </span>
+    </div>
+  );
+}
+
+/** The run's Boss: run-wide modifier and its two forms. */
+export function BossCard({ boss }: { boss: BossId }) {
+  const info = BOSS_INFO[boss];
+  return (
+    <div className="boss-card">
+      <div className="boss-card-head">
+        <EnemyArt size={84} kind={info.kind} rarity="epic" boss />
+        <div>
+          <h2>{info.name}</h2>
+          <span className="boss-run">
+            <span className="mod-emoji">{info.icon}</span> {info.runDesc}
+          </span>
+        </div>
+      </div>
+      <div className="boss-forms">
+        <div className="sk">
+          <b>Wave 5</b>
+          <small>
+            {info.ability}: {info.midDesc}
+          </small>
+        </div>
+        <div className="sk">
+          <b>Wave 10</b>
+          <small>
+            {info.ability}: {info.finalDesc}
+          </small>
+        </div>
+      </div>
     </div>
   );
 }

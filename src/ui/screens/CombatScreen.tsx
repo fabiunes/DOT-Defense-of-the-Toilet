@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ABILITY_INFO, ITEM_INFO, MODIFIER_INFO, ROUNDS, STAT_KEYS, TRAIT_INFO } from '../../engine/data';
+import { ABILITY_INFO, BOSS_INFO, ITEM_INFO, MODIFIER_INFO, ROUNDS, STAT_KEYS, STRUCTURE_INFO, TRAIT_INFO } from '../../engine/data';
 import type {
   AbilityId,
   CombatBonus,
@@ -12,8 +12,10 @@ import type {
   RewardSource,
   Side,
   StatKey,
+  StructureId,
 } from '../../engine/types';
 import { EnemyArt, MerdomonArt } from '../art';
+import { StructureIcon } from '../bathroom';
 import { AbilityBadge, HpBar, Stars, StatValue } from '../components';
 import { Icon, ItemIcon, RESOURCE_ICON, STAT_ICON, TraitIcon } from '../icons';
 
@@ -24,6 +26,7 @@ const DELAY: Record<CombatEvent['type'], number> = {
   revive: 650,
   ability: 520,
   modifier: 520,
+  boss: 650,
   end: 350,
 };
 const SPEEDS = [1, 2, 4];
@@ -34,6 +37,9 @@ const PASSIVE_TEXT: Partial<Record<CombatBonus['source'], string>> = {
   window: 'First strike hits twice',
   flipflops: 'Double hits at 2× speed',
   magazine: 'One free revive',
+  brownTowel: 'Normal: +1 HP +1 ATK',
+  yellowTowel: 'Liquid: +1 HP +1 ATK',
+  whiteTowel: 'Fart: +1 HP +1 ATK',
 };
 
 interface View {
@@ -58,6 +64,7 @@ function replay(report: CombatReport, upto: number): View {
       if (ev.side === 'p') ehp[e] = ev.hp;
       else php[p] = ev.hp;
     } else if (ev.type === 'revive') php[ev.index] = ev.hp;
+    else if (ev.type === 'boss' && ev.hp !== undefined) ehp[ev.index] = ev.hp;
     else if (ev.type === 'ability' && ev.target) {
       if (ev.target.side === 'p') php[ev.target.index] = ev.target.hp;
       else ehp[ev.target.index] = ev.target.hp;
@@ -103,7 +110,9 @@ export function CombatScreen({ report, onDone }: { report: CombatReport; onDone:
       ? { side: 'p', text: `${ABILITY_INFO[last.ability].icon} ${ABILITY_INFO[last.ability].name}` }
       : last?.type === 'modifier'
         ? { side: 'e', text: `${MODIFIER_INFO[last.modifier].icon} +1 ATK` }
-        : null;
+        : last?.type === 'boss'
+          ? { side: 'e', text: `${BOSS_INFO[last.boss].icon} ${BOSS_INFO[last.boss].ability}` }
+          : null;
 
   return (
     <div className="screen combat">
@@ -248,6 +257,7 @@ function SourceIcon({ source }: { source: RewardSource }) {
       if (source in ITEM_INFO) return <ItemIcon item={source as keyof typeof ITEM_INFO} size={22} />;
       if (source in ABILITY_INFO) return <AbilityBadge ability={source as AbilityId} size={24} />;
       if (source in MODIFIER_INFO) return <span className="mod-emoji">{MODIFIER_INFO[source as ModifierId].icon}</span>;
+      if (source in STRUCTURE_INFO) return <StructureIcon id={source as StructureId} tier={2} size={26} />;
       return null;
   }
 }

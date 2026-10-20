@@ -1,6 +1,6 @@
-# D.O.T. – Defense of the Toilet · Game Design Document
+# D.o.t.T. – Defense of the Toilet · Game Design Document
 
-> Versione regole: **v0.3** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
+> Versione regole: **v0.4** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
 >
 > Fonte ufficiale delle regole. Il gioco è interamente in **inglese**; questo documento è in italiano, con i termini di gioco in inglese.
 
@@ -21,17 +21,17 @@ Single player per smartphone, roguelite + auto-battler. Il giocatore difende la 
 | Fase | Contenuto |
 |---|---|
 | **1** | Gioco base per beta testing, run completa. Livello 1 – *Home Bathroom*. |
-| 2 | Componenti roguelite: *Toilet Points* guadagnati nelle run per potenziare il bagno (es. capienza Merdascore). |
+| 2 | Componenti roguelite: *Toilet Points* guadagnati nelle run per potenziare il bagno tra una run e l'altra (le strutture del bagno oggi si potenziano solo durante la run). |
 | 3 | Livello 2 (*Work Bathroom*), Livello 3 (*Public Bathroom*), più abilità/tratti/nemici/oggetti, statistiche avanzate, archivio partite. |
 
 ## 4. Risorse del giocatore
 
 | Risorsa | Range | Iniziale | Note |
 |---|---|---|---|
-| **Toilet Paper** (TP) | 0 → ∞ | 2 | Valuta. Mai negativa. Contatore numerico. |
+| **Toilet Paper** (TP) | 0 → limite Paper Holder (30/50/70) | 2 | Valuta. L'eccesso va perso. |
 | **Concentration** | 0 – 10 | 10 | "Vita" del giocatore, barra a riempimento. 0 = game over. |
-| **Merdascore** | 0 – 20 | 5 | Spesa con *Evacuate*. L'eccesso oltre 20 va perso. |
-| **Action Points** (AP) | – | 1 | A ogni preparazione: 1 + bonus del tratto Action. Quelli non spesi si perdono (tornano a 0 dopo il combattimento). |
+| **Poop** (ex Poop) | 0 → limite Bidet (15/20/30) | 5 | Spesa con *Evacuate*. L'eccesso va perso. |
+| **Action Points** (AP) | 0 – 5 | 1 al primo round | A ogni preparazione: +1, + tratto Action, + Sink, + ricompense. **Quelli non spesi si accumulano** (massimo 5). |
 
 ## 5. Merdomon
 
@@ -42,17 +42,17 @@ Single player per smartphone, roguelite + auto-battler. Il giocatore difende la 
 | Tipo | Aspetto | Ripartizione |
 |---|---|---|
 | **Normal** | Cacca marrone | 25 · 25 · 25 · 25 % (tuttofare) |
-| **Runny** (Sciolta) | Cacca gialla "colante" | 40 · 40 · 10 · 10 % (due statistiche forti) |
+| **Liquid** (ex Runny) | Cacca gialla "colante" | 40 · 40 · 10 · 10 % (due statistiche forti) |
 | **Fart** | Nuvoletta trasparente | 65 · 25 · 10 · 0 % (una statistica fortissima) |
 
 - **Generazione**: il Merdomon nasce con totale − 1 (9 / 14 / 19) diviso **esattamente** secondo la curva; ogni quota va a una statistica scelta a caso. Poi il giocatore assegna il **+1** e si arriva a 10 / 15 / 20.
   - Arrotondamento: i punti avanzati vanno alle quote con la parte decimale più alta (a parità, alla quota più grande).
   - Ogni statistica è almeno 1 (il punto si toglie alla più alta) e al massimo 10 (l'eccesso passa alle quote successive).
-  - Esempi (totale 20): Normal 5·5·5·5, Runny 8·8·2·2, Fart 10·7·2·1. Small Merdomon alla nascita (9): Normal 3·2·2·2, Runny 4·3·1·1, Fart 5·2·1·1.
+  - Esempi (totale 20): Normal 5·5·5·5, Liquid 8·8·2·2, Fart 10·7·2·1. Small Merdomon alla nascita (9): Normal 3·2·2·2, Liquid 4·3·1·1, Fart 5·2·1·1.
 - **HP** = vita massima. I danni **persistono** tra i round.
 - **Tratti**: casuali tra i 7 disponibili (Action compreso), anche ripetuti — 1 (Small), 2 (Big), 3 (Huge).
 - **Abilità**: 1, scelta dal giocatore tra **3 estratte a caso** (tutte diverse) nella stessa schermata del +1, poi *Confirm*. Valori fissi per tutte le grandezze (vedi §7b).
-- Massimo **6** Merdomon in squadra.
+- Merdomon in squadra: massimo **4 / 5 / 6** secondo il Tier del **Toilet**.
 
 ## 6. Distraction-mon
 
@@ -65,7 +65,7 @@ Single player per smartphone, roguelite + auto-battler. Il giocatore difende la 
 | **Console** | Rossa, stile Switch | 65 · 25 · 10 · 0 % |
 
 - Nessuna abilità: le difficoltà extra arrivano dai modificatori delle wave (§9b).
-- **Boss**: è il nemico Huge della wave 10, con la corona,, ha grafica dedicata ed è **sempre nell'ultimo slot**.
+- **Boss**: vedi §9c.
 
 ## 7. Tratti
 
@@ -74,7 +74,7 @@ Bonus a soglie in base al numero di occorrenze dello **stesso tratto** in squadr
 | Tratto | Simbolo | 2 | 4 | 6 | 8 | Effetto |
 |---|---|---|---|---|---|---|
 | **Paper** | 🧻 | 2 | 5 | 9 | 15 | TP a fine battaglia |
-| **Merdon** | 💩 | 1 | 2 | 3 | 4 | Merdascore a fine battaglia |
+| **Stinky** (ex Merdon) | 💩 | 1 | 2 | 3 | 4 | Poop a fine battaglia |
 | **Healthy** | ❤️ | 1 | 2 | 3 | 4 | +HP a tutti a inizio combattimento |
 | **Haste** | ⚡ | 1 | 2 | 3 | 4 | +SPD a tutti a inizio combattimento |
 | **Fighter** | 🥊 | 1 | 2 | 3 | 4 | +ATK a tutti a inizio combattimento |
@@ -101,7 +101,7 @@ Bonus a soglie in base al numero di occorrenze dello **stesso tratto** in squadr
 | 💥 **Last Gasp** | Quando muore, 3 danni a chi l'ha ucciso |
 | 🎁 **Legacy** | Quando muore, il Merdomon successivo ottiene +2 ATK |
 | 🪙 **Collector** | +2 TP per ogni nemico che sconfigge |
-| 🌱 **Fertilizer** | +1 Merdascore a fine wave se è sopravvissuto |
+| 🌱 **Fertilizer** | +1 Poop a fine wave se è sopravvissuto |
 | 🤢 **Stinky Aura** | Il nemico che affronta ha −1 SPD |
 
 Regole di dettaglio:
@@ -116,23 +116,28 @@ A ogni preparazione lo shop estrae **2 oggetti a caso** (3 con il Game Boy) tra 
 
 | Oggetto (IT) | Nome in gioco | Tratto | Effetto |
 |---|---|---|---|
-| Scopettone | **Toilet Brush** | 💩 Merdon | +2 Merdascore a fine wave |
+| Scopettone | **Toilet Brush** | 💩 Stinky | +2 Poop a fine wave |
 | Rivista | **Magazine** | ❤️ Healthy | Il primo Merdomon che muore resuscita a vita piena (1 volta per combattimento) |
-| Bidet | **Bidet** | 🛡️ Defender | *Evacuate* dà anche +1 Concentration |
+| Getto d'acqua | **Water Jet** (ex Bidet) | 🛡️ Defender | *Evacuate* dà anche +1 Concentration |
 | Doccino | **Hand Shower** | 🧻 Paper | Shop, Flush e Bonus Action costano −2 TP |
 | Finestra | **Window** | ⚡ Haste | Il primo Merdomon della squadra fa un doppio attacco al suo **primo** attacco del combattimento |
-| Asciugamano | **Towel** | 🥊 Fighter | +5 TP a fine wave |
+| Asciugamano | **Paper Towel** | 🥊 Fighter | +5 TP a fine wave |
 | Spazzolino | **Toothbrush** | ◆ Action | +X HP a tutti i Merdomon per il combattimento, dove X = AP non spesi quando si preme Next Wave |
 | Infradito | **Flip-Flops** | ◆ Action + ⚡ Haste | Un Merdomon con Velocità almeno doppia rispetto all'avversario attacca 2 volte a ogni turno (solo Merdomon) |
-| Game Boy | **Game Boy** | 🧻 Paper + 💩 Merdon | 3 opzioni invece di 2 in Shop ed Evacuate |
+| Game Boy | **Game Boy** | 🧻 Paper + 💩 Stinky | 3 opzioni invece di 2 in Shop ed Evacuate |
+| Asciugamano marrone | **Brown Towel** | 💩 Stinky | Merdomon Normal +1 HP e +1 ATK in combattimento |
+| Asciugamano giallo | **Yellow Towel** | ❤️ Healthy | Merdomon Liquid +1 HP e +1 ATK in combattimento |
+| Asciugamano bianco | **White Towel** | ⚡ Haste | Merdomon Fart +1 HP e +1 ATK in combattimento |
+
+- **Borsa**: il numero di oggetti è limitato dal **Sink** (3 / 6 / 9). Con la borsa piena, per comprare si sceglie un oggetto da **scartare**.
 
 ## 9. Flusso della run
 
-1. Home → **New Game** → scelta di 1 tra 3 Merdomon **Small** → abilità (1 tra 3) e +1.
+1. Home → **New Game** → **rivelazione del Boss** della partita (§9c) → scelta di 1 tra 3 Merdomon **Small** → abilità (1 tra 3) e +1.
 2. **Bonus di partenza**, uno a scelta tra:
    - un **oggetto** casuale;
    - un Merdomon **Small** casuale (poi abilità e +1);
-   - un pacchetto **Supplies**: +5 TP, +3 Merdascore, +1 AP solo nel round 1.
+   - un pacchetto **Supplies**: +5 TP, +3 Poop, +1 AP.
 3. 10 round: ognuno è **Preparation → Combat → Esito**.
 4. Fine: **Game Over** se Concentration = 0 (in qualunque momento), **Victory** se si sconfigge il Boss. Perdere la wave 10 = Game Over.
 
@@ -144,18 +149,18 @@ A ogni preparazione lo shop estrae **2 oggetti a caso** (3 con il Game Boy) tra 
 | 2 | 3 Small |
 | 3 | 3 Small + 1 Big |
 | 4 | 4 Small + 1 Big |
-| 5 | 4 Small + 1 Big |
+| 5 | 4 Small + **Boss** in forma media (Big, ultimo slot) |
 | 6 | 3 Small + 2 Big |
 | 7 | 3 Small + 3 Big |
 | 8 | 2 Small + 4 Big |
 | 9 | 6 Big |
-| 10 | 5 Big + **Boss** (Huge, ultimo slot) |
+| 10 | 5 Big + **Boss** in forma finale (Huge 22 punti, ultimo slot) |
 
 Ordine dei nemici casuale (tranne il Boss).
 
 ### 9b. Modificatori delle wave
 
-Le wave **3, 6, 9 e 10** hanno un modificatore, estratto a inizio partita tra questi 6 (senza ripetizioni; il Jackpot mai alla wave 10). È visibile sul tasto Next Wave e nello Scout.
+Le wave **3, 6 e 9** hanno un modificatore, estratto a inizio partita tra questi 6 (senza ripetizioni). È visibile sul tasto Next Wave e nel recap della wave.
 
 | Modificatore | Effetto |
 |---|---|
@@ -164,10 +169,46 @@ Le wave **3, 6, 9 e 10** hanno un modificatore, estratto a inizio partita tra qu
 | ⏰ **Rush Hour** | I nemici colpiscono sempre per primi (la Window resta valida) |
 | 📱 **Doomscrolling** | Ogni volta che cade un tuo Merdomon, tutti i nemici +1 ATK (si somma) |
 | 🔕 **Silent Mode** | Le abilità dei Merdomon non si attivano |
-| 🎰 **Jackpot** | Nemici +1 ATK e +1 HP, ma TP e Merdascore della wave raddoppiati |
+| 🎰 **Jackpot** | Nemici +1 ATK e +1 HP, ma TP e Poop della wave raddoppiati |
 
 - **Ricompensa**: se vinci una wave con il modificatore attivo, **+1 AP** nella preparazione del round successivo.
-- **Disattivazione**: durante la preparazione, per **3 TP** (senza sconto). Si perde anche la ricompensa. **Alla wave 10 non si può disattivare.**
+- **Corrupt**: nel recap che compare premendo Next Wave (o dallo Scout), per **3 TP** (senza sconto). Si perde anche la ricompensa.
+
+### 9c. Boss
+
+A inizio partita viene estratto e mostrato **uno dei 3 Boss**. Ogni Boss dà **+1 ATK a tutti i nemici del suo tipo** per tutta la partita, e combatte due volte: in forma **media** alla wave 5 (Big, 15 punti) e in forma **finale** alla wave 10 (Huge, 22 punti). È sempre l'ultimo della fila.
+
+| Boss | Tipo | Abilità (forma media) | Abilità (forma finale) |
+|---|---|---|---|
+| 📱 **Demon Scroller** | Smartphone | **Endless Feed**: +1 HP per ogni punto di Concentration perso finora nella partita | Uguale |
+| 📚 **The Bestseller** | Book | **Plot Twist**: +1 DEF dopo ogni suo attacco | +1 DEF e +1 ATK dopo ogni suo attacco |
+| 🎮 **The StreamDeck** | Console | **Extra Life**: torna in vita una volta con metà HP | Torna in vita una volta con tutti gli HP |
+
+### 9d. Strutture del bagno
+
+Disegnate nella parte bassa della schermata (il Toilet con il giocatore, davanti Sink, Paper Holder e Bidet). Partono tutte dal **Tier 1**; si toccano per vedere l'effetto e potenziarle. **Build**: 20 TP + 1 AP per ogni Tier, fino al Tier 3.
+
+| Struttura | Limite (T1/T2/T3) | Produzione dopo ogni combattimento (T1/T2/T3) |
+|---|---|---|
+| **Sink** (Lavandino) | Oggetti 3 / 6 / 9 | +0 / +1 / +2 Action Point |
+| **Bidet** | Poop 15 / 20 / 30 | +0 / +1 / +2 Concentration |
+| **Paper Holder** (Porta carta) | Toilet Paper 30 / 50 / 70 | +0 / +5 / +10 TP |
+| **Toilet** (Water) | Merdomon 4 / 5 / 6 | +0 / +2 / +3 Poop |
+
+### 9e. Punteggio finale
+
+Mostrato a fine partita con il dettaglio; il **record** resta salvato nel browser e compare nella Home.
+
+| Voce | Punti |
+|---|---|
+| Wave vinta | 100 |
+| Distrazione sconfitta | 10 |
+| Wave con modificatore vinta senza Corrupt | 50 |
+| Boss medio / finale sconfitto | 150 / 300 |
+| Vittoria | 500 |
+| Concentration rimasta | 30 per punto |
+| Livello di struttura sopra il Tier 1 | 25 |
+| Poop prodotta (ricompense di fine wave e strutture) | 10 per punto |
 
 ## 10. Preparation
 
@@ -176,10 +217,11 @@ Le wave **3, 6, 9 e 10** hanno un modificatore, estratto a inizio partita tra qu
 | Azione | Nome | Effetto |
 |---|---|---|
 | Cura | **Heal** | Tutta la squadra a HP massimi |
-| Evacuate | **Evacuate** | Spendi 5 / 10 / 20 Merdascore → appaiono **2 Merdomon** (3 con il Game Boy) Small / Big / Huge tra cui sceglierne 1, poi il +1. **Re-Roll** delle opzioni: 2 TP, illimitato. Bloccata con 6 slot pieni. |
+| Evacuate | **Evacuate** | Spendi 5 / 10 / 20 Poop → appaiono **2 Merdomon** (3 con il Game Boy) Small / Big / Huge tra cui sceglierne 1, poi il +1. **Re-Roll** delle opzioni: 2 TP, illimitato. Bloccata se il Toilet è pieno. |
 | Acquista | **Shop** | 10 TP → compri uno dei 3 oggetti in vendita |
-| Concentrate | **Concentrate** | −2 Concentration → +4 Merdascore. Non usabile con Concentration ≤ 2. |
-| Scambio | **Trade** | A scelta: +2 Merdascore, +5 TP, oppure +1 a una statistica di un Merdomon (max 10). Sempre disponibile. |
+| Concentrate | **Concentrate** | −2 Concentration → +4 Poop. Non usabile con Concentration ≤ 2. |
+| Costruisci | **Build** | Potenzia una struttura: 20 TP + 1 AP (§9d). |
+| Scambio | **Trade** | A scelta: +2 Poop, +5 TP, oppure +1 a una statistica di un Merdomon (max 10). Sempre disponibile. |
 
 ### Azioni gratuite
 
@@ -187,7 +229,7 @@ Le wave **3, 6, 9 e 10** hanno un modificatore, estratto a inizio partita tra qu
 |---|---|---|---|
 | Organize | **Organize** | – | Riordina la squadra |
 | Flush | **Flush** | 5 TP | Elimina un Merdomon → +1 Concentration (max 10). Non sull'ultimo Merdomon. |
-| Bonus Action | **Bonus Action** | 20 TP | +1 AP (solo per il round corrente) |
+| Bonus Action | **Bonus Action** | 15 TP | +1 AP (massimo 5) |
 | Anteprima | **Scout** | – | Mostra le statistiche dei nemici in arrivo, nell'ordine di combattimento |
 | Combat | **Fight** | – | Avvia la wave |
 
@@ -203,8 +245,8 @@ Le wave **3, 6, 9 e 10** hanno un modificatore, estratto a inizio partita tra qu
 
 ### Esito
 
-**Vittoria**: +Merdascore = Merdomon sopravvissuti.
-**Sconfitta**: −Concentration = Distraction-mon sopravvissuti, **massimo 3** per wave.
+**Vittoria**: +Poop = Merdomon sopravvissuti.
+**Sconfitta**: −Concentration = Distraction-mon sopravvissuti (nessun limite).
 
 In entrambi i casi, poi:
 1. +TP = danno totale inflitto ai Distraction-mon.
@@ -222,7 +264,7 @@ In entrambi i casi, poi:
   - giocatore stilizzato visto dall'alto, seduto sul water;
   - 6 slot Merdomon con anteprima delle caratteristiche;
   - bottoni **Preparation** e **Next Wave**;
-  - in alto: TP (sinistra), barra Concentration (centro), Merdascore (destra); sotto, "Round X/10" a sinistra, oggetti al centro, "Actions ◆" a destra, poi i tratti.
+  - in alto: TP (sinistra), barra Concentration (centro), Poop (destra), con i limiti; sotto, "Round X/10", borsa oggetti (n/limite), Boss, "Actions ◆ /5", poi i tratti. In basso il bagno con le strutture; gli slot oltre il limite del Toilet sono mostrati bloccati.
 - **Preparation panel**: griglia di icone con il costo indicato (AP per le azioni costose, TP per le altre).
 - **Merdomon detail**: popup con statistiche e tratti, a icone.
 - **Combat**: prima una schermata "Bonuses" con il modificatore della wave, le abilità di inizio combattimento, i bonus attivi di tratti e oggetti e la squadra potenziata (si chiude toccando o dopo 2,6 secondi), poi animazione automatica con tasto ⏩.

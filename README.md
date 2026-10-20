@@ -1,4 +1,4 @@
-# D.O.T. – Defense of the Toilet 🚽🛡️
+# D.o.t.T. – Defense of the Toilet 🚽🛡️
 
 Roguelite auto-battler per smartphone: difendi la tua pausa bagno dai *Distraction-mon* schierando i tuoi *Merdomon*.
 

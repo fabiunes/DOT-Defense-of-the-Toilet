@@ -1,5 +1,32 @@
 # Changelog
 
+## v0.4
+
+### Nuove funzioni
+- **Strutture del bagno** (in basso nella schermata, toccabili): **Sink**, **Bidet**, **Paper Holder** e **Toilet**, dal Tier 1 al Tier 3.
+  - Decidono quanto puoi tenere: oggetti 3/6/9, Poop 15/20/30, Toilet Paper 30/50/70, Merdomon 4/5/6.
+  - Dal Tier 2 producono qualcosa dopo ogni combattimento (AP, Concentration, TP, Poop).
+  - Si potenziano con la nuova azione **Build** (20 TP + 1 AP per Tier).
+- **3 Boss** (Demon Scroller, The Bestseller, The StreamDeck): rivelato a inizio partita, dà +1 ATK ai nemici del suo tipo e combatte in forma media alla wave 5 e in forma finale alla wave 10, con un'abilità propria.
+- **Next Wave** apre il recap della wave in arrivo, con **Corrupt** (disattiva il modificatore per 3 TP) e **Fight**.
+- **Punteggio finale** con il dettaglio delle voci e **record** salvato (mostrato nella Home).
+- **3 nuovi oggetti**: Brown Towel, Yellow Towel e White Towel (+1 HP e +1 ATK ai Merdomon Normal, Liquid o Fart).
+- **Borsa degli oggetti**: con la borsa piena, per comprare si sceglie un oggetto da scartare.
+- Tutorial con nuove pagine: **Your bathroom**, **Bosses**, Items divisa in 2.
+
+### Modifiche alle regole
+- Gli **Action Point non spesi si accumulano** (massimo 5).
+- Il **Bonus Action** costa 15 TP.
+- Nessun limite alla Concentration persa in una wave.
+- Modificatori delle wave solo sulle wave **3, 6 e 9** (alla wave 10 c'è il Boss).
+- La wave 5 ora ha 4 Small e il Boss in forma media.
+
+### Nomi
+- Il gioco si chiama **D.o.t.T.** (Defense of the Toilet).
+- Merdascore → **Poop**, Runny → **Liquid**, tratto Merdon → **Stinky**, oggetto Bidet → **Water Jet**, Towel → **Paper Towel**.
+
+> I salvataggi della v0.3 non sono compatibili: il tasto Continue li ignora.
+
 ## v0.3
 
 ### Nuove funzioni

@@ -1,25 +1,30 @@
 import { useState } from 'react';
 import {
+  BOSS_INFO,
+  BUILD_COST,
   COSTS,
   EVACUATE_COST,
   ITEM_INFO,
   KIND_NAME,
-  MAX_TEAM,
+  MAX_TIER,
   MODIFIER_AP_REWARD,
   MODIFIER_DISABLE_COST,
   MODIFIER_INFO,
   REROLL_COST,
-  ROUNDS,
   SIZE_NAME,
   STAT_KEYS,
+  STRUCTURES,
+  STRUCTURE_INFO,
   CONCENTRATE_GAIN,
   TRADE,
 } from '../../engine/data';
 import * as G from '../../engine/game';
 import { countTraits } from '../../engine/traits';
-import type { ItemId, Rarity, RunState, TraitId } from '../../engine/types';
-import { EnemyArt, PlayerArt } from '../art';
+import type { ItemId, Rarity, RunState, StructureId, TraitId } from '../../engine/types';
+import { EnemyArt } from '../art';
+import { Bathroom, StructureIcon } from '../bathroom';
 import {
+  BossCard,
   CostBadge,
   EmptySlot,
   InfoRow,
@@ -41,7 +46,11 @@ type Panel =
   | { kind: 'evacuate' }
   | { kind: 'shop' }
   | { kind: 'trade' }
-  | { kind: 'scout' }
+  | { kind: 'scout'; fight?: boolean }
+  | { kind: 'items' }
+  | { kind: 'boss' }
+  | { kind: 'build' }
+  | { kind: 'structure'; id: StructureId }
   | { kind: 'detail'; id: number }
   | { kind: 'tradeStat'; id: number }
   | { kind: 'flush'; id: number }
@@ -86,7 +95,7 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
   return (
     <div className="screen prep">
       <TopBar run={run} />
-      <InfoRow run={run} onItem={(item) => setPanel({ kind: 'item', item })} />
+      <InfoRow run={run} onItems={() => setPanel({ kind: 'items' })} onBoss={() => setPanel({ kind: 'boss' })} />
       <TraitsRow run={run} onTrait={(trait) => setPanel({ kind: 'trait', trait })} />
 
       {mode ? (
@@ -102,7 +111,11 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
           <button className="big-btn shadow" onClick={() => setPanel({ kind: 'actions' })}>
             <Icon name="bonus" size={22} fill="#fff" /> Preparation
           </button>
-          <button className="big-btn shadow fight-btn" onClick={() => update(G.fight)} disabled={!G.canFight(run)}>
+          <button
+            className="big-btn shadow fight-btn"
+            onClick={() => setPanel({ kind: 'scout', fight: true })}
+            disabled={!G.canFight(run)}
+          >
             <span className="fight-label">
               <Icon name="fight" size={22} /> Next Wave
             </span>
@@ -112,19 +125,22 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       )}
 
       <div className="slots">
-        {Array.from({ length: MAX_TEAM }, (_, i) => {
+        {Array.from({ length: 6 }, (_, i) => {
           const m = run.team[i];
-          return m ? (
-            <MerdomonCard key={m.id} m={m} onClick={() => onSlot(i)} selected={mode === 'organize' && swapFrom === i} />
-          ) : (
-            <EmptySlot key={`empty-${i}`} index={i} />
-          );
+          if (m)
+            return <MerdomonCard key={m.id} m={m} onClick={() => onSlot(i)} selected={mode === 'organize' && swapFrom === i} />;
+          if (i >= G.teamCap(run))
+            return (
+              <button key={`lock-${i}`} className="card empty locked" onClick={() => setPanel({ kind: 'structure', id: 'toilet' })}>
+                <span>🔒</span>
+                <small>Toilet T{i - 2}</small>
+              </button>
+            );
+          return <EmptySlot key={`empty-${i}`} index={i} />;
         })}
       </div>
 
-      <div className="player-zone">
-        <PlayerArt />
-      </div>
+      <Bathroom run={run} onOpen={(id) => setPanel({ kind: 'structure', id })} />
 
       {panel?.kind === 'actions' && (
         <ActionPanel
@@ -140,7 +156,58 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       )}
       {panel?.kind === 'evacuate' && <EvacuatePanel run={run} update={update} onClose={close} />}
       {panel?.kind === 'shop' && <ShopPanel run={run} update={update} onClose={close} />}
-      {panel?.kind === 'scout' && <ScoutPanel run={run} update={update} onClose={close} />}
+      {panel?.kind === 'scout' && <ScoutPanel run={run} update={update} onClose={close} fight={panel.fight} />}
+      {panel?.kind === 'items' && (
+        <Modal onClose={close}>
+          <div className="panel-head">
+            <Icon name="shop" size={26} fill="#fff" />
+            <b>
+              {run.items.length}/{G.itemCap(run)}
+            </b>
+          </div>
+          {run.items.length === 0 ? (
+            <p className="muted center">No items yet – visit the Shop</p>
+          ) : (
+            <div className="item-list">
+              {run.items.map((it) => (
+                <ItemRow key={it} item={it} />
+              ))}
+            </div>
+          )}
+          <p className="muted center small">Upgrade the Sink to carry more</p>
+        </Modal>
+      )}
+      {panel?.kind === 'boss' && (
+        <Modal onClose={close}>
+          <BossCard boss={run.boss} />
+        </Modal>
+      )}
+      {panel?.kind === 'structure' && <StructurePanel run={run} id={panel.id} update={update} onClose={close} />}
+      {panel?.kind === 'build' && (
+        <Modal onClose={close}>
+          <div className="panel-head">
+            <Icon name="upgrade" size={26} />
+            <b>Build</b>
+            <CostBadge ap={BUILD_COST.ap} tp={BUILD_COST.tp} />
+          </div>
+          <div className="build-list">
+            {STRUCTURES.map((id) => (
+              <button key={id} className="build-row sk" onClick={() => setPanel({ kind: 'structure', id })}>
+                <StructureIcon id={id} tier={run.structures[id]} size={34} />
+                <span>
+                  <b>{STRUCTURE_INFO[id].name}</b>
+                  <small>
+                    {STRUCTURE_INFO[id].capacity} {G.capacity(run, id)}
+                  </small>
+                </span>
+                <span className={`tier-badge t${run.structures[id]}`}>
+                  {run.structures[id] >= MAX_TIER ? 'MAX' : `T${run.structures[id]}`}
+                </span>
+              </button>
+            ))}
+          </div>
+        </Modal>
+      )}
       {panel?.kind === 'trade' && (
         <TradePanel
           run={run}
@@ -227,6 +294,72 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       {run.choices.length > 0 && <ChoicesModal run={run} update={update} />}
       {run.pending && <NewMerdomonModal key={run.pending.id} run={run} m={run.pending} update={update} />}
     </div>
+  );
+}
+
+function ItemRow({ item }: { item: ItemId }) {
+  return (
+    <div className="item-row">
+      <ItemIcon item={item} size={28} />
+      <span>
+        <b>
+          {ITEM_INFO[item].name}{' '}
+          {ITEM_INFO[item].traits.map((t) => (
+            <TraitIcon key={t} trait={t} size={14} />
+          ))}
+        </b>
+        <small>{ITEM_INFO[item].desc}</small>
+      </span>
+    </div>
+  );
+}
+
+/** A bathroom structure: what it holds and produces now and at the next tier, and Build. */
+function StructurePanel({ run, id, update, onClose }: { run: RunState; id: StructureId; update: Update; onClose: () => void }) {
+  const info = STRUCTURE_INFO[id];
+  const tier = run.structures[id];
+  const max = tier >= MAX_TIER;
+  const next = (list: readonly number[]) => (max ? null : list[tier]);
+  return (
+    <Modal onClose={onClose}>
+      <div className="structure-head">
+        <StructureIcon id={id} tier={tier} size={72} />
+        <div>
+          <h2>{info.name}</h2>
+          <span className="tier-pips">
+            {[1, 2, 3].map((t) => (
+              <span key={t} className={t <= tier ? 'on' : ''} />
+            ))}
+          </span>
+        </div>
+      </div>
+      <div className="structure-rows">
+        <div>
+          <span className="muted">Holds {info.capacity}</span>
+          <b>
+            {info.capacities[tier - 1]}
+            {next(info.capacities) !== null && <span className="next"> → {next(info.capacities)}</span>}
+          </b>
+        </div>
+        <div>
+          <span className="muted">After each wave: {info.produce}</span>
+          <b>
+            +{info.production[tier - 1]}
+            {next(info.production) !== null && <span className="next"> → +{next(info.production)}</span>}
+          </b>
+        </div>
+      </div>
+      {max ? (
+        <p className="center">
+          <b>Max tier</b>
+        </p>
+      ) : (
+        <button className="big-btn shadow" disabled={!G.canBuild(run, id)} onClick={() => update((s) => G.build(s, id))}>
+          <Icon name="upgrade" size={22} /> Build T{tier + 1}
+          <CostBadge ap={BUILD_COST.ap} tp={BUILD_COST.tp} />
+        </button>
+      )}
+    </Modal>
   );
 }
 
@@ -317,6 +450,14 @@ function ActionPanel({
       cost: { ap: 1 },
       onClick: () => onOpen({ kind: 'trade' }),
     },
+    {
+      key: 'build',
+      icon: 'upgrade',
+      label: 'Build',
+      enabled: STRUCTURES.some((id) => G.canBuild(run, id)),
+      cost: { ap: BUILD_COST.ap, tp: BUILD_COST.tp },
+      onClick: () => onOpen({ kind: 'build' }),
+    },
   ];
   const free: Tile[] = [
     {
@@ -400,7 +541,7 @@ function EvacuatePanel({ run, update, onClose }: { run: RunState; update: Update
           </button>
         ))}
       </div>
-      {run.team.length >= MAX_TEAM && <p className="muted center">Team full – Flush first</p>}
+      {run.team.length >= G.teamCap(run) && <p className="muted center">Toilet full – Flush or upgrade the Toilet</p>}
     </Modal>
   );
 }
@@ -485,80 +626,119 @@ function TradePanel({
 }
 
 function ShopPanel({ run, update, onClose }: { run: RunState; update: Update; onClose: () => void }) {
+  // With a full bag, buying asks which owned item to drop.
+  const [buying, setBuying] = useState<ItemId | null>(null);
+  const full = G.bagFull(run);
   return (
     <Modal onClose={onClose} className="shop-panel">
       <div className="panel-head">
         <Icon name="shop" size={28} fill="#fff" />
         <CostBadge ap={1} tp={G.tpCost(run, 'shop')} />
+        <span className={`bag-count ${full ? 'full' : ''}`}>
+          {run.items.length}/{G.itemCap(run)}
+        </span>
       </div>
-      {run.shopOffer.length === 0 ? (
-        <p className="muted center">Sold out – come back next round</p>
+      {buying ? (
+        <>
+          <p className="center">
+            <b>Bag full – drop one item</b>
+          </p>
+          <div className="item-list">
+            {run.items.map((it) => (
+              <button
+                key={it}
+                className="item-row sk"
+                onClick={() => {
+                  update((s) => G.buy(s, buying, it));
+                  setBuying(null);
+                }}
+              >
+                <ItemIcon item={it} size={26} />
+                <span>
+                  <b>{ITEM_INFO[it].name}</b>
+                  <small>{ITEM_INFO[it].desc}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+          <button className="big-btn" onClick={() => setBuying(null)}>
+            <Icon name="close" size={20} /> Cancel
+          </button>
+        </>
       ) : (
-        <div className="shop-items single">
-          {run.shopOffer.map((it) => (
-            <button
-              key={it}
-              className="shop-item sk"
-              disabled={!G.canBuy(run, it)}
-              onClick={() => update((s) => G.buy(s, it))}
-            >
-              <span className="shop-item-head">
-                <ItemIcon item={it} size={28} />
-                <b>{ITEM_INFO[it].name}</b>
-                {ITEM_INFO[it].traits.map((t) => (
-                  <TraitIcon key={t} trait={t} size={16} />
-                ))}
-              </span>
-              <small>{ITEM_INFO[it].desc}</small>
-            </button>
-          ))}
-        </div>
+        <>
+          {run.shopOffer.length === 0 ? (
+            <p className="muted center">Sold out – come back next round</p>
+          ) : (
+            <div className="shop-items single">
+              {run.shopOffer.map((it) => (
+                <button
+                  key={it}
+                  className="shop-item sk"
+                  disabled={!G.affordable(run, it)}
+                  onClick={() => (full ? setBuying(it) : update((s) => G.buy(s, it)))}
+                >
+                  <span className="shop-item-head">
+                    <ItemIcon item={it} size={28} />
+                    <b>{ITEM_INFO[it].name}</b>
+                    {ITEM_INFO[it].traits.map((t) => (
+                      <TraitIcon key={t} trait={t} size={16} />
+                    ))}
+                  </span>
+                  <small>{ITEM_INFO[it].desc}</small>
+                </button>
+              ))}
+            </div>
+          )}
+          <RerollButton enabled={G.canRerollShop(run)} onClick={() => update(G.rerollShop)} />
+        </>
       )}
-      <RerollButton enabled={G.canRerollShop(run)} onClick={() => update(G.rerollShop)} />
     </Modal>
   );
 }
 
-/** This wave's modifier: effect, reward, and the option to pay it off. */
-function ModifierBox({ run, update }: { run: RunState; update: Update }) {
+/** This wave's modifier: effect and reward. */
+function ModifierBox({ run }: { run: RunState }) {
   const id = run.modifiers[run.round];
   if (!id) return null;
   const info = MODIFIER_INFO[id];
-  const lastWave = run.round >= ROUNDS;
   return (
     <div className={`modifier-box ${run.modifierDisabled ? 'off' : ''}`}>
       <span className="modifier-icon">{info.icon}</span>
       <span className="modifier-text">
         <b>{info.name}</b>
         <small>{info.desc}</small>
-        {!run.modifierDisabled && !lastWave && (
+        {!run.modifierDisabled && (
           <small className="modifier-reward">
             Win: +{MODIFIER_AP_REWARD} <Icon name="ap" size={11} fill="#1b1b1b" /> next round
           </small>
         )}
       </span>
-      {run.modifierDisabled ? (
-        <span className="muted">Off</span>
-      ) : (
-        !lastWave && (
-          <button className="disable-btn" disabled={!G.canDisableModifier(run)} onClick={() => update(G.disableModifier)}>
-            Disable <CostBadge tp={MODIFIER_DISABLE_COST} />
-          </button>
-        )
-      )}
+      {run.modifierDisabled && <span className="muted">Corrupted</span>}
     </div>
   );
 }
 
-/** Preview of the incoming wave, in fighting order. */
-function ScoutPanel({ run, update, onClose }: { run: RunState; update: Update; onClose: () => void }) {
+/** Preview of the incoming wave, in fighting order. From Next Wave it ends with Corrupt / Fight. */
+function ScoutPanel({
+  run,
+  update,
+  onClose,
+  fight = false,
+}: {
+  run: RunState;
+  update: Update;
+  onClose: () => void;
+  fight?: boolean;
+}) {
+  const modifierWave = !!run.modifiers[run.round];
   return (
     <Modal onClose={onClose} className="scout-panel">
       <div className="panel-head">
         <Icon name="eye" size={28} fill="#fff" />
         <WavePreview run={run} />
       </div>
-      <ModifierBox run={run} update={update} />
+      <ModifierBox run={run} />
       <div className={`scout-list ${run.wave.length > 6 ? 'tight' : ''}`}>
         {run.wave.map((e, i) => (
           <div key={e.id} className={`scout-row ${e.boss ? 'boss' : ''}`}>
@@ -566,7 +746,7 @@ function ScoutPanel({ run, update, onClose }: { run: RunState; update: Update; o
             <EnemyArt size={40} kind={e.kind} rarity={e.rarity} boss={e.boss} />
             <span className="scout-name">
               <Stars rarity={e.rarity} size={10} />
-              <small>{KIND_NAME[e.kind]}</small>
+              <small>{e.boss ? BOSS_INFO[run.boss].name : KIND_NAME[e.kind]}</small>
             </span>
             <span className="scout-stats">
               {STAT_KEYS.map((k) => (
@@ -578,6 +758,18 @@ function ScoutPanel({ run, update, onClose }: { run: RunState; update: Update; o
             </span>
           </div>
         ))}
+      </div>
+      <div className="scout-actions">
+        {modifierWave && (
+          <button className="big-btn corrupt-btn" disabled={!G.canDisableModifier(run)} onClick={() => update(G.disableModifier)}>
+            Corrupt <CostBadge tp={MODIFIER_DISABLE_COST} />
+          </button>
+        )}
+        {fight && (
+          <button className="big-btn shadow" onClick={() => update(G.fight)} disabled={!G.canFight(run)}>
+            <Icon name="fight" size={22} /> Fight
+          </button>
+        )}
       </div>
     </Modal>
   );

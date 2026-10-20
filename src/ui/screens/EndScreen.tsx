@@ -1,41 +1,47 @@
-import { ROUNDS } from '../../engine/data';
+import { useEffect } from 'react';
+import { loadBest, saveBest } from '../../engine/save';
+import { runScore } from '../../engine/score';
 import type { RunState } from '../../engine/types';
-import { EnemyArt, MerdomonArt } from '../art';
-import { Icon, type IconName } from '../icons';
+import { Icon } from '../icons';
+
+/** Record before this run ended, read once per finished run (keyed by its RNG state). */
+const previousBest = new Map<number, number>();
 
 export function EndScreen({ run, onHome, onNew }: { run: RunState; onHome: () => void; onNew: () => void }) {
   const victory = run.phase === 'victory';
-  const s = run.stats;
-  const rows: { icon: IconName | 'merdomon' | 'enemy'; label: string; value: string | number }[] = [
-    { icon: 'fight', label: 'Waves won', value: `${s.wavesWon}/${ROUNDS}` },
-    { icon: 'enemy', label: 'Distractions defeated', value: s.enemiesDefeated },
-    { icon: 'fist', label: 'Damage dealt', value: s.damageDealt },
-    { icon: 'merdomon', label: 'Merdomon created', value: s.merdomonCreated },
-    { icon: 'tp', label: 'Toilet Paper earned', value: s.tpEarned },
-    { icon: 'poop', label: 'Merdascore earned', value: s.merdascoreEarned },
-    { icon: 'shop', label: 'Items bought', value: s.itemsBought },
-  ];
+  const { lines, total } = runScore(run);
+  if (!previousBest.has(run.rngState)) previousBest.set(run.rngState, loadBest());
+  const prev = previousBest.get(run.rngState)!;
+  const newRecord = total > prev;
+
+  useEffect(() => {
+    saveBest(total);
+  }, [total]);
+
   return (
     <div className="screen end">
       <div className={`end-title ${victory ? 'win' : 'lose'}`}>
-        <Icon name={victory ? 'trophy' : 'skull'} size={64} fill="#fff" />
+        <Icon name={victory ? 'trophy' : 'skull'} size={52} fill="#fff" />
         <h1>{victory ? 'Victory!' : 'Game Over'}</h1>
         <p className="muted">{victory ? 'Break completed in peace.' : `Distracted at wave ${run.round}`}</p>
       </div>
       <div className="end-stats sk">
-        {rows.map((r) => (
-          <div key={r.label} className="end-row">
-            {r.icon === 'merdomon' ? (
-              <MerdomonArt size={22} />
-            ) : r.icon === 'enemy' ? (
-              <EnemyArt size={22} />
-            ) : (
-              <Icon name={r.icon} size={20} fill="#fff" />
-            )}
-            <span>{r.label}</span>
-            <b>{r.value}</b>
-          </div>
-        ))}
+        {lines
+          .filter((l) => l.points > 0)
+          .map((l) => (
+            <div key={l.label} className="score-row">
+              <span>{l.label}</span>
+              <span className="muted">×{l.count}</span>
+              <b>{l.points}</b>
+            </div>
+          ))}
+        <div className="score-total">
+          <span>Score</span>
+          <b>{total}</b>
+        </div>
+        <div className={`score-best ${newRecord ? 'new' : ''}`}>
+          {newRecord ? '★ New record!' : `Best: ${prev}`}
+        </div>
       </div>
       <div className="end-buttons">
         <button className="big-btn shadow" onClick={onNew}>

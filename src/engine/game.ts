@@ -5,6 +5,8 @@ import {
   ABILITY_CHOICES,
   BASE_AP,
   BIDET_CONCENTRATION,
+  BOSSES,
+  BUILD_COST,
   BRUSH_MERDASCORE,
   CONCENTRATE_GAIN,
   EVACUATE_CHOICES,
@@ -13,11 +15,10 @@ import {
   EVACUATE_COST,
   FLUSH_CONCENTRATION,
   ITEMS,
+  MAX_AP,
   MAX_CONCENTRATION,
-  MAX_CONCENTRATION_LOSS,
-  MAX_MERDASCORE,
   MAX_STAT,
-  MAX_TEAM,
+  MAX_TIER,
   MODIFIERS,
   MODIFIER_AP_REWARD,
   MODIFIER_DISABLE_COST,
@@ -31,6 +32,8 @@ import {
   STAT_KEYS,
   STARTING_TP,
   START_PACK,
+  STRUCTURES,
+  STRUCTURE_INFO,
   TOWEL_TP,
   TRADE,
 } from './data';
@@ -49,6 +52,7 @@ import type {
   RunStats,
   StartBonusId,
   StatKey,
+  StructureId,
 } from './types';
 
 // Every action is a pure function: it returns a new state, or the same state if the action isn't allowed.
@@ -75,19 +79,24 @@ function emptyStats(): RunStats {
     merdascoreEarned: 0,
     concentrationLost: 0,
     itemsBought: 0,
+    modifierWavesWon: 0,
+    midBossDefeated: false,
+    finalBossDefeated: false,
   };
 }
 
 export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
   const s: RunState = {
-    version: 4,
-    phase: 'starter',
+    version: 5,
+    phase: 'boss',
     round: 1,
     concentration: MAX_CONCENTRATION,
     tp: STARTING_TP,
     merdascore: STARTING_MERDASCORE,
-    ap: BASE_AP,
+    ap: 0,
     bonusAp: 0,
+    boss: 'demonScroller',
+    structures: Object.fromEntries(STRUCTURES.map((id) => [id, 1])) as Record<StructureId, number>,
     team: [],
     items: [],
     shopOffer: [],
@@ -108,14 +117,36 @@ export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
     Array.from({ length: STARTER_CHOICES }, () => createMerdomon(rng, s.nextId++, 'common')),
   );
   s.modifiers = withRng(s, (rng) => planModifiers(rng));
+  s.boss = withRng(s, (rng) => rng.pick(BOSSES));
   return s;
 }
 
-/** One distinct modifier for each modifier wave; Jackpot never on the last wave. */
+/** After the Boss reveal, the run starts with the starter pick. */
+export function beginRun(prev: RunState): RunState {
+  if (prev.phase !== 'boss') return prev;
+  return { ...clone(prev), phase: 'starter' };
+}
+
+// ---------- Structures: capacities ----------
+
+export function capacity(s: RunState, id: StructureId): number {
+  return STRUCTURE_INFO[id].capacities[s.structures[id] - 1];
+}
+export const itemCap = (s: RunState) => capacity(s, 'sink');
+export const poopCap = (s: RunState) => capacity(s, 'bidet');
+export const tpCap = (s: RunState) => capacity(s, 'holder');
+export const teamCap = (s: RunState) => capacity(s, 'toilet');
+
+function addTp(s: RunState, amount: number) {
+  s.tp = clamp(s.tp + amount, 0, tpCap(s));
+}
+function addPoop(s: RunState, amount: number) {
+  s.merdascore = clamp(s.merdascore + amount, 0, poopCap(s));
+}
+
+/** One distinct modifier for each modifier wave. */
 function planModifiers(rng: Rng): Partial<Record<number, ModifierId>> {
   const picks = rng.shuffle([...MODIFIERS]).slice(0, MODIFIER_WAVES.length);
-  const last = picks.length - 1;
-  if (picks[last] === 'jackpot') [picks[0], picks[last]] = [picks[last], picks[0]];
   return Object.fromEntries(MODIFIER_WAVES.map((w, i) => [w, picks[i]]));
 }
 
@@ -126,13 +157,14 @@ export function activeModifier(s: RunState): ModifierId | null {
 
 function startPreparation(s: RunState) {
   s.phase = 'preparation';
-  s.ap = BASE_AP + apBonus(s.team, s.items) + s.bonusAp;
+  // Unspent AP carry over, up to MAX_AP.
+  s.ap = Math.min(MAX_AP, s.ap + BASE_AP + apBonus(s.team, s.items) + s.bonusAp);
   s.bonusAp = 0;
   s.modifierDisabled = false;
-  s.wave = withRng(s, (rng) => createWave(rng, s.round, s.nextId));
+  s.wave = withRng(s, (rng) => createWave(rng, s.round, s.nextId, s.boss, s.stats.concentrationLost));
   s.nextId += s.wave.length;
   if (s.modifiers[s.round] === 'groupChat') {
-    const extra = withRng(s, (rng) => createEnemy(rng, s.nextId++, 'common'));
+    const extra = withRng(s, (rng) => createEnemy(rng, s.nextId++, 'common', s.boss));
     s.wave.unshift({ ...extra, extra: true });
   }
   drawShop(s);
@@ -225,8 +257,8 @@ export function chooseStartBonus(prev: RunState, choice: StartBonusId): RunState
   }
   if (choice === 'item') s.items.push(options.item);
   else {
-    s.tp += START_PACK.tp;
-    s.merdascore = Math.min(MAX_MERDASCORE, s.merdascore + START_PACK.merdascore);
+    addTp(s, START_PACK.tp);
+    addPoop(s, START_PACK.merdascore);
     s.bonusAp += START_PACK.ap;
   }
   s.startOptions = null;
@@ -255,7 +287,7 @@ export function heal(prev: RunState): RunState {
 }
 
 export function canEvacuate(s: RunState, rarity: Rarity): boolean {
-  return inPreparation(s) && s.ap >= 1 && s.team.length < MAX_TEAM && s.merdascore >= EVACUATE_COST[rarity];
+  return inPreparation(s) && s.ap >= 1 && s.team.length < teamCap(s) && s.merdascore >= EVACUATE_COST[rarity];
 }
 
 /** Pays and offers 2 (Game Boy: 3) Merdomon to choose from. */
@@ -265,7 +297,7 @@ export function evacuate(prev: RunState, rarity: Rarity): RunState {
   s.ap--;
   s.merdascore -= EVACUATE_COST[rarity];
   drawChoices(s, rarity);
-  if (s.items.includes('bidet')) s.concentration = Math.min(MAX_CONCENTRATION, s.concentration + BIDET_CONCENTRATION);
+  if (s.items.includes('waterJet')) s.concentration = Math.min(MAX_CONCENTRATION, s.concentration + BIDET_CONCENTRATION);
   return s;
 }
 
@@ -304,15 +336,26 @@ export function rerollShop(prev: RunState): RunState {
   return s;
 }
 
-export function canBuy(s: RunState, item: ItemId): boolean {
+/** The Sink limits how many items you can hold. */
+export const bagFull = (s: RunState) => s.items.length >= itemCap(s);
+
+/** With a full bag, an owned item must be discarded to make room. */
+export function canBuy(s: RunState, item: ItemId, discard?: ItemId): boolean {
+  const room = !bagFull(s) || (discard !== undefined && s.items.includes(discard));
+  return inPreparation(s) && s.ap >= 1 && s.tp >= tpCost(s, 'shop') && s.shopOffer.includes(item) && room;
+}
+
+/** Could buy this if there were room (used to offer a discard). */
+export function affordable(s: RunState, item: ItemId): boolean {
   return inPreparation(s) && s.ap >= 1 && s.tp >= tpCost(s, 'shop') && s.shopOffer.includes(item);
 }
 
-export function buy(prev: RunState, item: ItemId): RunState {
-  if (!canBuy(prev, item)) return prev;
+export function buy(prev: RunState, item: ItemId, discard?: ItemId): RunState {
+  if (!canBuy(prev, item, discard)) return prev;
   const s = clone(prev);
   s.ap--;
   s.tp -= tpCost(s, 'shop');
+  if (bagFull(s)) s.items = s.items.filter((i) => i !== discard);
   s.items.push(item);
   s.shopOffer = s.shopOffer.filter((i) => i !== item);
   s.stats.itemsBought++;
@@ -328,7 +371,7 @@ export function concentrate(prev: RunState): RunState {
   const s = clone(prev);
   s.ap--;
   s.concentration -= COSTS.concentrate;
-  s.merdascore = Math.min(MAX_MERDASCORE, s.merdascore + CONCENTRATE_GAIN);
+  addPoop(s, CONCENTRATE_GAIN);
   return s;
 }
 
@@ -359,7 +402,7 @@ export function flush(prev: RunState, id: number): RunState {
 }
 
 export function canBonusAction(s: RunState): boolean {
-  return inPreparation(s) && s.tp >= tpCost(s, 'bonusAction');
+  return inPreparation(s) && s.ap < MAX_AP && s.tp >= tpCost(s, 'bonusAction');
 }
 
 export function bonusAction(prev: RunState): RunState {
@@ -380,8 +423,8 @@ export function trade(prev: RunState, resource: 'merdascore' | 'tp'): RunState {
   if (!canTrade(prev)) return prev;
   const s = clone(prev);
   s.ap--;
-  if (resource === 'merdascore') s.merdascore = Math.min(MAX_MERDASCORE, s.merdascore + TRADE.merdascore);
-  else s.tp += TRADE.tp;
+  if (resource === 'merdascore') addPoop(s, TRADE.merdascore);
+  else addTp(s, TRADE.tp);
   return s;
 }
 
@@ -401,6 +444,21 @@ export function tradeStat(prev: RunState, id: number, stat: StatKey): RunState {
   s.ap--;
   m.stats[stat] += TRADE.stat;
   if (stat === 'hp') m.hp += TRADE.stat;
+  return s;
+}
+
+// ---------- Build (1 AP + TP) ----------
+
+export function canBuild(s: RunState, id: StructureId): boolean {
+  return inPreparation(s) && s.structures[id] < MAX_TIER && s.ap >= BUILD_COST.ap && s.tp >= BUILD_COST.tp;
+}
+
+export function build(prev: RunState, id: StructureId): RunState {
+  if (!canBuild(prev, id)) return prev;
+  const s = clone(prev);
+  s.ap -= BUILD_COST.ap;
+  s.tp -= BUILD_COST.tp;
+  s.structures[id]++;
   return s;
 }
 
@@ -435,11 +493,11 @@ export function canFight(s: RunState): boolean {
 function applyReward(s: RunState, r: Reward) {
   switch (r.resource) {
     case 'tp':
-      s.tp = Math.max(0, s.tp + r.amount);
+      addTp(s, r.amount);
       s.stats.tpEarned += r.amount;
       break;
     case 'merdascore':
-      s.merdascore = clamp(s.merdascore + r.amount, 0, MAX_MERDASCORE);
+      addPoop(s, r.amount);
       s.stats.merdascoreEarned += r.amount;
       break;
     case 'concentration':
@@ -459,7 +517,9 @@ export function fight(prev: RunState): RunState {
   const traits = countTraits(s.team, s.items);
   const toothbrushHp = s.items.includes('toothbrush') ? s.ap : 0;
   const modifier = activeModifier(s);
-  const result = withRng(s, (rng) => simulateCombat(s.team, s.wave, s.items, rng, { extraHp: toothbrushHp, modifier }));
+  const result = withRng(s, (rng) =>
+    simulateCombat(s.team, s.wave, s.items, rng, { extraHp: toothbrushHp, modifier, bossId: s.boss }),
+  );
 
   // What changes at combat start, for the pre-fight recap.
   const bonuses: CombatBonus[] = [];
@@ -468,11 +528,12 @@ export function fight(prev: RunState): RunState {
   const BONUS_TRAIT = { hp: 'healthy', atk: 'fighter', def: 'defender', spd: 'haste' } as const;
   for (const k of STAT_KEYS) if (statBonus[k] > 0) bonuses.push({ source: BONUS_TRAIT[k], stat: k, amount: statBonus[k] });
   if (toothbrushHp > 0) bonuses.push({ source: 'toothbrush', stat: 'hp', amount: toothbrushHp });
-  for (const item of ['window', 'flipflops', 'magazine'] as const) if (s.items.includes(item)) bonuses.push({ source: item });
+  for (const item of ['window', 'flipflops', 'magazine', 'brownTowel', 'yellowTowel', 'whiteTowel'] as const)
+    if (s.items.includes(item)) bonuses.push({ source: item });
 
   const rewards: Reward[] = [];
   if (result.won) rewards.push({ source: 'survivors', resource: 'merdascore', amount: result.survivors });
-  else rewards.push({ source: 'enemies', resource: 'concentration', amount: -Math.min(result.enemySurvivors, MAX_CONCENTRATION_LOSS) });
+  else rewards.push({ source: 'enemies', resource: 'concentration', amount: -result.enemySurvivors });
   if (result.damageDealt > 0) rewards.push({ source: 'damage', resource: 'tp', amount: result.damageDealt });
   const paper = traitValue('paper', traits.paper);
   if (paper > 0) rewards.push({ source: 'paper', resource: 'tp', amount: paper });
@@ -496,6 +557,12 @@ export function fight(prev: RunState): RunState {
   }
   if (modifier && result.won && s.round < ROUNDS)
     rewards.push({ source: modifier, resource: 'ap', amount: MODIFIER_AP_REWARD });
+  // Structures produce after every combat.
+  const produce = (id: StructureId) => STRUCTURE_INFO[id].production[s.structures[id] - 1];
+  if (produce('sink') > 0) rewards.push({ source: 'sink', resource: 'ap', amount: produce('sink') });
+  if (produce('bidet') > 0) rewards.push({ source: 'bidet', resource: 'concentration', amount: produce('bidet') });
+  if (produce('holder') > 0) rewards.push({ source: 'holder', resource: 'tp', amount: produce('holder') });
+  if (produce('toilet') > 0) rewards.push({ source: 'toilet', resource: 'merdascore', amount: produce('toilet') });
   for (const r of rewards) applyReward(s, r);
 
   // Combat-only bonus HP is dropped; fallen Merdomon come back with half their max HP.
@@ -503,13 +570,18 @@ export function fight(prev: RunState): RunState {
     const hp = result.hpAfter[i];
     m.hp = hp > 0 ? Math.min(hp, m.stats.hp) : Math.ceil(m.stats.hp / 2);
   });
-  s.ap = 0;
 
   s.stats.damageDealt += result.damageDealt;
   s.stats.enemiesDefeated += result.enemiesDefeated;
   s.stats.merdomonFallen += result.merdomonFallen;
   if (result.won) s.stats.wavesWon++;
   else s.stats.wavesLost++;
+  if (result.won && modifier) s.stats.modifierWavesWon++;
+  s.wave.forEach((e, i) => {
+    if (!e.boss || result.enemyHpAfter[i] > 0) return;
+    if (e.bossForm === 'mid') s.stats.midBossDefeated = true;
+    else s.stats.finalBossDefeated = true;
+  });
 
   s.lastCombat = {
     round: s.round,

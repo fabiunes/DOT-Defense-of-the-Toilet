@@ -3,6 +3,7 @@ import { continueAfterCombat, newRun } from './engine/game';
 import { clearSave, loadRun, saveRun } from './engine/save';
 import type { RunState } from './engine/types';
 import { SketchDefs } from './ui/art';
+import { BossRevealScreen } from './ui/screens/BossRevealScreen';
 import { CombatScreen } from './ui/screens/CombatScreen';
 import { EndScreen } from './ui/screens/EndScreen';
 import { HomeScreen } from './ui/screens/HomeScreen';
@@ -43,6 +44,8 @@ export default function App() {
         onTutorial={() => setShowTutorial(true)}
       />
     );
+  } else if (run.phase === 'boss') {
+    content = <BossRevealScreen run={run} update={update} />;
   } else if (run.phase === 'starter') {
     content = <StarterScreen run={run} update={update} />;
   } else if (run.phase === 'startBonus') {

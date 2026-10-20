@@ -1,4 +1,5 @@
 import { MerdomonArt, PlayerArt } from '../art';
+import { loadBest } from '../../engine/save';
 import { Icon } from '../icons';
 
 export function HomeScreen({
@@ -16,8 +17,9 @@ export function HomeScreen({
     <div className="screen home">
       <div className="home-title">
         <MerdomonArt size={84} />
-        <h1>D.O.T.</h1>
+        <h1>D.o.t.T.</h1>
         <p>Defense of the Toilet</p>
+        {loadBest() > 0 && <p className="home-best">Best: {loadBest()}</p>}
       </div>
       <div className="home-menu">
         <button className="big-btn shadow" onClick={onNew}>

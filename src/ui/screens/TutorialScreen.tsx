@@ -11,8 +11,13 @@ import {
   KIND_CURVE,
   KIND_NAME,
   MAX_CONCENTRATION,
-  MAX_CONCENTRATION_LOSS,
-  MAX_MERDASCORE,
+  MAX_AP,
+  BOSSES,
+  BOSS_INFO,
+  BUILD_COST,
+  SCORE,
+  STRUCTURES,
+  STRUCTURE_INFO,
   MERDOMON_KINDS,
   MODIFIERS,
   MODIFIER_AP_REWARD,
@@ -32,6 +37,7 @@ import {
 } from '../../engine/data';
 import type { Merdomon, Rarity, RunState } from '../../engine/types';
 import { EnemyArt, MerdomonArt } from '../art';
+import { StructureIcon } from '../bathroom';
 import { AbilityBadge, CostBadge, InfoRow, MerdomonCard, Stars, StatValue, TopBar, TraitsRow } from '../components';
 import { Icon, ItemIcon, TraitIcon, type IconName } from '../icons';
 import { PrepScreen } from './PrepScreen';
@@ -40,12 +46,12 @@ import { PrepScreen } from './PrepScreen';
 
 const demoTeam: Merdomon[] = [
   { id: 1, rarity: 'rare', kind: 'normal', stats: { hp: 6, atk: 5, def: 2, spd: 3 }, hp: 4, traits: ['fighter', 'paper'], ability: 'cheerleader' },
-  { id: 2, rarity: 'common', kind: 'runny', stats: { hp: 4, atk: 2, def: 3, spd: 1 }, hp: 4, traits: ['fighter'], ability: 'snowball' },
+  { id: 2, rarity: 'common', kind: 'liquid', stats: { hp: 4, atk: 2, def: 3, spd: 1 }, hp: 4, traits: ['fighter'], ability: 'snowball' },
   { id: 3, rarity: 'common', kind: 'fart', stats: { hp: 3, atk: 2, def: 1, spd: 3 }, hp: 3, traits: ['haste'], ability: 'spiky' },
 ];
 
 const demoRun: RunState = {
-  version: 4,
+  version: 5,
   phase: 'preparation',
   round: 3,
   concentration: 7,
@@ -53,6 +59,8 @@ const demoRun: RunState = {
   merdascore: 12,
   ap: 1,
   bonusAp: 0,
+  boss: 'bestseller',
+  structures: { sink: 2, bidet: 1, holder: 1, toilet: 1 },
   team: demoTeam,
   items: ['brush', 'window'],
   shopOffer: [],
@@ -82,6 +90,9 @@ const demoRun: RunState = {
     merdascoreEarned: 0,
     concentrationLost: 0,
     itemsBought: 0,
+    modifierWavesWon: 0,
+    midBossDefeated: false,
+    finalBossDefeated: false,
   },
 };
 
@@ -177,13 +188,16 @@ const pages: Page[] = [
     title: 'Starting a run',
     body: (
       <>
-        <Row icon={<span className="tut-step">1</span>} title="Pick a starter">
+        <Row icon={<span className="tut-step">1</span>} title="Meet your Boss">
+          One of {BOSSES.length} Bosses is revealed: it changes the run and attacks on waves 5 and 10.
+        </Row>
+        <Row icon={<span className="tut-step">2</span>} title="Pick a starter">
           Choose 1 of 3 Small Merdomon.
         </Row>
-        <Row icon={<span className="tut-step">2</span>} title="Ability and +1">
+        <Row icon={<span className="tut-step">3</span>} title="Ability and +1">
           Every new Merdomon picks <b>1 of 3 abilities</b> and a stat for its +1 point, then Confirm.
         </Row>
-        <Row icon={<span className="tut-step">3</span>} title="Starting bonus">
+        <Row icon={<span className="tut-step">4</span>} title="Starting bonus">
           Choose one:
         </Row>
         <div className="tut-starts">
@@ -202,7 +216,7 @@ const pages: Page[] = [
             </small>
           </span>
         </div>
-        <p className="tut-note">The pack's extra Action Point is for round 1 only.</p>
+
       </>
     ),
   },
@@ -214,13 +228,13 @@ const pages: Page[] = [
           <TopBar run={demoRun} />
         </Demo>
         <Row icon={I('tp')} title="Toilet Paper">
-          Your money. Earn it by dealing damage, spend it on items and free actions.
+          Your money. Earn it by dealing damage. The Paper Holder sets how much you can keep.
         </Row>
         <Row icon={I('focus')} title="Concentration">
           Your life ({MAX_CONCENTRATION} max). Losing a wave lowers it. At 0 the run ends.
         </Row>
-        <Row icon={I('poop')} title="Merdascore">
-          Up to {MAX_MERDASCORE}. Spend it to Evacuate new Merdomon. Won waves fill it.
+        <Row icon={I('poop')} title="Poop">
+          Spend it to Evacuate new Merdomon. Won waves fill it. The Bidet sets how much you can keep.
         </Row>
       </>
     ),
@@ -230,17 +244,20 @@ const pages: Page[] = [
     body: (
       <>
         <Demo>
-          <InfoRow run={demoRun} onItem={noop} />
+          <InfoRow run={demoRun} onItems={noop} onBoss={noop} />
           <TraitsRow run={demoRun} onTrait={noop} />
         </Demo>
         <Row icon={<span className="round-badge">Round 3/{ROUNDS}</span>} title="Round">
           Current wave out of {ROUNDS}.
         </Row>
         <Row icon={I('ap', '#1b1b1b')} title="Action Points">
-          1 every round (more with the Action trait). Spend them on the main actions: unspent ones are lost.
+          +1 every round (more with the Action trait and the Sink). Unspent ones are kept, up to {MAX_AP}.
         </Row>
-        <Row icon={<ItemIcon item="brush" size={22} />} title="Items">
-          Your items (top right). Tap one to read what it does.
+        <Row icon={I('shop')} title="Items">
+          Items held / room in the bag (set by the Sink). Tap to see them.
+        </Row>
+        <Row icon={<span className="mod-emoji">{BOSS_INFO.bestseller.icon}</span>} title="Boss">
+          Tap to see this run's Boss.
         </Row>
         <Row
           icon={
@@ -439,26 +456,27 @@ const pages: Page[] = [
             { icon: 'shop', label: 'Shop', cost: { ap: 1, tp: COSTS.shop } },
             { icon: 'focus', label: 'Concentrate', cost: { ap: 1, ms: `+${CONCENTRATE_GAIN}`, conc: -COSTS.concentrate } },
             { icon: 'trade', label: 'Trade', cost: { ap: 1 } },
+            { icon: 'upgrade', label: 'Build', cost: { ap: BUILD_COST.ap, tp: BUILD_COST.tp } },
           ]}
         />
         <Row icon={I('heal')} title="Heal">
           All Merdomon back to full HP.
         </Row>
         <Row icon={I('toilet')} title="Evacuate">
-          Pick 1 of 2 new Merdomon (max 6), then its ability and +1.
+          Pick 1 of 2 new Merdomon, then its ability and +1.
         </Row>
         <Row icon={I('shop')} title="Shop">
-          Buy one of the 2 items on sale this round.
+          Buy 1 of 2 items. Bag full? Drop one.
         </Row>
         <Row icon={I('focus')} title="Concentrate">
-          Trade 2 Concentration for {CONCENTRATE_GAIN} Merdascore.
-        </Row>
-        <Row icon={I('dice')} title="Re-Roll">
-          Don't like the options in Evacuate or Shop? Redraw them for {REROLL_COST} {ii('tp')}.
+          Trade 2 Concentration for {CONCENTRATE_GAIN} Poop.
         </Row>
         <Row icon={I('trade')} title="Trade">
           Swap 1 {ii('ap', '#1b1b1b')} for +{TRADE.merdascore} {ii('poop')}, +{TRADE.tp} {ii('tp')} or +{TRADE.stat} to a
           Merdomon stat (max 10).
+        </Row>
+        <Row icon={I('upgrade')} title="Build">
+          Upgrade a structure (or just tap it).
         </Row>
       </>
     ),
@@ -488,6 +506,9 @@ const pages: Page[] = [
         <Row icon={I('eye')} title="Scout">
           See the stats of the incoming Distractions, in fighting order.
         </Row>
+        <Row icon={I('dice')} title="Re-Roll">
+          Redraw the options in Evacuate or Shop for {REROLL_COST} {ii('tp')}.
+        </Row>
       </>
     ),
   },
@@ -515,10 +536,11 @@ const pages: Page[] = [
           {SIZE_TOTAL.rare} stat points.
         </Row>
         <Row icon={I('crown', '#1b1b1b')} title="The Boss">
-          Huge ({SIZE_TOTAL.epic} points), only in wave {ROUNDS}, always last in line.
+          Big on wave 5, Huge on wave {ROUNDS}, always last in line.
         </Row>
         <p className="tut-note">
-          Use {ii('eye')} Scout to see their stats and the wave modifier. Then tap Next Wave: the fight plays out by itself.
+          Tap Next Wave to see who is coming. Then <b>Corrupt</b> the wave modifier, or <b>Fight</b>: the battle plays out
+          by itself.
         </p>
       </>
     ),
@@ -532,14 +554,74 @@ const pages: Page[] = [
           <b>
             +{MODIFIER_AP_REWARD} {ii('ap', '#1b1b1b')}
           </b>{' '}
-          next round, or pay {MODIFIER_DISABLE_COST} {ii('tp')} to switch it off (and lose the reward). Wave 10 can't be
-          switched off.
+          next round, or <b>Corrupt</b> it for {MODIFIER_DISABLE_COST} {ii('tp')} (and lose the reward).
         </p>
         {MODIFIERS.map((m) => (
           <Row key={m} icon={<span className="mod-emoji">{MODIFIER_INFO[m].icon}</span>} title={MODIFIER_INFO[m].name}>
             {MODIFIER_INFO[m].desc}
           </Row>
         ))}
+      </>
+    ),
+  },
+  {
+    title: 'Your bathroom',
+    body: (
+      <>
+        <p className="tut-note">
+          The structures at the bottom of the screen set how much you can hold, and from Tier 2 they produce something
+          after every wave. Tap one to upgrade it: {BUILD_COST.tp} {ii('tp')} + {BUILD_COST.ap} {ii('ap', '#1b1b1b')} per
+          tier, up to Tier 3.
+        </p>
+        <table className="tut-table">
+          <thead>
+            <tr>
+              <th />
+              <th className="left">Holds</th>
+              <th>T1/T2/T3</th>
+              <th className="left">Produces</th>
+            </tr>
+          </thead>
+          <tbody>
+            {STRUCTURES.map((id) => (
+              <tr key={id}>
+                <td>
+                  <StructureIcon id={id} tier={2} size={30} />
+                </td>
+                <td className="left">
+                  <b>{STRUCTURE_INFO[id].name}</b>
+                  <small>{STRUCTURE_INFO[id].capacity}</small>
+                </td>
+                <td>{STRUCTURE_INFO[id].capacities.join('/')}</td>
+                <td className="left">
+                  <small>
+                    {STRUCTURE_INFO[id].produce} +{STRUCTURE_INFO[id].production.join('/+')}
+                  </small>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </>
+    ),
+  },
+  {
+    title: 'Bosses',
+    body: (
+      <>
+        <p className="tut-note">
+          Each run has one Boss, revealed at the start. Its type gets +1 ATK all run, and it fights on wave 5 (Big) and
+          wave 10 (Huge).
+        </p>
+        {BOSSES.map((b) => (
+          <Row key={b} icon={<EnemyArt size={36} kind={BOSS_INFO[b].kind} rarity="epic" boss />} title={BOSS_INFO[b].name}>
+            {BOSS_INFO[b].runDesc}. <b>{BOSS_INFO[b].ability}</b>: {BOSS_INFO[b].finalDesc}.
+          </Row>
+        ))}
+        <p className="tut-note">
+          Final score: {SCORE.waveWon} per wave won, {SCORE.enemy} per Distraction, Bosses, victory, Concentration left,
+          upgrades and {SCORE.poop} per Poop produced.
+        </p>
       </>
     ),
   },
@@ -595,7 +677,7 @@ const pages: Page[] = [
             {I('skull', '#fff', 30)}
             <b>Lost</b>
             <p>
-              −1 {ii('focus')} for each Distraction still standing (max −{MAX_CONCENTRATION_LOSS})
+              −1 {ii('focus')} for each Distraction still standing
             </p>
           </div>
         </div>
@@ -603,18 +685,33 @@ const pages: Page[] = [
         <Row icon={I('tp')}>+1 Toilet Paper for every point of damage dealt.</Row>
         <Row icon={<TraitIcon trait="paper" size={22} />}>Trait and item bonuses are paid out.</Row>
         <Row icon={<MerdomonArt size={26} sad />}>Fallen Merdomon come back with half their HP.</Row>
-        <Row icon={I('ap', '#1b1b1b')}>Unspent Action Points are lost.</Row>
+        <Row icon={<StructureIcon id="holder" tier={2} size={24} />}>Upgraded structures produce their bonus.</Row>
       </>
     ),
   },
   {
-    title: 'Items',
+    title: 'Items (1/2)',
     body: (
       <>
         <p className="tut-note">
           2 random items are on sale each round. Each item also counts for its <b>traits</b>.
         </p>
-        {ITEMS.map((it) => (
+        {ITEMS.slice(0, 6).map((it) => (
+          <Row key={it} icon={<ItemIcon item={it} size={24} />} title={ITEM_INFO[it].name}>
+            {ITEM_INFO[it].traits.map((t) => (
+              <TraitIcon key={t} trait={t} size={14} />
+            ))}{' '}
+            {ITEM_INFO[it].desc}
+          </Row>
+        ))}
+      </>
+    ),
+  },
+  {
+    title: 'Items (2/2)',
+    body: (
+      <>
+        {ITEMS.slice(6).map((it) => (
           <Row
             key={it}
             icon={<ItemIcon item={it} size={24} />}

@@ -25,7 +25,7 @@ const confirm = (s: RunState, stat: Parameters<typeof G.confirmMerdomon>[1] = 'h
 
 /** A run in preparation with a known team. */
 function prepRun(patch: Partial<RunState> = {}): RunState {
-  let s = G.newRun(42);
+  let s = G.beginRun(G.newRun(42));
   s = G.chooseStarter(s, 0);
   s = confirm(s, 'atk');
   s = G.chooseStartBonus(s, 'resources');
@@ -51,10 +51,10 @@ describe('generation', () => {
       ['normal', 10, [3, 3, 2, 2]],
       ['normal', 15, [4, 4, 4, 3]],
       ['normal', 20, [5, 5, 5, 5]],
-      ['runny', 9, [4, 3, 1, 1]],
-      ['runny', 10, [4, 4, 1, 1]],
-      ['runny', 15, [6, 6, 2, 1]],
-      ['runny', 20, [8, 8, 2, 2]],
+      ['liquid', 9, [4, 3, 1, 1]],
+      ['liquid', 10, [4, 4, 1, 1]],
+      ['liquid', 15, [6, 6, 2, 1]],
+      ['liquid', 20, [8, 8, 2, 2]],
       ['fart', 9, [5, 2, 1, 1]],
       ['fart', 10, [6, 2, 1, 1]],
       ['fart', 15, [9, 4, 1, 1]],
@@ -92,12 +92,13 @@ describe('generation', () => {
   });
 
   it('builds waves with the boss always last', () => {
-    const wave = createWave(new Rng(3), 10, 1);
+    const wave = createWave(new Rng(3), 10, 1, 'streamDeck');
     expect(wave).toHaveLength(6);
-    expect(wave[5].boss).toBe(true);
-    expect(wave[5].rarity).toBe('epic');
+    expect(wave[5]).toMatchObject({ boss: true, rarity: 'epic', bossForm: 'final', kind: 'console' });
     expect(wave.slice(0, 5).every((e) => e.rarity === 'rare' && !e.boss)).toBe(true);
-    expect(createWave(new Rng(3), 4, 1).map((e) => e.rarity).sort()).toEqual(['common', 'common', 'common', 'common', 'rare']);
+    expect(createWave(new Rng(3), 4, 1, 'streamDeck').map((e) => e.rarity).sort()).toEqual(['common', 'common', 'common', 'common', 'rare']);
+    const w5 = createWave(new Rng(3), 5, 1, 'bestseller');
+    expect(w5.at(-1)).toMatchObject({ boss: true, rarity: 'rare', bossForm: 'mid', kind: 'book' });
   });
 });
 
@@ -192,9 +193,10 @@ describe('combat', () => {
 });
 
 describe('run flow', () => {
-  it('starts with 2 TP, 5 Merdascore and 3 small starters', () => {
-    const s = G.newRun(1);
-    expect(s).toMatchObject({ phase: 'starter', concentration: 10, tp: 2, merdascore: 5, ap: 1 });
+  it('starts with 2 TP, 5 Poop and 3 small starters, after the Boss reveal', () => {
+    expect(G.newRun(1).phase).toBe('boss');
+    const s = G.beginRun(G.newRun(1));
+    expect(s).toMatchObject({ phase: 'starter', concentration: 10, tp: 2, merdascore: 5, ap: 0 });
     expect(s.starters).toHaveLength(3);
     expect(s.starters.every((m) => m.rarity === 'common' && m.traits.length === 1)).toBe(true);
   });
@@ -210,14 +212,15 @@ describe('run flow', () => {
   });
 
   it('Big enemies have 15 stat points', () => {
-    const wave = createWave(new Rng(9), 9, 1);
-    for (const e of wave) expect(e.stats.hp + e.stats.atk + e.stats.def + e.stats.spd).toBe(15);
+    const wave = createWave(new Rng(9), 9, 1, 'bestseller');
+    // Books get +1 ATK from the Bestseller's run-wide modifier.
+    for (const e of wave) expect(e.stats.hp + e.stats.atk + e.stats.def + e.stats.spd).toBe(e.kind === 'book' ? 16 : 15);
   });
 
-  it('Concentrate needs more than 2 concentration and caps Merdascore', () => {
+  it('Concentrate needs more than 2 concentration; Poop is capped by the Bidet', () => {
     expect(G.canConcentrate(prepRun({ concentration: 2 }))).toBe(false);
-    const s = G.concentrate(prepRun({ merdascore: 18 }));
-    expect(s).toMatchObject({ concentration: 8, merdascore: 20, ap: 0 });
+    const s = G.concentrate(prepRun({ merdascore: 13 }));
+    expect(s).toMatchObject({ concentration: 8, merdascore: 15, ap: 0 });
   });
 
   it('Evacuate spends merdascore and AP, offers 2 options, blocked when the team is full', () => {
@@ -273,7 +276,7 @@ describe('run flow', () => {
   });
 
   it('the next shop offer never contains owned items', () => {
-    let s = prepRun({ items: ['brush', 'magazine', 'bidet', 'shower', 'window', 'flipflops', 'gameboy'] });
+    let s = prepRun({ items: ITEMS.filter((i) => i !== 'toothbrush' && i !== 'towel') });
     s = G.continueAfterCombat(G.fight(s));
     expect([...s.shopOffer].sort()).toEqual(['toothbrush', 'towel']);
   });
@@ -282,7 +285,7 @@ describe('run flow', () => {
     const s = prepRun({ tp: 30, items: ['shower'] });
     expect(G.tpCost(s, 'flush')).toBe(3);
     expect(G.tpCost(s, 'shop')).toBe(8);
-    expect(G.tpCost(s, 'bonusAction')).toBe(18);
+    expect(G.tpCost(s, 'bonusAction')).toBe(13);
   });
 
   it('Flush cannot remove the last Merdomon', () => {
@@ -303,15 +306,18 @@ describe('run flow', () => {
     expect(G.canTradeStat(s, m.id, 'spd')).toBe(false);
   });
 
-  it('the Action trait adds AP each round, and unspent AP do not carry over', () => {
+  it('the Action trait adds AP each round, and unspent AP carry over (max 5)', () => {
     let s = prepRun();
     s.team[0].traits = ['action', 'action'];
     s = G.bonusAction({ ...s, tp: 20 });
     expect(s.ap).toBe(2);
     s = G.fight(s);
-    expect(s.ap).toBe(0);
+    expect(s.ap).toBe(2);
     s = G.continueAfterCombat(s);
-    expect(s.ap).toBe(2); // 1 base + 1 from Action (2 traits)
+    expect(s.ap).toBe(4); // 2 kept + 1 base + 1 from Action (2 traits)
+    s = G.continueAfterCombat(G.fight(s));
+    expect(s.ap).toBe(5);
+    expect(G.canBonusAction({ ...s, tp: 50 })).toBe(false);
   });
 
   it('Toothbrush adds unspent AP as combat HP, listed in the combat bonuses', () => {
@@ -324,14 +330,14 @@ describe('run flow', () => {
     expect(G.fight(s).lastCombat!.bonuses[0]).toEqual({ source: 'fighter', stat: 'atk', amount: 1 });
   });
 
-  it('a lost wave costs at most 3 concentration and fallen Merdomon return at half HP', () => {
+  it('a lost wave costs 1 concentration per surviving enemy and fallen Merdomon return at half HP', () => {
     const s = prepRun();
     s.team = [mk({ hp: 6, atk: 1, def: 1, spd: 1 })];
     s.wave = [foe({ hp: 10, atk: 9, spd: 9 }), foe({}), foe({}), foe({}), foe({})];
     const after = G.fight(s);
     expect(after.phase).toBe('combat');
     expect(after.lastCombat?.won).toBe(false);
-    expect(after.concentration).toBe(7);
+    expect(after.concentration).toBe(5);
     expect(after.team[0].hp).toBe(3);
     expect(after.tp).toBe(s.tp); // no damage: the faster enemy kills before the Merdomon can strike
   });

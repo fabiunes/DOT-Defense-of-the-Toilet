@@ -28,7 +28,7 @@ export function SketchDefs() {
 
 export const MERDOMON_COLOR: Record<MerdomonKind, string> = {
   normal: '#a8703f',
-  runny: '#ecd36f',
+  liquid: '#ecd36f',
   fart: 'rgba(196, 214, 160, 0.35)',
 };
 
@@ -89,13 +89,13 @@ export function MerdomonArt({
               <Face x={50} y={62} sad={sad} />
             </>
           )}
-          {kind === 'runny' && (
+          {kind === 'liquid' && (
             <>
               <path
-                fill={MERDOMON_COLOR.runny}
+                fill={MERDOMON_COLOR.liquid}
                 d="M10 90c-4 0-5-6-1-8 5-2 7-6 7-12 0-16 15-30 34-30s34 14 34 30c0 6 2 10 7 12 4 2 3 8-1 8z"
               />
-              <path fill={MERDOMON_COLOR.runny} d="M28 90c0 5 6 5 6 0M64 90c0 7 7 7 7 0" />
+              <path fill={MERDOMON_COLOR.liquid} d="M28 90c0 5 6 5 6 0M64 90c0 7 7 7 7 0" />
               <path fill="none" strokeWidth="3" d="M30 52q8-6 14-2" opacity=".4" />
               <Face x={50} y={64} sad={sad} />
             </>

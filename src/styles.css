@@ -1623,3 +1623,271 @@ button:disabled {
 .start-option.merdomon .card {
   pointer-events: none;
 }
+
+/* ---------- v0.4: bathroom, bosses, bag, score ---------- */
+.bathroom {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.bathroom-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.struct {
+  position: relative;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  min-width: 0;
+}
+.struct svg {
+  max-height: 100%;
+}
+.struct.toilet {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+}
+.struct.toilet .player-art {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+}
+.tier-badge {
+  position: absolute;
+  top: 0;
+  right: 6px;
+  font-size: 12px;
+  line-height: 1;
+  padding: 2px 5px;
+  border: 1.5px solid var(--ink);
+  border-radius: 8px;
+  background: var(--paper);
+}
+.build-row .tier-badge,
+.structure-head .tier-badge {
+  position: static;
+}
+.tier-badge.t2 {
+  background: #cfe3f7;
+}
+.tier-badge.t3 {
+  background: #f2c94c;
+}
+.struct.toilet .tier-badge {
+  right: 28%;
+  top: 4px;
+}
+.card.locked {
+  flex-direction: column;
+  gap: 2px;
+  font-size: 20px;
+}
+.card.locked small {
+  font-size: 12px;
+}
+
+.info-chip {
+  padding: 1px 6px;
+  border-radius: var(--r-small);
+  font-size: 16px;
+  gap: 3px;
+}
+.boss-chip {
+  font-size: 16px;
+  line-height: 1;
+  padding: 3px 6px;
+}
+.inforow {
+  gap: 6px;
+}
+.ap-badge {
+  margin-left: auto;
+}
+.ap-badge small {
+  font-size: 12px;
+}
+
+.boss-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.boss-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.boss-card-head h2 {
+  font-size: 24px;
+}
+.boss-run {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--danger);
+}
+.boss-forms {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.boss-forms > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+}
+.boss-forms small {
+  font-size: 13px;
+  line-height: 1.2;
+  color: #555;
+}
+.boss-reveal {
+  justify-content: center;
+  gap: 16px;
+  padding: 0 4px;
+}
+.boss-reveal-card {
+  padding: 14px;
+}
+
+.item-list,
+.build-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.item-row,
+.build-row {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding: 6px 8px;
+  justify-content: stretch;
+}
+.item-row {
+  grid-template-columns: 34px 1fr;
+}
+.item-row > span,
+.build-row > span:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.item-row small,
+.build-row small {
+  font-size: 13px;
+  color: #555;
+}
+.small {
+  font-size: 13px;
+}
+.bag-count {
+  font-size: 15px;
+  border: 1.5px solid var(--ink);
+  border-radius: 8px;
+  padding: 0 5px;
+}
+.bag-count.full {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.structure-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.structure-head h2 {
+  font-size: 24px;
+}
+.tier-pips {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+.tier-pips span {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+}
+.tier-pips span.on {
+  background: var(--ink);
+}
+.structure-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.structure-rows > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1.5px dashed var(--soft);
+  padding-bottom: 4px;
+  font-size: 18px;
+}
+.structure-rows .muted {
+  font-size: 15px;
+}
+.structure-rows .next {
+  color: var(--good);
+}
+
+.scout-actions {
+  display: flex;
+  gap: 8px;
+}
+.scout-actions .big-btn {
+  flex: 1;
+}
+.scout-actions:empty {
+  display: none;
+}
+.corrupt-btn {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.score-row {
+  display: grid;
+  grid-template-columns: 1fr auto 52px;
+  gap: 8px;
+  font-size: 17px;
+  align-items: center;
+}
+.score-row b {
+  text-align: right;
+}
+.score-total {
+  display: flex;
+  justify-content: space-between;
+  border-top: 2px solid var(--ink);
+  padding-top: 4px;
+  font-size: 24px;
+}
+.score-best {
+  text-align: center;
+  color: var(--muted);
+}
+.score-best.new {
+  color: var(--good);
+  font-weight: bold;
+  font-size: 18px;
+}
+.home-best {
+  font-size: 16px !important;
+  color: var(--muted);
+}
+.tut-table td.left small {
+  display: block;
+}

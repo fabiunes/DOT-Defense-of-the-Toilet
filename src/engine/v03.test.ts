@@ -19,7 +19,7 @@ const foe = (stats: Partial<Stats>, extra: Partial<Enemy> = {}): Enemy => ({
 });
 /** A run past the starter pick (first ability offered), at the starting-bonus choice. */
 const start = (seed: number) => {
-  const s = G.chooseStarter(G.newRun(seed), 0);
+  const s = G.chooseStarter(G.beginRun(G.newRun(seed)), 0);
   return G.confirmMerdomon(s, 'hp', s.pendingAbilities[0]);
 };
 const fight = (team: Merdomon[], wave: Enemy[], modifier: Parameters<typeof simulateCombat>[4] = {}) =>
@@ -29,7 +29,7 @@ const abilityEvents = (r: ReturnType<typeof fight>, a: AbilityId) =>
 
 describe('new Merdomon flow', () => {
   it('offers 3 distinct abilities and confirms ability + stat together', () => {
-    let s = G.chooseStarter(G.newRun(5), 1);
+    let s = G.chooseStarter(G.beginRun(G.newRun(5)), 1);
     expect(new Set(s.pendingAbilities).size).toBe(3);
     expect(s.pendingAbilities.every((a) => ABILITIES.includes(a))).toBe(true);
     const notOffered = ABILITIES.find((a) => !s.pendingAbilities.includes(a))!;
@@ -58,11 +58,11 @@ describe('starting bonus', () => {
     expect(s.team).toHaveLength(2);
     expect(s.phase).toBe('preparation');
   });
-  it('resources: +5 TP, +3 Merdascore, +1 AP in round 1 only', () => {
+  it('resources: +5 TP, +3 Poop, +1 AP in round 1', () => {
     let s = G.chooseStartBonus(atBonus(), 'resources');
     expect(s).toMatchObject({ tp: 2 + START_PACK.tp, merdascore: 5 + START_PACK.merdascore, ap: 2 });
     s = G.continueAfterCombat(G.fight(s));
-    expect(s.ap).toBe(1);
+    expect(s.ap).toBe(3); // the 2 unspent AP carry over, +1 base
   });
 });
 
@@ -148,12 +148,12 @@ describe('wave modifiers', () => {
     return { ...s, ...patch };
   };
 
-  it('plans one distinct modifier on waves 3, 6, 9 and 10 (no Jackpot on 10)', () => {
+  it('plans one distinct modifier on waves 3, 6 and 9', () => {
     for (let seed = 1; seed < 60; seed++) {
       const m = G.newRun(seed).modifiers;
+      expect(Object.keys(m).map(Number)).toEqual([3, 6, 9]);
       expect(Object.keys(m).map(Number)).toEqual([...MODIFIER_WAVES]);
-      expect(new Set(Object.values(m)).size).toBe(4);
-      expect(m[10]).not.toBe('jackpot');
+      expect(new Set(Object.values(m)).size).toBe(3);
     }
   });
 
@@ -181,9 +181,9 @@ describe('wave modifiers', () => {
     const strong = [mk({ hp: 10, atk: 10, def: 10, spd: 10 }), mk({ hp: 10, atk: 10, def: 10, spd: 10 })];
     const modded = { ...s, team: strong, modifiers: { ...s.modifiers, 3: 'rushHour' as const } };
     const won = G.continueAfterCombat(G.fight(modded));
-    expect(won.ap).toBe(2);
+    expect(won.ap).toBe(Math.min(5, s.ap + 2)); // kept + base + reward
     const paid = G.continueAfterCombat(G.fight(G.disableModifier(modded)));
-    expect(paid.ap).toBe(1);
+    expect(paid.ap).toBe(Math.min(5, s.ap + 1));
   });
 
   it('Rush Hour, Wi-Fi Down, Silent Mode, Doomscrolling, Jackpot change the fight', () => {
