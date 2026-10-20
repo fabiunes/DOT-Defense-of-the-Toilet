@@ -306,8 +306,10 @@ describe('run flow', () => {
     expect(G.canTradeStat(s, m.id, 'spd')).toBe(false);
   });
 
-  it('the Action trait adds AP each round, and unspent AP carry over (max 5)', () => {
+  it('the Action trait adds AP each round; unspent AP carry over up to the Toilet Brush limit', () => {
     let s = prepRun();
+    expect(G.apCap(s)).toBe(2);
+    s.structures.scrubber = 3; // limit 4
     s.team[0].traits = ['action', 'action'];
     s = G.bonusAction({ ...s, tp: 20 });
     expect(s.ap).toBe(2);
@@ -316,7 +318,7 @@ describe('run flow', () => {
     s = G.continueAfterCombat(s);
     expect(s.ap).toBe(4); // 2 kept + 1 base + 1 from Action (2 traits)
     s = G.continueAfterCombat(G.fight(s));
-    expect(s.ap).toBe(5);
+    expect(s.ap).toBe(4);
     expect(G.canBonusAction({ ...s, tp: 50 })).toBe(false);
   });
 

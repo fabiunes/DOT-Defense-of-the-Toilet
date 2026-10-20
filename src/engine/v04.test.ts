@@ -31,8 +31,9 @@ function prep(seed = 4, patch: Partial<RunState> = {}): RunState {
 describe('structures', () => {
   it('start at Tier 1 with their capacities', () => {
     const s = prep();
-    expect(s.structures).toEqual({ sink: 1, bidet: 1, holder: 1, toilet: 1 });
+    expect(s.structures).toEqual({ stall: 1, sink: 1, bidet: 1, scrubber: 1, toilet: 1, holder: 1 });
     expect([G.itemCap(s), G.poopCap(s), G.tpCap(s), G.teamCap(s)]).toEqual([3, 15, 30, 4]);
+    expect([G.concentrationCap(s), G.apCap(s)]).toEqual([10, 2]);
   });
 
   it('Build costs 20 TP + 1 AP per tier, up to Tier 3', () => {
@@ -54,26 +55,26 @@ describe('structures', () => {
   });
 
   it('produce after every combat from Tier 2', () => {
-    const s = prep(4, { structures: { sink: 2, bidet: 3, holder: 2, toilet: 3 }, concentration: 5, tp: 0, merdascore: 0 });
+    const s = prep(4, { structures: { stall: 1, sink: 2, bidet: 3, scrubber: 3, holder: 2, toilet: 3 }, concentration: 5, tp: 0, merdascore: 0 });
     const after = G.fight(s);
     const r = after.lastCombat!.rewards;
     expect(r).toContainEqual({ source: 'sink', resource: 'ap', amount: 1 });
     expect(r).toContainEqual({ source: 'bidet', resource: 'concentration', amount: 2 });
     expect(r).toContainEqual({ source: 'holder', resource: 'tp', amount: 5 });
     expect(r).toContainEqual({ source: 'toilet', resource: 'merdascore', amount: 3 });
-    expect(G.continueAfterCombat(after).ap).toBe(Math.min(5, s.ap + 1 + 1));
+    expect(G.continueAfterCombat(after).ap).toBe(Math.min(4, s.ap + 1 + 1));
   });
 });
 
 describe('items bag', () => {
   it('a full bag needs a discard to buy', () => {
-    const s = prep(4, { tp: 30, items: ['brush', 'magazine', 'window'] });
+    const s = prep(4, { tp: 30, items: ['plunger', 'magazine', 'window'] });
     const item = s.shopOffer[0];
     expect(G.bagFull(s)).toBe(true);
     expect(G.canBuy(s, item)).toBe(false);
     expect(G.affordable(s, item)).toBe(true);
     const after = G.buy(s, item, 'magazine');
-    expect(after.items).toEqual(['brush', 'window', item]);
+    expect(after.items).toEqual(['plunger', 'window', item]);
   });
 });
 
@@ -135,7 +136,7 @@ describe('final score', () => {
       ...s,
       phase: 'victory',
       concentration: 4,
-      structures: { sink: 2, bidet: 1, holder: 3, toilet: 1 },
+      structures: { stall: 1, sink: 2, bidet: 1, scrubber: 1, holder: 3, toilet: 1 },
       stats: {
         ...s.stats,
         wavesWon: 9,

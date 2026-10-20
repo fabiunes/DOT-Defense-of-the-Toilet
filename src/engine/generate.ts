@@ -67,9 +67,11 @@ export function createMerdomon(rng: Rng, id: number, rarity: Rarity): Merdomon {
   return { id, rarity, kind, stats, hp: stats.hp, traits, ability: null };
 }
 
-export function createEnemy(rng: Rng, id: number, rarity: Rarity, bossId?: BossId): Enemy {
+/** `extraPoints` comes from the difficulty level. */
+export function createEnemy(rng: Rng, id: number, rarity: Rarity, bossId?: BossId, extraPoints = 0): Enemy {
   const kind = rng.pick(ENEMY_KINDS);
-  const enemy: Enemy = { id, rarity, kind, stats: splitStats(rng, SIZE_TOTAL[rarity], KIND_CURVE[kind]), boss: false };
+  const stats = splitStats(rng, SIZE_TOTAL[rarity] + extraPoints, KIND_CURVE[kind]);
+  const enemy: Enemy = { id, rarity, kind, stats, boss: false };
   return bossId ? withBossAura(enemy, bossId) : enemy;
 }
 
@@ -89,12 +91,19 @@ export function createBoss(rng: Rng, id: number, bossId: BossId, form: BossForm,
 }
 
 /** Enemies in random order; the Boss (if any) is always last. */
-export function createWave(rng: Rng, round: number, firstId: number, bossId: BossId, concentrationLost = 0): Enemy[] {
+export function createWave(
+  rng: Rng,
+  round: number,
+  firstId: number,
+  bossId: BossId,
+  concentrationLost = 0,
+  extraPoints = 0,
+): Enemy[] {
   const def = WAVES[round - 1];
   let id = firstId;
   const wave: Enemy[] = [];
-  for (let i = 0; i < def.common; i++) wave.push(createEnemy(rng, id++, 'common', bossId));
-  for (let i = 0; i < def.rare; i++) wave.push(createEnemy(rng, id++, 'rare', bossId));
+  for (let i = 0; i < def.common; i++) wave.push(createEnemy(rng, id++, 'common', bossId, extraPoints));
+  for (let i = 0; i < def.rare; i++) wave.push(createEnemy(rng, id++, 'rare', bossId, extraPoints));
   rng.shuffle(wave);
   if (def.boss) wave.push(createBoss(rng, id++, bossId, def.boss, concentrationLost));
   return wave;

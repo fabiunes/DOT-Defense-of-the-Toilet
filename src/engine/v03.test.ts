@@ -62,7 +62,7 @@ describe('starting bonus', () => {
     let s = G.chooseStartBonus(atBonus(), 'resources');
     expect(s).toMatchObject({ tp: 2 + START_PACK.tp, merdascore: 5 + START_PACK.merdascore, ap: 2 });
     s = G.continueAfterCombat(G.fight(s));
-    expect(s.ap).toBe(3); // the 2 unspent AP carry over, +1 base
+    expect(s.ap).toBe(2); // unspent AP carry over, capped at 2 by the Toilet Brush (Tier 1)
   });
 });
 
@@ -179,11 +179,17 @@ describe('wave modifiers', () => {
   it('winning a modifier wave gives +1 AP next round; disabling loses it', () => {
     const s = runAt(3, { tp: 10 });
     const strong = [mk({ hp: 10, atk: 10, def: 10, spd: 10 }), mk({ hp: 10, atk: 10, def: 10, spd: 10 })];
-    const modded = { ...s, team: strong, modifiers: { ...s.modifiers, 3: 'rushHour' as const } };
+    const modded = {
+      ...s,
+      ap: 0,
+      team: strong,
+      structures: { ...s.structures, scrubber: 3 },
+      modifiers: { ...s.modifiers, 3: 'rushHour' as const },
+    };
     const won = G.continueAfterCombat(G.fight(modded));
-    expect(won.ap).toBe(Math.min(5, s.ap + 2)); // kept + base + reward
+    expect(won.ap).toBe(2); // base + reward
     const paid = G.continueAfterCombat(G.fight(G.disableModifier(modded)));
-    expect(paid.ap).toBe(Math.min(5, s.ap + 1));
+    expect(paid.ap).toBe(1);
   });
 
   it('Rush Hour, Wi-Fi Down, Silent Mode, Doomscrolling, Jackpot change the fight', () => {

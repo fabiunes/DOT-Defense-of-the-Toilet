@@ -7,6 +7,7 @@ import type {
   ModifierId,
   Rarity,
   StatKey,
+  Level,
   StructureId,
   TraitId,
 } from './types';
@@ -15,8 +16,6 @@ export const ROUNDS = 10;
 export const MAX_STAT = 10;
 export const MAX_CONCENTRATION = 10;
 export const BASE_AP = 1;
-/** Unspent Action Points carry over, up to this. */
-export const MAX_AP = 5;
 export const STARTER_CHOICES = 3;
 export const STARTING_TP = 2;
 export const STARTING_MERDASCORE = 5;
@@ -98,7 +97,7 @@ export const TRAIT_INFO: Record<TraitId, { name: string; desc: string }> = {
 };
 
 export const ITEMS: readonly ItemId[] = [
-  'brush',
+  'plunger',
   'magazine',
   'waterJet',
   'shower',
@@ -114,7 +113,7 @@ export const ITEMS: readonly ItemId[] = [
 
 /** Each trait listed counts once towards the trait thresholds. */
 export const ITEM_INFO: Record<ItemId, { name: string; traits: readonly TraitId[]; desc: string }> = {
-  brush: { name: 'Toilet Brush', traits: ['merdon'], desc: '+2 Poop after each wave' },
+  plunger: { name: 'Plunger', traits: ['merdon'], desc: '+2 Poop after each wave' },
   magazine: { name: 'Magazine', traits: ['healthy'], desc: 'First fallen Merdomon revives at full HP (once per fight)' },
   waterJet: { name: 'Water Jet', traits: ['defender'], desc: 'Evacuate also gives +1 Concentration' },
   shower: { name: 'Hand Shower', traits: ['paper'], desc: 'Shop, Flush and Bonus Action cost 2 less' },
@@ -213,7 +212,8 @@ export const MODIFIER_INFO: Record<ModifierId, { name: string; icon: string; des
 
 // ---------- Bathroom structures (in-run upgrades) ----------
 
-export const STRUCTURES: readonly StructureId[] = ['sink', 'bidet', 'holder', 'toilet'];
+/** In screen order: top row Shower, Sink, Bidet; bottom row Toilet Brush, Toilet, Paper Holder. */
+export const STRUCTURES: readonly StructureId[] = ['stall', 'sink', 'bidet', 'scrubber', 'toilet', 'holder'];
 export const MAX_TIER = 3;
 export const BUILD_COST = { tp: 20, ap: 1 } as const;
 
@@ -221,6 +221,8 @@ export const STRUCTURE_INFO: Record<
   StructureId,
   { name: string; capacity: string; capacities: readonly number[]; produce: string; production: readonly number[] }
 > = {
+  stall: { name: 'Shower', capacity: 'Max Concentration', capacities: [10, 12, 14], produce: 'HP to all Merdomon', production: [0, 1, 2] },
+  scrubber: { name: 'Toilet Brush', capacity: 'Max Action Points', capacities: [2, 3, 4], produce: 'free Re-Rolls', production: [0, 2, 4] },
   sink: { name: 'Sink', capacity: 'Items', capacities: [3, 6, 9], produce: 'Action Points', production: [0, 1, 2] },
   bidet: { name: 'Bidet', capacity: 'Poop', capacities: [15, 20, 30], produce: 'Concentration', production: [0, 1, 2] },
   holder: { name: 'Paper Holder', capacity: 'Toilet Paper', capacities: [30, 50, 70], produce: 'Toilet Paper', production: [0, 5, 10] },
@@ -229,7 +231,16 @@ export const STRUCTURE_INFO: Record<
 
 // ---------- Bosses ----------
 
-export const BOSSES: readonly BossId[] = ['demonScroller', 'bestseller', 'streamDeck'];
+export const BOSSES: readonly BossId[] = ['bestseller', 'streamDeck', 'demonScroller'];
+
+// ---------- Difficulty levels ----------
+
+export const LEVELS: readonly Level[] = [1, 2, 3];
+export const LEVEL_BOSS: Record<Level, BossId> = { 1: 'bestseller', 2: 'streamDeck', 3: 'demonScroller' };
+/** Extra stat points for every normal enemy. */
+export const LEVEL_ENEMY_BONUS: Record<Level, number> = { 1: 0, 2: 1, 3: 2 };
+/** Finished runs kept in the Stats history. */
+export const HISTORY_MAX = 50;
 /** The medium form joins wave 5 as a Big; the final form is a Huge with extra points. */
 export const BOSS_TOTAL = { mid: 15, final: 22 } as const;
 /** Run-wide modifier: every enemy of the Boss's type gets this much ATK. */

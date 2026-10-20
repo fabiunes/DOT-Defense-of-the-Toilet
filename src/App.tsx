@@ -10,6 +10,7 @@ import { HomeScreen } from './ui/screens/HomeScreen';
 import { PrepScreen } from './ui/screens/PrepScreen';
 import { StartBonusScreen } from './ui/screens/StartBonusScreen';
 import { StarterScreen } from './ui/screens/StarterScreen';
+import { StatsScreen } from './ui/screens/StatsScreen';
 import { TutorialScreen } from './ui/screens/TutorialScreen';
 import type { Update } from './ui/update';
 
@@ -17,6 +18,7 @@ export default function App() {
   const [run, setRun] = useState<RunState | null>(null);
   const [hasSave, setHasSave] = useState(() => loadRun() !== null);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showStats, setShowStats] = useState(false);
 
   // Autosave during preparation; a finished run removes the save.
   useEffect(() => {
@@ -33,7 +35,9 @@ export default function App() {
   };
 
   let content;
-  if (showTutorial) {
+  if (showStats) {
+    content = <StatsScreen onClose={() => setShowStats(false)} />;
+  } else if (showTutorial) {
     content = <TutorialScreen onClose={() => setShowTutorial(false)} />;
   } else if (!run) {
     content = (
@@ -42,6 +46,7 @@ export default function App() {
         onNew={() => setRun(newRun())}
         onContinue={() => setRun(loadRun())}
         onTutorial={() => setShowTutorial(true)}
+        onStats={() => setShowStats(true)}
       />
     );
   } else if (run.phase === 'boss') {

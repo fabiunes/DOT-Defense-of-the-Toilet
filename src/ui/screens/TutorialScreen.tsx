@@ -11,8 +11,9 @@ import {
   KIND_CURVE,
   KIND_NAME,
   MAX_CONCENTRATION,
-  MAX_AP,
-  BOSSES,
+  LEVELS,
+  LEVEL_BOSS,
+  LEVEL_ENEMY_BONUS,
   BOSS_INFO,
   BUILD_COST,
   SCORE,
@@ -51,7 +52,7 @@ const demoTeam: Merdomon[] = [
 ];
 
 const demoRun: RunState = {
-  version: 5,
+  version: 6,
   phase: 'preparation',
   round: 3,
   concentration: 7,
@@ -59,10 +60,12 @@ const demoRun: RunState = {
   merdascore: 12,
   ap: 1,
   bonusAp: 0,
+  level: 1,
+  freeRerolls: 0,
   boss: 'bestseller',
-  structures: { sink: 2, bidet: 1, holder: 1, toilet: 1 },
+  structures: { stall: 1, sink: 2, bidet: 1, scrubber: 1, toilet: 1, holder: 1 },
   team: demoTeam,
-  items: ['brush', 'window'],
+  items: ['plunger', 'window'],
   shopOffer: [],
   starters: [],
   startOptions: null,
@@ -188,8 +191,8 @@ const pages: Page[] = [
     title: 'Starting a run',
     body: (
       <>
-        <Row icon={<span className="tut-step">1</span>} title="Meet your Boss">
-          One of {BOSSES.length} Bosses is revealed: it changes the run and attacks on waves 5 and 10.
+        <Row icon={<span className="tut-step">1</span>} title="Choose the level">
+          Level 1, 2 or 3: it sets your Boss, who attacks on waves 5 and 10.
         </Row>
         <Row icon={<span className="tut-step">2</span>} title="Pick a starter">
           Choose 1 of 3 Small Merdomon.
@@ -251,7 +254,7 @@ const pages: Page[] = [
           Current wave out of {ROUNDS}.
         </Row>
         <Row icon={I('ap', '#1b1b1b')} title="Action Points">
-          +1 every round (more with the Action trait and the Sink). Unspent ones are kept, up to {MAX_AP}.
+          +1 every round (more with the Action trait and the Sink). Unspent ones are kept, up to the Toilet Brush limit.
         </Row>
         <Row icon={I('shop')} title="Items">
           Items held / room in the bag (set by the Sink). Tap to see them.
@@ -507,7 +510,7 @@ const pages: Page[] = [
           See the stats of the incoming Distractions, in fighting order.
         </Row>
         <Row icon={I('dice')} title="Re-Roll">
-          Redraw the options in Evacuate or Shop for {REROLL_COST} {ii('tp')}.
+          Redraw the options in Evacuate or Shop for {REROLL_COST} {ii('tp')} (the Toilet Brush gives free ones).
         </Row>
       </>
     ),
@@ -569,9 +572,8 @@ const pages: Page[] = [
     body: (
       <>
         <p className="tut-note">
-          The structures at the bottom of the screen set how much you can hold, and from Tier 2 they produce something
-          after every wave. Tap one to upgrade it: {BUILD_COST.tp} {ii('tp')} + {BUILD_COST.ap} {ii('ap', '#1b1b1b')} per
-          tier, up to Tier 3.
+          The six blocks at the bottom set how much you can hold; from Tier 2 they also produce after every wave. Tap one
+          to upgrade it: {BUILD_COST.tp} {ii('tp')} + {BUILD_COST.ap} {ii('ap', '#1b1b1b')} per tier, up to Tier 3.
         </p>
         <table className="tut-table">
           <thead>
@@ -606,18 +608,27 @@ const pages: Page[] = [
     ),
   },
   {
-    title: 'Bosses',
+    title: 'Levels & Bosses',
     body: (
       <>
         <p className="tut-note">
-          Each run has one Boss, revealed at the start. Its type gets +1 ATK all run, and it fights on wave 5 (Big) and
-          wave 10 (Huge).
+          Pick a level at the start: it sets the Boss. Its type gets +1 ATK all run, and it fights on wave 5 (Big) and wave
+          10 (Huge). Higher levels also toughen every enemy.
         </p>
-        {BOSSES.map((b) => (
-          <Row key={b} icon={<EnemyArt size={36} kind={BOSS_INFO[b].kind} rarity="epic" boss />} title={BOSS_INFO[b].name}>
-            {BOSS_INFO[b].runDesc}. <b>{BOSS_INFO[b].ability}</b>: {BOSS_INFO[b].finalDesc}.
-          </Row>
-        ))}
+        {LEVELS.map((l) => {
+          const b = LEVEL_BOSS[l];
+          return (
+            <Row
+              key={l}
+              icon={<EnemyArt size={36} kind={BOSS_INFO[b].kind} rarity="epic" boss />}
+              title={`Level ${l} · ${BOSS_INFO[b].name}`}
+            >
+              {BOSS_INFO[b].runDesc}
+              {LEVEL_ENEMY_BONUS[l] > 0 && `, enemies +${LEVEL_ENEMY_BONUS[l]} stat`}. <b>{BOSS_INFO[b].ability}</b>:{' '}
+              {BOSS_INFO[b].finalDesc}.
+            </Row>
+          );
+        })}
         <p className="tut-note">
           Final score: {SCORE.waveWon} per wave won, {SCORE.enemy} per Distraction, Bosses, victory, Concentration left,
           upgrades and {SCORE.poop} per Poop produced.

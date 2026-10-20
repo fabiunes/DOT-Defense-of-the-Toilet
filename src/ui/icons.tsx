@@ -6,7 +6,7 @@ export type IconName =
   | 'heal' | 'toilet' | 'shop' | 'swap' | 'flush' | 'bonus' | 'upgrade' | 'fight'
   | 'close' | 'check' | 'star' | 'ff' | 'skip' | 'home' | 'trophy' | 'skull' | 'crown' | 'question' | 'phone' | 'play'
   | 'trade' | 'eye'
-  | 'brush' | 'magazine' | 'waterJet' | 'shower' | 'window' | 'towel' | 'toothbrush' | 'flipflops' | 'gameboy' | 'dice';
+  | 'plunger' | 'magazine' | 'waterJet' | 'shower' | 'window' | 'towel' | 'toothbrush' | 'flipflops' | 'gameboy' | 'dice';
 
 export const TRAIT_COLOR: Record<TraitId, string> = {
   paper: '#4f8fe8',
@@ -29,7 +29,7 @@ export const TRAIT_ICON: Record<TraitId, IconName> = {
 };
 
 export const STAT_ICON: Record<StatKey, IconName> = { hp: 'heart', atk: 'fist', def: 'shield', spd: 'bolt' };
-export const RESOURCE_ICON: Record<Resource, IconName> = { tp: 'tp', merdascore: 'poop', concentration: 'focus', ap: 'ap' };
+export const RESOURCE_ICON: Record<Resource, IconName> = { tp: 'tp', merdascore: 'poop', concentration: 'focus', ap: 'ap', hp: 'heart' };
 
 function shapes(name: IconName, fill: string): ReactNode {
   switch (name) {
@@ -206,12 +206,12 @@ function shapes(name: IconName, fill: string): ReactNode {
           <circle cx="12" cy="12" r="1.2" fill="currentColor" />
         </>
       );
-    case 'brush':
+    case 'plunger':
       return (
         <>
-          <path d="M16.5 2.5 11 13.5" />
-          <path fill={fill} d="M6 13.5h9.5l-.7 3a4.1 4.1 0 0 1-8.1 0z" />
-          <path d="M8 20.5l-.5 1.5M10.75 21v1.5M13.5 20.5l.5 1.5" />
+          <path d="M12 2.5v11" strokeWidth={3} />
+          <path fill={fill} d="M5 20a7 6.5 0 0 1 14 0z" />
+          <path d="M3.5 20.5h17" />
         </>
       );
     case 'magazine':

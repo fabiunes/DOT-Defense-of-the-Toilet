@@ -98,6 +98,22 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       <InfoRow run={run} onItems={() => setPanel({ kind: 'items' })} onBoss={() => setPanel({ kind: 'boss' })} />
       <TraitsRow run={run} onTrait={(trait) => setPanel({ kind: 'trait', trait })} />
 
+      <div className="slots">
+        {Array.from({ length: 6 }, (_, i) => {
+          const m = run.team[i];
+          if (m)
+            return <MerdomonCard key={m.id} m={m} onClick={() => onSlot(i)} selected={mode === 'organize' && swapFrom === i} />;
+          if (i >= G.teamCap(run))
+            return (
+              <button key={`lock-${i}`} className="card empty locked" onClick={() => setPanel({ kind: 'structure', id: 'toilet' })}>
+                <span>🔒</span>
+                <small>Toilet T{i - 2}</small>
+              </button>
+            );
+          return <EmptySlot key={`empty-${i}`} index={i} />;
+        })}
+      </div>
+
       {mode ? (
         <div className="mode-bar sk">
           <Icon name={MODE_ICON[mode]} size={22} />
@@ -123,22 +139,6 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
           </button>
         </div>
       )}
-
-      <div className="slots">
-        {Array.from({ length: 6 }, (_, i) => {
-          const m = run.team[i];
-          if (m)
-            return <MerdomonCard key={m.id} m={m} onClick={() => onSlot(i)} selected={mode === 'organize' && swapFrom === i} />;
-          if (i >= G.teamCap(run))
-            return (
-              <button key={`lock-${i}`} className="card empty locked" onClick={() => setPanel({ kind: 'structure', id: 'toilet' })}>
-                <span>🔒</span>
-                <small>Toilet T{i - 2}</small>
-              </button>
-            );
-          return <EmptySlot key={`empty-${i}`} index={i} />;
-        })}
-      </div>
 
       <Bathroom run={run} onOpen={(id) => setPanel({ kind: 'structure', id })} />
 
@@ -558,16 +558,17 @@ function ChoicesModal({ run, update }: { run: RunState; update: Update }) {
           <MerdomonCard key={m.id} m={m} big onClick={() => update((s) => G.chooseEvacuated(s, i))} />
         ))}
       </div>
-      <RerollButton enabled={G.canRerollChoices(run)} onClick={() => update(G.rerollChoices)} />
+      <RerollButton enabled={G.canRerollChoices(run)} onClick={() => update(G.rerollChoices)} free={run.freeRerolls} />
     </Modal>
   );
 }
 
-function RerollButton({ enabled, onClick }: { enabled: boolean; onClick: () => void }) {
+/** Free Re-Rolls (Toilet Brush) are used before paying Toilet Paper. */
+function RerollButton({ enabled, onClick, free }: { enabled: boolean; onClick: () => void; free: number }) {
   return (
     <button className="big-btn reroll-btn" disabled={!enabled} onClick={onClick}>
       <Icon name="dice" size={22} fill="#fff" /> Re-Roll
-      <CostBadge tp={REROLL_COST} />
+      {free > 0 ? <span className="cost free">free ×{free}</span> : <CostBadge tp={REROLL_COST} />}
     </button>
   );
 }
@@ -690,7 +691,7 @@ function ShopPanel({ run, update, onClose }: { run: RunState; update: Update; on
               ))}
             </div>
           )}
-          <RerollButton enabled={G.canRerollShop(run)} onClick={() => update(G.rerollShop)} />
+          <RerollButton enabled={G.canRerollShop(run)} onClick={() => update(G.rerollShop)} free={run.freeRerolls} />
         </>
       )}
     </Modal>

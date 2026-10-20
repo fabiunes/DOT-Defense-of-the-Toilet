@@ -1,5 +1,4 @@
 import { MerdomonArt, PlayerArt } from '../art';
-import { loadBest } from '../../engine/save';
 import { Icon } from '../icons';
 
 export function HomeScreen({
@@ -7,11 +6,13 @@ export function HomeScreen({
   onNew,
   onContinue,
   onTutorial,
+  onStats,
 }: {
   hasSave: boolean;
   onNew: () => void;
   onContinue: () => void;
   onTutorial: () => void;
+  onStats: () => void;
 }) {
   return (
     <div className="screen home">
@@ -19,7 +20,6 @@ export function HomeScreen({
         <MerdomonArt size={84} />
         <h1>D.o.t.T.</h1>
         <p>Defense of the Toilet</p>
-        {loadBest() > 0 && <p className="home-best">Best: {loadBest()}</p>}
       </div>
       <div className="home-menu">
         <button className="big-btn shadow" onClick={onNew}>
@@ -31,11 +31,11 @@ export function HomeScreen({
         <button className="big-btn shadow" onClick={onTutorial}>
           <Icon name="question" size={22} fill="#fff" /> Tutorial
         </button>
-        <button className="big-btn" disabled>
-          <Icon name="upgrade" size={22} /> Upgrade <span className="soon">soon</span>
+        <button className="big-btn shadow" onClick={onStats}>
+          <Icon name="trophy" size={22} fill="#fff" /> Stats
         </button>
         <button className="big-btn" disabled>
-          <Icon name="trophy" size={22} fill="#fff" /> Stats <span className="soon">soon</span>
+          <Icon name="toilet" size={22} fill="#fff" /> Toilets <span className="soon">soon</span>
         </button>
       </div>
       <div className="home-art">

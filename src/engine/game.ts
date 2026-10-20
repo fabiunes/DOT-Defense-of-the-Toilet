@@ -5,7 +5,6 @@ import {
   ABILITY_CHOICES,
   BASE_AP,
   BIDET_CONCENTRATION,
-  BOSSES,
   BUILD_COST,
   BRUSH_MERDASCORE,
   CONCENTRATE_GAIN,
@@ -15,7 +14,8 @@ import {
   EVACUATE_COST,
   FLUSH_CONCENTRATION,
   ITEMS,
-  MAX_AP,
+  LEVEL_BOSS,
+  LEVEL_ENEMY_BONUS,
   MAX_CONCENTRATION,
   MAX_STAT,
   MAX_TIER,
@@ -43,6 +43,7 @@ import { apBonus, combatBonus, countTraits, traitValue } from './traits';
 import type {
   AbilityId,
   CombatBonus,
+  Level,
   ItemId,
   Merdomon,
   ModifierId,
@@ -87,7 +88,7 @@ function emptyStats(): RunStats {
 
 export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
   const s: RunState = {
-    version: 5,
+    version: 6,
     phase: 'boss',
     round: 1,
     concentration: MAX_CONCENTRATION,
@@ -95,7 +96,9 @@ export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
     merdascore: STARTING_MERDASCORE,
     ap: 0,
     bonusAp: 0,
-    boss: 'demonScroller',
+    level: 1,
+    boss: LEVEL_BOSS[1],
+    freeRerolls: 0,
     structures: Object.fromEntries(STRUCTURES.map((id) => [id, 1])) as Record<StructureId, number>,
     team: [],
     items: [],
@@ -117,14 +120,17 @@ export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
     Array.from({ length: STARTER_CHOICES }, () => createMerdomon(rng, s.nextId++, 'common')),
   );
   s.modifiers = withRng(s, (rng) => planModifiers(rng));
-  s.boss = withRng(s, (rng) => rng.pick(BOSSES));
   return s;
 }
 
-/** After the Boss reveal, the run starts with the starter pick. */
-export function beginRun(prev: RunState): RunState {
+/** The player picks the difficulty level (and with it the Boss); then the starter pick. */
+export function beginRun(prev: RunState, level: Level = 1): RunState {
   if (prev.phase !== 'boss') return prev;
-  return { ...clone(prev), phase: 'starter' };
+  const s = clone(prev);
+  s.level = level;
+  s.boss = LEVEL_BOSS[level];
+  s.phase = 'starter';
+  return s;
 }
 
 // ---------- Structures: capacities ----------
@@ -136,6 +142,12 @@ export const itemCap = (s: RunState) => capacity(s, 'sink');
 export const poopCap = (s: RunState) => capacity(s, 'bidet');
 export const tpCap = (s: RunState) => capacity(s, 'holder');
 export const teamCap = (s: RunState) => capacity(s, 'toilet');
+export const concentrationCap = (s: RunState) => capacity(s, 'stall');
+export const apCap = (s: RunState) => capacity(s, 'scrubber');
+
+function addConcentration(s: RunState, amount: number) {
+  s.concentration = clamp(s.concentration + amount, 0, concentrationCap(s));
+}
 
 function addTp(s: RunState, amount: number) {
   s.tp = clamp(s.tp + amount, 0, tpCap(s));
@@ -157,14 +169,18 @@ export function activeModifier(s: RunState): ModifierId | null {
 
 function startPreparation(s: RunState) {
   s.phase = 'preparation';
-  // Unspent AP carry over, up to MAX_AP.
-  s.ap = Math.min(MAX_AP, s.ap + BASE_AP + apBonus(s.team, s.items) + s.bonusAp);
+  // Unspent AP carry over, up to the Toilet Brush's limit.
+  s.ap = Math.min(apCap(s), s.ap + BASE_AP + apBonus(s.team, s.items) + s.bonusAp);
   s.bonusAp = 0;
+  s.freeRerolls = STRUCTURE_INFO.scrubber.production[s.structures.scrubber - 1];
   s.modifierDisabled = false;
-  s.wave = withRng(s, (rng) => createWave(rng, s.round, s.nextId, s.boss, s.stats.concentrationLost));
+  const extraPoints = LEVEL_ENEMY_BONUS[s.level];
+  s.wave = withRng(s, (rng) =>
+    createWave(rng, s.round, s.nextId, s.boss, s.stats.concentrationLost, extraPoints),
+  );
   s.nextId += s.wave.length;
   if (s.modifiers[s.round] === 'groupChat') {
-    const extra = withRng(s, (rng) => createEnemy(rng, s.nextId++, 'common', s.boss));
+    const extra = withRng(s, (rng) => createEnemy(rng, s.nextId++, 'common', s.boss, extraPoints));
     s.wave.unshift({ ...extra, extra: true });
   }
   drawShop(s);
@@ -297,7 +313,7 @@ export function evacuate(prev: RunState, rarity: Rarity): RunState {
   s.ap--;
   s.merdascore -= EVACUATE_COST[rarity];
   drawChoices(s, rarity);
-  if (s.items.includes('waterJet')) s.concentration = Math.min(MAX_CONCENTRATION, s.concentration + BIDET_CONCENTRATION);
+  if (s.items.includes('waterJet')) addConcentration(s, BIDET_CONCENTRATION);
   return s;
 }
 
@@ -310,28 +326,34 @@ export function chooseEvacuated(prev: RunState, index: number): RunState {
   return s;
 }
 
-// ---------- Re-Roll (TP, unlimited) ----------
+// ---------- Re-Roll (free ones from the Toilet Brush first, then TP; unlimited) ----------
+
+const canPayReroll = (s: RunState) => s.freeRerolls > 0 || s.tp >= REROLL_COST;
+function payReroll(s: RunState) {
+  if (s.freeRerolls > 0) s.freeRerolls--;
+  else s.tp -= REROLL_COST;
+}
 
 export function canRerollChoices(s: RunState): boolean {
-  return s.phase === 'preparation' && s.choices.length > 0 && s.tp >= REROLL_COST;
+  return s.phase === 'preparation' && s.choices.length > 0 && canPayReroll(s);
 }
 
 export function rerollChoices(prev: RunState): RunState {
   if (!canRerollChoices(prev)) return prev;
   const s = clone(prev);
-  s.tp -= REROLL_COST;
+  payReroll(s);
   drawChoices(s, s.choices[0].rarity);
   return s;
 }
 
 export function canRerollShop(s: RunState): boolean {
-  return inPreparation(s) && s.tp >= REROLL_COST && ITEMS.some((i) => !s.items.includes(i));
+  return inPreparation(s) && canPayReroll(s) && ITEMS.some((i) => !s.items.includes(i));
 }
 
 export function rerollShop(prev: RunState): RunState {
   if (!canRerollShop(prev)) return prev;
   const s = clone(prev);
-  s.tp -= REROLL_COST;
+  payReroll(s);
   drawShop(s);
   return s;
 }
@@ -397,12 +419,12 @@ export function flush(prev: RunState, id: number): RunState {
   const s = clone(prev);
   s.tp -= tpCost(s, 'flush');
   s.team = s.team.filter((m) => m.id !== id);
-  s.concentration = Math.min(MAX_CONCENTRATION, s.concentration + FLUSH_CONCENTRATION);
+  addConcentration(s, FLUSH_CONCENTRATION);
   return s;
 }
 
 export function canBonusAction(s: RunState): boolean {
-  return inPreparation(s) && s.ap < MAX_AP && s.tp >= tpCost(s, 'bonusAction');
+  return inPreparation(s) && s.ap < apCap(s) && s.tp >= tpCost(s, 'bonusAction');
 }
 
 export function bonusAction(prev: RunState): RunState {
@@ -501,11 +523,14 @@ function applyReward(s: RunState, r: Reward) {
       s.stats.merdascoreEarned += r.amount;
       break;
     case 'concentration':
-      s.concentration = clamp(s.concentration + r.amount, 0, MAX_CONCENTRATION);
+      addConcentration(s, r.amount);
       if (r.amount < 0) s.stats.concentrationLost -= r.amount;
       break;
     case 'ap':
       s.bonusAp += r.amount;
+      break;
+    case 'hp':
+      // Applied after the fight's HP are settled (see fight).
       break;
   }
 }
@@ -539,7 +564,7 @@ export function fight(prev: RunState): RunState {
   if (paper > 0) rewards.push({ source: 'paper', resource: 'tp', amount: paper });
   const merdon = traitValue('merdon', traits.merdon);
   if (merdon > 0) rewards.push({ source: 'merdon', resource: 'merdascore', amount: merdon });
-  if (s.items.includes('brush')) rewards.push({ source: 'brush', resource: 'merdascore', amount: BRUSH_MERDASCORE });
+  if (s.items.includes('plunger')) rewards.push({ source: 'plunger', resource: 'merdascore', amount: BRUSH_MERDASCORE });
   if (s.items.includes('towel')) rewards.push({ source: 'towel', resource: 'tp', amount: TOWEL_TP });
   if (modifier !== 'silentMode') {
     s.team.forEach((m, i) => {
@@ -559,6 +584,7 @@ export function fight(prev: RunState): RunState {
     rewards.push({ source: modifier, resource: 'ap', amount: MODIFIER_AP_REWARD });
   // Structures produce after every combat.
   const produce = (id: StructureId) => STRUCTURE_INFO[id].production[s.structures[id] - 1];
+  if (produce('stall') > 0) rewards.push({ source: 'stall', resource: 'hp', amount: produce('stall') });
   if (produce('sink') > 0) rewards.push({ source: 'sink', resource: 'ap', amount: produce('sink') });
   if (produce('bidet') > 0) rewards.push({ source: 'bidet', resource: 'concentration', amount: produce('bidet') });
   if (produce('holder') > 0) rewards.push({ source: 'holder', resource: 'tp', amount: produce('holder') });
@@ -569,6 +595,8 @@ export function fight(prev: RunState): RunState {
   s.team.forEach((m, i) => {
     const hp = result.hpAfter[i];
     m.hp = hp > 0 ? Math.min(hp, m.stats.hp) : Math.ceil(m.stats.hp / 2);
+    // The Shower heals everyone a little after each wave.
+    m.hp = Math.min(m.stats.hp, m.hp + produce('stall'));
   });
 
   s.stats.damageDealt += result.damageDealt;

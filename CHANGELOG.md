@@ -1,5 +1,34 @@
 # Changelog
 
+## v0.5
+
+### Grafica e impaginazione
+- Nuova schermata principale:
+  - griglia dei Merdomon in alto;
+  - **Preparation** e **Next Wave** al centro;
+  - sotto, la **griglia del bagno** con 6 blocchi: Shower, Sink, Bidet / Toilet Brush, Toilet, Paper Holder.
+- Disegni nuovi per **Shower**, **Toilet Brush** e il **water** con il giocatore, adattati ai blocchi.
+- Il nome del tipo (Normal, Liquid, Fart) compare sul bordo in alto di ogni carta.
+- Carte dei Merdomon più compatte, così le due griglie stanno anche su schermi piccoli.
+
+### Nuove funzioni
+- **Livelli di difficoltà**: a inizio partita scegli il livello, e quindi il Boss.
+  - Livello 1: The Bestseller.
+  - Livello 2: The StreamDeck, nemici +1 punto statistica.
+  - Livello 3: Demon Scroller, nemici +2 punti statistica.
+- **Stats**: storico delle ultime 50 partite concluse, con riepilogo e record per livello. Ogni partita si espande con i dettagli.
+- **Record per livello** nella schermata finale.
+- 2 nuove strutture:
+  - **Shower**: Concentration massima 10/12/14 e cura +0/+1/+2 HP a tutti dopo ogni wave;
+  - **Toilet Brush**: Action Point massimi 2/3/4 e 0/2/4 Re-Roll gratuiti per round.
+
+### Modifiche alle regole
+- Gli Action Point accumulabili ora dipendono dal Toilet Brush: **2** al Tier 1 (prima erano 5).
+- L'oggetto Toilet Brush si chiama ora **Plunger**, con lo stesso effetto.
+- Nella Home, "Upgrade" diventa **Toilets** (in arrivo).
+
+> I salvataggi della v0.4 non sono compatibili: il tasto Continue li ignora. Il record della v0.4 non viene trasferito ai record per livello.
+
 ## v0.4
 
 ### Nuove funzioni

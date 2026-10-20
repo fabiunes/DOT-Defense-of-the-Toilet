@@ -3,8 +3,6 @@ import {
   ABILITY_INFO,
   BOSS_INFO,
   KIND_NAME,
-  MAX_AP,
-  MAX_CONCENTRATION,
   ROUNDS,
   SIZE_NAME,
   STAT_KEYS,
@@ -13,7 +11,7 @@ import {
   TRAIT_THRESHOLDS,
   TRAIT_VALUES,
 } from '../engine/data';
-import { itemCap, poopCap, tpCap } from '../engine/game';
+import { apCap, concentrationCap, itemCap, poopCap, tpCap } from '../engine/game';
 import { countTraits, traitTier } from '../engine/traits';
 import type { AbilityId, BossId, Merdomon, Rarity, RunState, Stats, TraitId } from '../engine/types';
 import { EnemyArt, MerdomonArt } from './art';
@@ -122,6 +120,7 @@ export function MerdomonCard({
 }) {
   return (
     <button className={`card sk ${selected ? 'selected' : ''} ${dim ? 'dim' : ''} ${big ? 'big' : ''}`} onClick={onClick}>
+      <span className="block-label">{KIND_NAME[m.kind]}</span>
       <div className="card-top">
         <span className="card-top-left">
           <Stars rarity={m.rarity} size={big ? 14 : 10} />
@@ -183,10 +182,10 @@ export function TopBar({ run }: { run: RunState }) {
         <b>{run.tp}</b>
         <small>/{tpCap(run)}</small>
       </div>
-      <div className="conc" aria-label={`Concentration ${run.concentration} of ${MAX_CONCENTRATION}`}>
+      <div className="conc" aria-label={`Concentration ${run.concentration} of ${concentrationCap(run)}`}>
         <Icon name="focus" size={18} fill="#fff" />
         <div className="conc-bar">
-          {Array.from({ length: MAX_CONCENTRATION }, (_, i) => (
+          {Array.from({ length: concentrationCap(run) }, (_, i) => (
             <span key={i} className={i < run.concentration ? 'on' : ''} />
           ))}
         </div>
@@ -218,7 +217,7 @@ export function InfoRow({ run, onItems, onBoss }: { run: RunState; onItems: () =
         {Array.from({ length: Math.max(run.ap, 1) }, (_, i) => (
           <Icon key={i} name="ap" size={12} fill={i < run.ap ? '#1b1b1b' : '#fff'} />
         ))}
-        <small className="muted">/{MAX_AP}</small>
+        <small className="muted">/{apCap(run)}</small>
       </span>
     </div>
   );

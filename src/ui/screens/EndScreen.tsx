@@ -1,29 +1,29 @@
-import { useEffect } from 'react';
-import { loadBest, saveBest } from '../../engine/save';
+import { useState } from 'react';
+import { BOSS_INFO } from '../../engine/data';
+import { recordRun } from '../../engine/save';
 import { runScore } from '../../engine/score';
 import type { RunState } from '../../engine/types';
 import { Icon } from '../icons';
 
-/** Record before this run ended, read once per finished run (keyed by its RNG state). */
-const previousBest = new Map<number, number>();
+/** Unique id of a finished run, so it is recorded only once. */
+const runId = (s: RunState) => `${s.rngState}-${s.nextId}-${s.level}`;
 
 export function EndScreen({ run, onHome, onNew }: { run: RunState; onHome: () => void; onNew: () => void }) {
   const victory = run.phase === 'victory';
   const { lines, total } = runScore(run);
-  if (!previousBest.has(run.rngState)) previousBest.set(run.rngState, loadBest());
-  const prev = previousBest.get(run.rngState)!;
-  const newRecord = total > prev;
-
-  useEffect(() => {
-    saveBest(total);
-  }, [total]);
+  // Records the run in the history (idempotent) and reads the level's previous record.
+  const [{ previousBest }] = useState(() => recordRun(run, runId(run)));
+  const newRecord = total > previousBest;
+  const boss = BOSS_INFO[run.boss];
 
   return (
     <div className="screen end">
       <div className={`end-title ${victory ? 'win' : 'lose'}`}>
         <Icon name={victory ? 'trophy' : 'skull'} size={52} fill="#fff" />
         <h1>{victory ? 'Victory!' : 'Game Over'}</h1>
-        <p className="muted">{victory ? 'Break completed in peace.' : `Distracted at wave ${run.round}`}</p>
+        <p className="muted">
+          Level {run.level} · {boss.icon} {boss.name} · {victory ? 'Break completed in peace.' : `wave ${run.round}`}
+        </p>
       </div>
       <div className="end-stats sk">
         {lines
@@ -40,7 +40,7 @@ export function EndScreen({ run, onHome, onNew }: { run: RunState; onHome: () =>
           <b>{total}</b>
         </div>
         <div className={`score-best ${newRecord ? 'new' : ''}`}>
-          {newRecord ? '★ New record!' : `Best: ${prev}`}
+          {newRecord ? `★ New Level ${run.level} record!` : `Level ${run.level} best: ${previousBest}`}
         </div>
       </div>
       <div className="end-buttons">

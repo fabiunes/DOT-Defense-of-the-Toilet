@@ -1,6 +1,6 @@
 # D.o.t.T. – Defense of the Toilet · Game Design Document
 
-> Versione regole: **v0.4** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
+> Versione regole: **v0.5** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
 >
 > Fonte ufficiale delle regole. Il gioco è interamente in **inglese**; questo documento è in italiano, con i termini di gioco in inglese.
 
@@ -29,9 +29,9 @@ Single player per smartphone, roguelite + auto-battler. Il giocatore difende la 
 | Risorsa | Range | Iniziale | Note |
 |---|---|---|---|
 | **Toilet Paper** (TP) | 0 → limite Paper Holder (30/50/70) | 2 | Valuta. L'eccesso va perso. |
-| **Concentration** | 0 – 10 | 10 | "Vita" del giocatore, barra a riempimento. 0 = game over. |
+| **Concentration** | 0 → limite Shower (10/12/14) | 10 | "Vita" del giocatore, barra a riempimento. 0 = game over. |
 | **Poop** (ex Poop) | 0 → limite Bidet (15/20/30) | 5 | Spesa con *Evacuate*. L'eccesso va perso. |
-| **Action Points** (AP) | 0 – 5 | 1 al primo round | A ogni preparazione: +1, + tratto Action, + Sink, + ricompense. **Quelli non spesi si accumulano** (massimo 5). |
+| **Action Points** (AP) | 0 → limite Toilet Brush (2/3/4) | 1 al primo round | A ogni preparazione: +1, + tratto Action, + Sink, + ricompense. **Quelli non spesi si accumulano** fino al limite. |
 
 ## 5. Merdomon
 
@@ -116,7 +116,7 @@ A ogni preparazione lo shop estrae **2 oggetti a caso** (3 con il Game Boy) tra 
 
 | Oggetto (IT) | Nome in gioco | Tratto | Effetto |
 |---|---|---|---|
-| Scopettone | **Toilet Brush** | 💩 Stinky | +2 Poop a fine wave |
+| Sturalavandini | **Plunger** (ex Toilet Brush) | 💩 Stinky | +2 Poop a fine wave |
 | Rivista | **Magazine** | ❤️ Healthy | Il primo Merdomon che muore resuscita a vita piena (1 volta per combattimento) |
 | Getto d'acqua | **Water Jet** (ex Bidet) | 🛡️ Defender | *Evacuate* dà anche +1 Concentration |
 | Doccino | **Hand Shower** | 🧻 Paper | Shop, Flush e Bonus Action costano −2 TP |
@@ -133,7 +133,7 @@ A ogni preparazione lo shop estrae **2 oggetti a caso** (3 con il Game Boy) tra 
 
 ## 9. Flusso della run
 
-1. Home → **New Game** → **rivelazione del Boss** della partita (§9c) → scelta di 1 tra 3 Merdomon **Small** → abilità (1 tra 3) e +1.
+1. Home → **New Game** → **scelta del livello** (e quindi del Boss, §9c) → scelta di 1 tra 3 Merdomon **Small** → abilità (1 tra 3) e +1.
 2. **Bonus di partenza**, uno a scelta tra:
    - un **oggetto** casuale;
    - un Merdomon **Small** casuale (poi abilità e +1);
@@ -176,7 +176,7 @@ Le wave **3, 6 e 9** hanno un modificatore, estratto a inizio partita tra questi
 
 ### 9c. Boss
 
-A inizio partita viene estratto e mostrato **uno dei 3 Boss**. Ogni Boss dà **+1 ATK a tutti i nemici del suo tipo** per tutta la partita, e combatte due volte: in forma **media** alla wave 5 (Big, 15 punti) e in forma **finale** alla wave 10 (Huge, 22 punti). È sempre l'ultimo della fila.
+A inizio partita il giocatore sceglie il **livello di difficoltà**, che determina il Boss: **Livello 1 – The Bestseller**, **Livello 2 – The StreamDeck**, **Livello 3 – Demon Scroller** (per ora tutti selezionabili; in futuro da sbloccare). Ai livelli 2 e 3 ogni nemico normale ha anche **+1 / +2 punti statistica**. Ogni Boss dà **+1 ATK a tutti i nemici del suo tipo** per tutta la partita, e combatte due volte: in forma **media** alla wave 5 (Big, 15 punti) e in forma **finale** alla wave 10 (Huge, 22 punti). È sempre l'ultimo della fila.
 
 | Boss | Tipo | Abilità (forma media) | Abilità (forma finale) |
 |---|---|---|---|
@@ -186,18 +186,24 @@ A inizio partita viene estratto e mostrato **uno dei 3 Boss**. Ogni Boss dà **+
 
 ### 9d. Strutture del bagno
 
-Disegnate nella parte bassa della schermata (il Toilet con il giocatore, davanti Sink, Paper Holder e Bidet). Partono tutte dal **Tier 1**; si toccano per vedere l'effetto e potenziarle. **Build**: 20 TP + 1 AP per ogni Tier, fino al Tier 3.
+Sei blocchi nella parte bassa della schermata, come gli slot dei Merdomon: in alto **Shower, Sink, Bidet**; in basso **Toilet Brush, Toilet** (il water con il giocatore), **Paper Holder**. Partono tutte dal **Tier 1**; si toccano per vedere l'effetto e potenziarle. **Build**: 20 TP + 1 AP per ogni Tier, fino al Tier 3.
 
 | Struttura | Limite (T1/T2/T3) | Produzione dopo ogni combattimento (T1/T2/T3) |
 |---|---|---|
+| **Shower** (Doccia) | Concentration massima 10 / 12 / 14 | +0 / +1 / +2 HP a tutti i Merdomon |
 | **Sink** (Lavandino) | Oggetti 3 / 6 / 9 | +0 / +1 / +2 Action Point |
+| **Toilet Brush** (Scopettone) | Action Point massimi 2 / 3 / 4 | 0 / 2 / 4 **Re-Roll gratuiti** per round (usati prima dei TP) |
 | **Bidet** | Poop 15 / 20 / 30 | +0 / +1 / +2 Concentration |
 | **Paper Holder** (Porta carta) | Toilet Paper 30 / 50 / 70 | +0 / +5 / +10 TP |
 | **Toilet** (Water) | Merdomon 4 / 5 / 6 | +0 / +2 / +3 Poop |
 
 ### 9e. Punteggio finale
 
-Mostrato a fine partita con il dettaglio; il **record** resta salvato nel browser e compare nella Home.
+Mostrato a fine partita con il dettaglio. C'è un **record per ogni livello**, salvato nel browser.
+
+### 9f. Statistiche
+
+Schermata **Stats** dalla Home: riepilogo (partite, vittorie, record per livello) e lo storico delle **ultime 50 partite concluse** (quelle abbandonate non vengono salvate), dalla più recente, 6 per pagina. Ogni partita è una riga (icona del Boss, vinta o persa, livello, wave, punteggio, data) che toccata si espande con: dettaglio del punteggio, squadra finale, oggetti, Tier delle strutture, danni, Merdomon creati, TP e Poop prodotti.
 
 | Voce | Punti |
 |---|---|
@@ -256,15 +262,15 @@ In entrambi i casi, poi:
 
 ## 12. Schermate
 
-- **Home**: New Game, Continue, Tutorial, Upgrade *(coming soon)*, Stats *(coming soon)*; numero di versione in basso.
+- **Home**: New Game, Continue, Tutorial, Stats, Toilets *(coming soon)*; numero di versione in basso.
 - **Tutorial**: 11 pagine con icone e regole, con esempi presi dalla schermata principale.
 - **Starter**: scelta tra 3 Merdomon Small, poi schermata abilità + +1 con Confirm.
 - **Starting bonus**: scelta tra oggetto, Merdomon Small e Supplies.
-- **Main / Preparation** (dal basso verso l'alto):
-  - giocatore stilizzato visto dall'alto, seduto sul water;
-  - 6 slot Merdomon con anteprima delle caratteristiche;
-  - bottoni **Preparation** e **Next Wave**;
-  - in alto: TP (sinistra), barra Concentration (centro), Poop (destra), con i limiti; sotto, "Round X/10", borsa oggetti (n/limite), Boss, "Actions ◆ /5", poi i tratti. In basso il bagno con le strutture; gli slot oltre il limite del Toilet sono mostrati bloccati.
+- **Main / Preparation** (dall'alto verso il basso):
+  - griglia 2×3 dei Merdomon, con il nome del tipo sul bordo di ogni carta;
+  - bottoni **Preparation** e **Next Wave**, tra le due griglie;
+  - griglia 2×3 del bagno con le strutture (§9d);
+  - in alto: TP (sinistra), barra Concentration (centro), Poop (destra), con i limiti; sotto, "Round X/10", borsa oggetti (n/limite), Boss, "Actions ◆ /5", poi i tratti. Gli slot oltre il limite del Toilet sono mostrati bloccati.
 - **Preparation panel**: griglia di icone con il costo indicato (AP per le azioni costose, TP per le altre).
 - **Merdomon detail**: popup con statistiche e tratti, a icone.
 - **Combat**: prima una schermata "Bonuses" con il modificatore della wave, le abilità di inizio combattimento, i bonus attivi di tratti e oggetti e la squadra potenziata (si chiude toccando o dopo 2,6 secondi), poi animazione automatica con tasto ⏩.

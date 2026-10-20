@@ -2,7 +2,7 @@ export type Rarity = 'common' | 'rare' | 'epic';
 export type StatKey = 'hp' | 'atk' | 'def' | 'spd';
 export type TraitId = 'paper' | 'merdon' | 'healthy' | 'haste' | 'fighter' | 'defender' | 'action';
 export type ItemId =
-  | 'brush'
+  | 'plunger'
   | 'magazine'
   | 'waterJet'
   | 'shower'
@@ -34,7 +34,9 @@ export type AbilityId =
   | 'stinkyAura';
 export type ModifierId = 'groupChat' | 'wifiDown' | 'rushHour' | 'doomscrolling' | 'silentMode' | 'jackpot';
 export type StartBonusId = 'item' | 'merdomon' | 'resources';
-export type StructureId = 'sink' | 'bidet' | 'holder' | 'toilet';
+export type StructureId = 'stall' | 'sink' | 'bidet' | 'scrubber' | 'toilet' | 'holder';
+/** Difficulty level, chosen at the start: it picks the Boss and toughens normal enemies. */
+export type Level = 1 | 2 | 3;
 export type BossId = 'demonScroller' | 'bestseller' | 'streamDeck';
 /** Bosses show up twice: a medium form on wave 5 and the final form on wave 10. */
 export type BossForm = 'mid' | 'final';
@@ -102,7 +104,7 @@ export type CombatEvent =
   | { type: 'boss'; boss: BossId; index: number; hp?: number }
   | { type: 'end'; won: boolean };
 
-export type Resource = 'tp' | 'merdascore' | 'concentration' | 'ap';
+export type Resource = 'tp' | 'merdascore' | 'concentration' | 'ap' | 'hp';
 export type RewardSource = 'survivors' | 'enemies' | 'damage' | TraitId | ItemId | AbilityId | ModifierId | StructureId;
 
 export interface Reward {
@@ -150,7 +152,7 @@ export interface RunStats {
 export type Phase = 'boss' | 'starter' | 'startBonus' | 'preparation' | 'combat' | 'gameover' | 'victory';
 
 export interface RunState {
-  version: 5;
+  version: 6;
   phase: Phase;
   round: number;
   concentration: number;
@@ -159,8 +161,12 @@ export interface RunState {
   ap: number;
   /** AP added at the next preparation (modifier reward, Sink, starting pack). Unspent AP carry over (max 5). */
   bonusAp: number;
-  /** This run's Boss: a run-wide modifier, then a medium form on wave 5 and the final form on wave 10. */
+  /** Difficulty level chosen at the start. */
+  level: Level;
+  /** This run's Boss (set by the level): a run-wide modifier, then a medium form on wave 5 and the final form on wave 10. */
   boss: BossId;
+  /** Free Re-Rolls left this round (Toilet Brush structure). */
+  freeRerolls: number;
   /** Bathroom structures' tiers (1..3). */
   structures: Record<StructureId, number>;
   team: Merdomon[];

@@ -1891,3 +1891,249 @@ button:disabled {
 .tut-table td.left small {
   display: block;
 }
+
+/* ---------- v0.5: two grids layout, type labels, levels, stats ---------- */
+.card,
+.struct-block {
+  position: relative;
+}
+.block-label {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 0 5px;
+  background: var(--paper);
+  color: #444;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.prep {
+  gap: 7px;
+}
+.prep .slots {
+  flex: 1.15;
+  min-height: 0;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: unset;
+  gap: 12px 8px;
+  padding-top: 6px;
+}
+.prep .card {
+  min-height: 0;
+  padding-top: 8px;
+}
+.prep .card > svg {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-height: 46px;
+}
+.bathroom {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 12px 8px;
+  padding-top: 6px;
+}
+.struct-block {
+  min-height: 0;
+  min-width: 0;
+  padding: 10px 6px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.struct-block svg {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+}
+.struct-block .tier-badge {
+  top: 4px;
+  right: 4px;
+  font-size: 10px;
+  padding: 1px 4px;
+}
+.cost.free {
+  background: #e3f3e4;
+  border-color: var(--good);
+  color: var(--good);
+}
+
+.level-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.level-option {
+  display: grid;
+  grid-template-columns: 62px 1fr;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding: 6px 10px;
+  justify-content: stretch;
+}
+.level-option.on {
+  box-shadow: 0 0 0 3px var(--paper), 0 0 0 5px var(--ink);
+  background: #f3efe2;
+}
+.level-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  gap: 1px;
+}
+.level-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+}
+.level-skulls {
+  font-size: 11px;
+}
+.level-name {
+  font-size: 19px;
+}
+.level-text small {
+  font-size: 13px;
+  color: #555;
+}
+.level-best {
+  color: var(--good) !important;
+}
+.boss-reveal {
+  justify-content: space-evenly;
+}
+
+.stats {
+  gap: 8px;
+}
+.stats-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  justify-content: center;
+  font-size: 16px;
+  border-bottom: 2px dashed var(--soft);
+  padding-bottom: 6px;
+}
+.stats-best {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.stats-list {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.run-row {
+  display: flex;
+  flex-direction: column;
+  border-width: 1.5px;
+}
+.run-row.win {
+  border-left: 5px solid var(--good);
+}
+.run-row.lose {
+  border-left: 5px solid var(--danger);
+}
+.run-head {
+  display: grid;
+  grid-template-columns: 32px 22px 1fr auto auto;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  padding: 3px 8px;
+  text-align: left;
+  justify-content: stretch;
+}
+.run-score {
+  font-size: 18px;
+}
+.run-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 10px 8px;
+  border-top: 1.5px dashed var(--soft);
+  animation: fade 0.2s;
+}
+.run-lines {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px 10px;
+  font-size: 13px;
+}
+.run-lines span {
+  display: flex;
+  justify-content: space-between;
+}
+.run-team,
+.run-items,
+.run-structures,
+.run-extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.run-mini {
+  display: inline-flex;
+  align-items: flex-end;
+}
+.run-structures span {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+}
+.run-extra {
+  font-size: 13px;
+  gap: 12px;
+}
+.run-extra span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Short phones: tighter cards so both grids fit. */
+@media (max-height: 760px) {
+  .prep .card > svg {
+    max-height: 34px;
+  }
+  .prep .statgrid.compact {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .prep .statgrid.compact .stat {
+    font-size: 12px;
+  }
+  .prep .statgrid.compact svg {
+    width: 10px;
+    height: 10px;
+  }
+  .prep .statgrid.compact .sv {
+    min-width: 14px;
+    padding: 0 2px;
+  }
+  .prep .card .hpbar {
+    height: 11px;
+  }
+  .prep .card .hpbar-text {
+    font-size: 10px;
+  }
+  .prep .main-buttons .big-btn {
+    min-height: 42px;
+    font-size: 19px;
+  }
+}
