@@ -8,6 +8,7 @@ import type {
   Rarity,
   StatKey,
   Level,
+  BathroomId,
   StructureId,
   TraitId,
 } from './types';
@@ -17,8 +18,6 @@ export const MAX_STAT = 10;
 export const MAX_CONCENTRATION = 10;
 export const BASE_AP = 1;
 export const STARTER_CHOICES = 3;
-export const STARTING_TP = 2;
-export const STARTING_MERDASCORE = 5;
 export const SHOP_OFFER = 2;
 export const EVACUATE_CHOICES = 2;
 /** Shop items / Evacuate options with the Game Boy. */
@@ -109,6 +108,7 @@ export const ITEMS: readonly ItemId[] = [
   'brownTowel',
   'yellowTowel',
   'whiteTowel',
+  'hammer',
 ];
 
 /** Each trait listed counts once towards the trait thresholds. */
@@ -125,6 +125,7 @@ export const ITEM_INFO: Record<ItemId, { name: string; traits: readonly TraitId[
   brownTowel: { name: 'Brown Towel', traits: ['merdon'], desc: 'Normal Merdomon +1 HP and +1 ATK in combat' },
   yellowTowel: { name: 'Yellow Towel', traits: ['healthy'], desc: 'Liquid Merdomon +1 HP and +1 ATK in combat' },
   whiteTowel: { name: 'White Towel', traits: ['haste'], desc: 'Fart Merdomon +1 HP and +1 ATK in combat' },
+  hammer: { name: 'Hammer', traits: ['fighter'], desc: 'Every Build costs 15 TP, even from Tier 0' },
 };
 
 /** Towels boost one Merdomon type in combat. */
@@ -215,18 +216,20 @@ export const MODIFIER_INFO: Record<ModifierId, { name: string; icon: string; des
 /** In screen order: top row Shower, Sink, Bidet; bottom row Toilet Brush, Toilet, Paper Holder. */
 export const STRUCTURES: readonly StructureId[] = ['stall', 'sink', 'bidet', 'scrubber', 'toilet', 'holder'];
 export const MAX_TIER = 3;
-export const BUILD_COST = { tp: 20, ap: 1 } as const;
+/** Build: 30 TP from Tier 0, 20 TP otherwise (15 TP with the Hammer), always + 1 AP. */
+export const BUILD_COST = { tp: 20, fromZeroTp: 30, hammerTp: 15, ap: 1 } as const;
 
 export const STRUCTURE_INFO: Record<
   StructureId,
   { name: string; capacity: string; capacities: readonly number[]; produce: string; production: readonly number[] }
 > = {
-  stall: { name: 'Shower', capacity: 'Max Concentration', capacities: [10, 12, 14], produce: 'HP to all Merdomon', production: [0, 1, 2] },
-  scrubber: { name: 'Toilet Brush', capacity: 'Max Action Points', capacities: [2, 3, 4], produce: 'free Re-Rolls', production: [0, 2, 4] },
-  sink: { name: 'Sink', capacity: 'Items', capacities: [3, 6, 9], produce: 'Action Points', production: [0, 1, 2] },
-  bidet: { name: 'Bidet', capacity: 'Poop', capacities: [15, 20, 30], produce: 'Concentration', production: [0, 1, 2] },
-  holder: { name: 'Paper Holder', capacity: 'Toilet Paper', capacities: [30, 50, 70], produce: 'Toilet Paper', production: [0, 5, 10] },
-  toilet: { name: 'Toilet', capacity: 'Merdomon', capacities: [4, 5, 6], produce: 'Poop', production: [0, 2, 3] },
+  // Values by tier: index 0 = Tier 0 (not built yet) … index 3 = Tier 3.
+  stall: { name: 'Shower', capacity: 'Max Concentration', capacities: [8, 10, 12, 14], produce: 'HP to all Merdomon', production: [0, 0, 1, 2] },
+  scrubber: { name: 'Toilet Brush', capacity: 'Max Action Points', capacities: [2, 3, 4, 5], produce: 'free Re-Rolls', production: [0, 1, 2, 3] },
+  sink: { name: 'Sink', capacity: 'Items', capacities: [3, 5, 7, 9], produce: 'Action Points', production: [0, 0, 1, 2] },
+  bidet: { name: 'Bidet', capacity: 'Poop', capacities: [10, 15, 20, 25], produce: 'Concentration', production: [0, 0, 1, 2] },
+  holder: { name: 'Paper Holder', capacity: 'Toilet Paper', capacities: [30, 40, 50, 60], produce: 'Toilet Paper', production: [0, 2, 5, 8] },
+  toilet: { name: 'Toilet', capacity: 'Merdomon', capacities: [3, 4, 5, 6], produce: 'Poop', production: [0, 1, 2, 3] },
 };
 
 // ---------- Bosses ----------
@@ -241,6 +244,53 @@ export const LEVEL_BOSS: Record<Level, BossId> = { 1: 'bestseller', 2: 'streamDe
 export const LEVEL_ENEMY_BONUS: Record<Level, number> = { 1: 0, 2: 1, 3: 2 };
 /** Finished runs kept in the Stats history. */
 export const HISTORY_MAX = 50;
+
+// ---------- Bathroom types (starting setups, unlocked with Toilet Points) ----------
+
+export const BATHROOMS: readonly BathroomId[] = ['homeA', 'homeB', 'officeA', 'officeB', 'publicA', 'publicB', 'hotelA', 'hotelB'];
+
+const tiers = (stall: number, sink: number, bidet: number, scrubber: number, toilet: number, holder: number) => ({
+  stall,
+  sink,
+  bidet,
+  scrubber,
+  toilet,
+  holder,
+});
+
+export const BATHROOM_INFO: Record<
+  BathroomId,
+  {
+    name: string;
+    color: string;
+    /** Toilet Points to unlock (0 = unlocked from the start). */
+    cost: number;
+    structures: Record<StructureId, number>;
+    tp: number;
+    concentration: number;
+    poop: number;
+  }
+> = {
+  homeA: { name: 'Home Bathroom A', color: '#e8f1fb', cost: 0, structures: tiers(1, 1, 1, 1, 1, 1), tp: 3, concentration: 10, poop: 5 },
+  homeB: { name: 'Home Bathroom B', color: '#d6e6f8', cost: 3000, structures: tiers(0, 1, 2, 1, 2, 0), tp: 0, concentration: 8, poop: 3 },
+  officeA: { name: 'Office Bathroom A', color: '#eeeeea', cost: 0, structures: tiers(0, 1, 0, 2, 1, 1), tp: 5, concentration: 8, poop: 7 },
+  officeB: { name: 'Office Bathroom B', color: '#e0e0da', cost: 5000, structures: tiers(0, 0, 0, 1, 1, 2), tp: 5, concentration: 6, poop: 10 },
+  publicA: { name: 'Public Toilet A', color: '#eef6e6', cost: 0, structures: tiers(0, 0, 0, 0, 3, 3), tp: 0, concentration: 5, poop: 10 },
+  publicB: { name: 'Public Toilet B', color: '#dfeed3', cost: 10000, structures: tiers(0, 1, 1, 0, 2, 0), tp: 10, concentration: 6, poop: 12 },
+  hotelA: { name: 'Hotel Bathroom A', color: '#fbf1dc', cost: 20000, structures: tiers(2, 2, 2, 2, 2, 2), tp: 0, concentration: 4, poop: 0 },
+  hotelB: { name: 'Hotel Bathroom B', color: '#f6e2b8', cost: 40000, structures: tiers(3, 3, 3, 3, 3, 3), tp: 0, concentration: 1, poop: 0 },
+};
+
+/** Toilet Points a new player starts with (high for testing: everything can be unlocked). */
+export const STARTING_TOILET_POINTS = 200000;
+
+// ---------- Extras ----------
+
+/** Free action: heal one Merdomon. */
+export const FARTING = { tp: 3, hp: 1 } as const;
+/** After this wave (won or lost) you pick a free item. */
+export const GIFT_WAVE = 5;
+export const GIFT_CHOICES = 3;
 /** The medium form joins wave 5 as a Big; the final form is a Huge with extra points. */
 export const BOSS_TOTAL = { mid: 15, final: 22 } as const;
 /** Run-wide modifier: every enemy of the Boss's type gets this much ATK. */
@@ -308,7 +358,7 @@ export interface WaveDef {
 /** Level 1 – Home Bathroom. common = Small, rare = Big; the Boss is Big on wave 5 and Huge on wave 10. */
 export const WAVES: readonly WaveDef[] = [
   { common: 1, rare: 0 },
-  { common: 3, rare: 0 },
+  { common: 2, rare: 0 },
   { common: 3, rare: 1 },
   { common: 4, rare: 1 },
   { common: 4, rare: 0, boss: 'mid' },

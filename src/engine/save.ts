@@ -1,8 +1,8 @@
-import { HISTORY_MAX, STRUCTURES } from './data';
+import { BATHROOM_INFO, HISTORY_MAX, STARTING_TOILET_POINTS, STRUCTURES } from './data';
 import { runScore, type ScoreLine } from './score';
-import type { AbilityId, BossId, ItemId, Level, MerdomonKind, Rarity, RunState, StructureId } from './types';
+import type { AbilityId, BathroomId, BossId, ItemId, Level, MerdomonKind, Rarity, RunState, StructureId } from './types';
 
-const KEY = 'dot.save.v6';
+const KEY = 'dot.save.v7';
 
 export function saveRun(s: RunState): void {
   try {
@@ -17,7 +17,7 @@ export function loadRun(): RunState | null {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as RunState;
-    return s?.version === 6 && s.phase === 'preparation' ? s : null;
+    return s?.version === 7 && s.phase === 'preparation' ? s : null;
   } catch {
     return null;
   }
@@ -52,6 +52,7 @@ export interface RunRecord {
   date: string;
   level: Level;
   boss: BossId;
+  bathroom: BathroomId;
   victory: boolean;
   round: number;
   score: number;
@@ -92,6 +93,7 @@ export function recordRun(s: RunState, runId: string): { previousBest: number } 
     date: new Date().toISOString(),
     level: s.level,
     boss: s.boss,
+    bathroom: s.bathroom,
     victory: s.phase === 'victory',
     round: s.round,
     score: total,
@@ -108,8 +110,49 @@ export function recordRun(s: RunState, runId: string): { previousBest: number } 
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify([record, ...history].slice(0, HISTORY_MAX)));
     if (total > previousBest) localStorage.setItem(bestKey(s.level), String(total));
+    // The final score is also earned as Toilet Points.
+    localStorage.setItem(POINTS_KEY, String(loadToiletPoints() + total));
   } catch {
     // Storage unavailable: nothing is recorded.
   }
   return { previousBest };
+}
+
+// ---------- Toilet Points and unlocked bathrooms (kept between runs) ----------
+
+const POINTS_KEY = 'dot.toiletPoints';
+const UNLOCKED_KEY = 'dot.unlockedBathrooms';
+
+export function loadToiletPoints(): number {
+  try {
+    const raw = localStorage.getItem(POINTS_KEY);
+    return raw === null ? STARTING_TOILET_POINTS : Number(raw) || 0;
+  } catch {
+    return STARTING_TOILET_POINTS;
+  }
+}
+
+export function isUnlocked(id: BathroomId): boolean {
+  if (BATHROOM_INFO[id].cost === 0) return true;
+  try {
+    const list = JSON.parse(localStorage.getItem(UNLOCKED_KEY) ?? '[]') as BathroomId[];
+    return list.includes(id);
+  } catch {
+    return false;
+  }
+}
+
+/** Spends Toilet Points to unlock a bathroom type. Returns false if it can't be afforded. */
+export function unlockBathroom(id: BathroomId): boolean {
+  if (isUnlocked(id)) return true;
+  const points = loadToiletPoints();
+  if (points < BATHROOM_INFO[id].cost) return false;
+  try {
+    const list = JSON.parse(localStorage.getItem(UNLOCKED_KEY) ?? '[]') as BathroomId[];
+    localStorage.setItem(UNLOCKED_KEY, JSON.stringify([...list, id]));
+    localStorage.setItem(POINTS_KEY, String(points - BATHROOM_INFO[id].cost));
+    return true;
+  } catch {
+    return false;
+  }
 }

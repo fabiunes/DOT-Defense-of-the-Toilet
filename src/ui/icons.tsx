@@ -6,7 +6,7 @@ export type IconName =
   | 'heal' | 'toilet' | 'shop' | 'swap' | 'flush' | 'bonus' | 'upgrade' | 'fight'
   | 'close' | 'check' | 'star' | 'ff' | 'skip' | 'home' | 'trophy' | 'skull' | 'crown' | 'question' | 'phone' | 'play'
   | 'trade' | 'eye'
-  | 'plunger' | 'magazine' | 'waterJet' | 'shower' | 'window' | 'towel' | 'toothbrush' | 'flipflops' | 'gameboy' | 'dice';
+  | 'plunger' | 'magazine' | 'waterJet' | 'shower' | 'window' | 'towel' | 'toothbrush' | 'flipflops' | 'gameboy' | 'dice' | 'hammer';
 
 export const TRAIT_COLOR: Record<TraitId, string> = {
   paper: '#4f8fe8',
@@ -195,6 +195,13 @@ function shapes(name: IconName, fill: string): ReactNode {
           <path d="M9 16h3M10.5 14.5v3" />
           <circle cx="15" cy="16.5" r="0.8" fill="currentColor" />
           <circle cx="16.3" cy="14.6" r="0.8" fill="currentColor" />
+        </>
+      );
+    case 'hammer':
+      return (
+        <>
+          <path d="M13 10l-8.5 8.5a1.8 1.8 0 0 0 2.5 2.5L15.5 12.5" fill={fill} />
+          <path d="M11 6.5l4-4 6.5 6.5-4 4z" fill={fill} />
         </>
       );
     case 'dice':

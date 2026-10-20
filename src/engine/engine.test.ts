@@ -30,7 +30,7 @@ function prepRun(patch: Partial<RunState> = {}): RunState {
   s = confirm(s, 'atk');
   s = G.chooseStartBonus(s, 'resources');
   // Neutralise the starting pack so tests start from the base values.
-  return { ...s, ap: 1, items: [], ...patch };
+  return { ...s, ap: 1, items: [], freeRerolls: 0, ...patch };
 }
 
 describe('rng', () => {
@@ -193,10 +193,10 @@ describe('combat', () => {
 });
 
 describe('run flow', () => {
-  it('starts with 2 TP, 5 Poop and 3 small starters, after the Boss reveal', () => {
+  it('starts (Home Bathroom A) with 3 TP, 5 Poop and 3 small starters, after the setup', () => {
     expect(G.newRun(1).phase).toBe('boss');
     const s = G.beginRun(G.newRun(1));
-    expect(s).toMatchObject({ phase: 'starter', concentration: 10, tp: 2, merdascore: 5, ap: 0 });
+    expect(s).toMatchObject({ phase: 'starter', concentration: 10, tp: 3, merdascore: 5, ap: 0 });
     expect(s.starters).toHaveLength(3);
     expect(s.starters.every((m) => m.rarity === 'common' && m.traits.length === 1)).toBe(true);
   });
@@ -308,8 +308,8 @@ describe('run flow', () => {
 
   it('the Action trait adds AP each round; unspent AP carry over up to the Toilet Brush limit', () => {
     let s = prepRun();
-    expect(G.apCap(s)).toBe(2);
-    s.structures.scrubber = 3; // limit 4
+    expect(G.apCap(s)).toBe(3);
+    s.structures.scrubber = 2; // limit 4
     s.team[0].traits = ['action', 'action'];
     s = G.bonusAction({ ...s, tp: 20 });
     expect(s.ap).toBe(2);
@@ -341,6 +341,7 @@ describe('run flow', () => {
     expect(after.lastCombat?.won).toBe(false);
     expect(after.concentration).toBe(5);
     expect(after.team[0].hp).toBe(3);
-    expect(after.tp).toBe(s.tp); // no damage: the faster enemy kills before the Merdomon can strike
+    // No damage (the faster enemy kills first): only the Paper Holder's +2 TP.
+    expect(after.tp).toBe(s.tp + 2);
   });
 });

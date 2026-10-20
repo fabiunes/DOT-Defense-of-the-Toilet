@@ -7,6 +7,10 @@ import type { Rarity, RunState } from './types';
 function playPreparation(s: RunState): RunState {
   for (let guard = 0; guard < 50; guard++) {
     const before = s;
+    if (s.giftOffer.length) {
+      s = G.bagFull(s) ? G.skipGift(s) : G.takeGift(s, s.giftOffer[0]);
+      continue;
+    }
     if (s.pending) {
       const stat = STAT_KEYS.find((k) => G.canAssignBonus(s, k))!;
       s = G.confirmMerdomon(s, stat, s.pendingAbilities[0]);

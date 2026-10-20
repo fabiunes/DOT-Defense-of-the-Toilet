@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { simulateCombat } from './combat';
-import { ABILITIES, MODIFIER_WAVES, START_PACK } from './data';
+import { ABILITIES, MODIFIER_WAVES, START_PACK, STRUCTURES } from './data';
 import * as G from './game';
 import { Rng } from './rng';
-import type { AbilityId, Enemy, Merdomon, RunState, Stats } from './types';
+import type { AbilityId, Enemy, Merdomon, RunState, Stats, StructureId } from './types';
 
 const mk = (stats: Partial<Stats>, ability: AbilityId | null = null, extra: Partial<Merdomon> = {}): Merdomon => {
   const s = { hp: 5, atk: 3, def: 1, spd: 1, ...stats };
@@ -48,7 +48,7 @@ describe('starting bonus', () => {
     const s0 = atBonus();
     const s = G.chooseStartBonus(s0, 'item');
     expect(s.items).toEqual([s0.startOptions!.item]);
-    expect(s).toMatchObject({ phase: 'preparation', ap: 1, tp: 2 });
+    expect(s).toMatchObject({ phase: 'preparation', ap: 1, tp: 3 });
   });
   it('merdomon: a Small one goes through the ability + stat screen, then preparation', () => {
     let s = G.chooseStartBonus(atBonus(), 'merdomon');
@@ -60,21 +60,21 @@ describe('starting bonus', () => {
   });
   it('resources: +5 TP, +3 Poop, +1 AP in round 1', () => {
     let s = G.chooseStartBonus(atBonus(), 'resources');
-    expect(s).toMatchObject({ tp: 2 + START_PACK.tp, merdascore: 5 + START_PACK.merdascore, ap: 2 });
+    expect(s).toMatchObject({ tp: 3 + START_PACK.tp, merdascore: 5 + START_PACK.merdascore, ap: 2 });
     s = G.continueAfterCombat(G.fight(s));
-    expect(s.ap).toBe(2); // unspent AP carry over, capped at 2 by the Toilet Brush (Tier 1)
+    expect(s.ap).toBe(3); // unspent AP carry over, capped at 3 by the Toilet Brush (Tier 1)
   });
 });
 
 describe('waves', () => {
-  it('waves 2–4 have one extra Small', () => {
+  it('wave sizes: 1, 2, 4, 5 enemies in waves 1–4', () => {
     let s = G.chooseStartBonus(start(3), 'item');
     const counts: number[] = [];
     for (let round = 1; round <= 4; round++) {
       counts.push(s.wave.filter((e) => !e.extra).length);
       s = G.continueAfterCombat(G.fight({ ...s, concentration: 10 }));
     }
-    expect(counts).toEqual([1, 3, 4, 5]);
+    expect(counts).toEqual([1, 2, 4, 5]);
   });
 });
 
@@ -207,7 +207,9 @@ describe('wave modifiers', () => {
     const strong = [mk({ hp: 10, atk: 10, def: 10, spd: 10 })];
     const after = G.fight({ ...s, team: strong, modifiers: { ...s.modifiers, 3: 'jackpot' as const } });
     const sum = (res: string, src?: string) =>
-      after.lastCombat!.rewards.filter((r) => r.resource === res && (src ? r.source === src : r.source !== 'jackpot')).reduce((t, r) => t + r.amount, 0);
+      after.lastCombat!.rewards
+        .filter((r) => r.resource === res && (src ? r.source === src : r.source !== 'jackpot' && !STRUCTURES.includes(r.source as StructureId)))
+        .reduce((t, r) => t + r.amount, 0);
     expect(sum('tp', 'jackpot')).toBe(sum('tp'));
     expect(sum('merdascore', 'jackpot')).toBe(sum('merdascore'));
   });

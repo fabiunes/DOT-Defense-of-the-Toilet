@@ -15,7 +15,11 @@ import {
   LEVEL_BOSS,
   LEVEL_ENEMY_BONUS,
   BOSS_INFO,
+  BATHROOMS,
+  BATHROOM_INFO,
   BUILD_COST,
+  FARTING,
+  GIFT_WAVE,
   SCORE,
   STRUCTURES,
   STRUCTURE_INFO,
@@ -52,7 +56,7 @@ const demoTeam: Merdomon[] = [
 ];
 
 const demoRun: RunState = {
-  version: 6,
+  version: 7,
   phase: 'preparation',
   round: 3,
   concentration: 7,
@@ -61,6 +65,9 @@ const demoRun: RunState = {
   ap: 1,
   bonusAp: 0,
   level: 1,
+  bathroom: 'homeA',
+  startStructures: { stall: 1, sink: 1, bidet: 1, scrubber: 1, toilet: 1, holder: 1 },
+  giftOffer: [],
   freeRerolls: 0,
   boss: 'bestseller',
   structures: { stall: 1, sink: 2, bidet: 1, scrubber: 1, toilet: 1, holder: 1 },
@@ -191,8 +198,8 @@ const pages: Page[] = [
     title: 'Starting a run',
     body: (
       <>
-        <Row icon={<span className="tut-step">1</span>} title="Choose the level">
-          Level 1, 2 or 3: it sets your Boss, who attacks on waves 5 and 10.
+        <Row icon={<span className="tut-step">1</span>} title="Level and bathroom">
+          The level sets your Boss (waves 5 and 10); the bathroom sets your starting structures and resources.
         </Row>
         <Row icon={<span className="tut-step">2</span>} title="Pick a starter">
           Choose 1 of 3 Small Merdomon.
@@ -495,10 +502,11 @@ const pages: Page[] = [
             { icon: 'flush', label: 'Flush', cost: { tp: COSTS.flush } },
             { icon: 'bonus', label: 'Bonus Action', cost: { tp: COSTS.bonusAction } },
             { icon: 'eye', label: 'Scout', cost: {} },
+            { icon: 'heart', label: 'Farting', cost: { tp: FARTING.tp } },
           ]}
         />
         <Row icon={I('swap')} title="Organize">
-          Swap positions: tap one Merdomon, then where it goes. Slot 1 fights first!
+          Tap a Merdomon, then where it goes. Slot 1 fights first!
         </Row>
         <Row icon={I('flush')} title="Flush">
           Remove a Merdomon and get +1 Concentration.
@@ -507,10 +515,13 @@ const pages: Page[] = [
           +1 {ii('ap', '#1b1b1b')} for this round.
         </Row>
         <Row icon={I('eye')} title="Scout">
-          See the stats of the incoming Distractions, in fighting order.
+          See the incoming Distractions, in fighting order.
+        </Row>
+        <Row icon={I('heart')} title="Farting">
+          +{FARTING.hp} HP to one Merdomon, as often as you like.
         </Row>
         <Row icon={I('dice')} title="Re-Roll">
-          Redraw the options in Evacuate or Shop for {REROLL_COST} {ii('tp')} (the Toilet Brush gives free ones).
+          Redraw Evacuate or Shop for {REROLL_COST} {ii('tp')} (Toilet Brush: free ones).
         </Row>
       </>
     ),
@@ -572,15 +583,16 @@ const pages: Page[] = [
     body: (
       <>
         <p className="tut-note">
-          The six blocks at the bottom set how much you can hold; from Tier 2 they also produce after every wave. Tap one
-          to upgrade it: {BUILD_COST.tp} {ii('tp')} + {BUILD_COST.ap} {ii('ap', '#1b1b1b')} per tier, up to Tier 3.
+          The six blocks at the bottom set how much you can hold and what you get after every wave. Grey = Tier 0, not
+          built yet. Build: {BUILD_COST.fromZeroTp} {ii('tp')} from Tier 0, {BUILD_COST.tp} {ii('tp')} after (
+          {BUILD_COST.hammerTp} with the Hammer), always + {BUILD_COST.ap} {ii('ap', '#1b1b1b')}.
         </p>
         <table className="tut-table">
           <thead>
             <tr>
               <th />
               <th className="left">Holds</th>
-              <th>T1/T2/T3</th>
+              <th>T0/1/2/3</th>
               <th className="left">Produces</th>
             </tr>
           </thead>
@@ -604,6 +616,29 @@ const pages: Page[] = [
             ))}
           </tbody>
         </table>
+      </>
+    ),
+  },
+  {
+    title: 'Bathrooms & Toilet Points',
+    body: (
+      <>
+        <p className="tut-note">
+          Each run starts in a bathroom type: different structures, Toilet Paper, Concentration and Poop. Your final score
+          becomes <b>Toilet Points</b> {ii('toilet', '#f2c94c')}: spend them in <b>Toilets</b> to unlock new bathrooms.
+        </p>
+        {BATHROOMS.map((id) => (
+          <div key={id} className="tut-bathroom" style={{ background: BATHROOM_INFO[id].color }}>
+            <b>{BATHROOM_INFO[id].name}</b>
+            <small>
+              {ii('tp')}
+              {BATHROOM_INFO[id].tp} {ii('focus')}
+              {BATHROOM_INFO[id].concentration} {ii('poop')}
+              {BATHROOM_INFO[id].poop}
+            </small>
+            <small className="muted">{BATHROOM_INFO[id].cost ? BATHROOM_INFO[id].cost.toLocaleString('en') : 'free'}</small>
+          </div>
+        ))}
       </>
     ),
   },
@@ -696,7 +731,8 @@ const pages: Page[] = [
         <Row icon={I('tp')}>+1 Toilet Paper for every point of damage dealt.</Row>
         <Row icon={<TraitIcon trait="paper" size={22} />}>Trait and item bonuses are paid out.</Row>
         <Row icon={<MerdomonArt size={26} sad />}>Fallen Merdomon come back with half their HP.</Row>
-        <Row icon={<StructureIcon id="holder" tier={2} size={24} />}>Upgraded structures produce their bonus.</Row>
+        <Row icon={<StructureIcon id="holder" tier={2} size={24} />}>Structures produce their bonus.</Row>
+        <Row icon={<span className="mod-emoji">🎁</span>}>After wave {GIFT_WAVE}: pick a free item out of 3.</Row>
       </>
     ),
   },

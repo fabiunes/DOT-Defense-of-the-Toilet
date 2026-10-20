@@ -10,7 +10,8 @@ export interface ScoreLine {
 /** Final score of a run, with the breakdown shown on the end screen. */
 export function runScore(s: RunState): { lines: ScoreLine[]; total: number } {
   const st = s.stats;
-  const tiers = STRUCTURES.reduce((t, id) => t + (s.structures[id] - 1), 0);
+  // Only upgrades built during the run count.
+  const tiers = STRUCTURES.reduce((t, id) => t + Math.max(0, s.structures[id] - s.startStructures[id]), 0);
   const victory = s.phase === 'victory';
   const lines: ScoreLine[] = [
     { label: 'Waves won', count: st.wavesWon, points: st.wavesWon * SCORE.waveWon },

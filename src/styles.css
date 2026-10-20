@@ -2137,3 +2137,207 @@ button:disabled {
     font-size: 19px;
   }
 }
+
+/* ---------- v0.6: bathrooms, Toilet Points, Tier 0, gift ---------- */
+.toilet-points {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 16px;
+  border: 1.5px solid var(--ink);
+  border-radius: 10px;
+  padding: 1px 8px;
+  background: #fff8e1;
+}
+.home-points {
+  display: flex;
+  justify-content: flex-end;
+}
+.home .home-title {
+  margin-top: 0;
+}
+.tp-cost {
+  background: #fff8e1;
+}
+.struct-block {
+  background: var(--bathroom, var(--paper));
+}
+.struct-block.t0 svg,
+.t0-art svg,
+.build-row.t0 svg,
+.mini-struct.t0 svg {
+  filter: grayscale(1) opacity(0.35);
+}
+.struct-block.t0 {
+  border-style: dashed;
+}
+.tier-badge.t0 {
+  background: #e4e1d9;
+  color: var(--muted);
+}
+.build-row-cost {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.run-bathroom {
+  font-size: 14px;
+}
+.points-earned {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  color: #a07800;
+  font-weight: bold;
+}
+
+.setup {
+  gap: 10px;
+}
+.setup-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.setup-head h2 {
+  font-size: 26px;
+}
+.carousel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.carousel-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 15px;
+  color: var(--muted);
+}
+.carousel-label .tut-dots {
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+.carousel-label .tut-dot {
+  width: 9px;
+  height: 9px;
+}
+.carousel-body {
+  display: grid;
+  grid-template-columns: 28px 1fr 28px;
+  align-items: center;
+}
+.carousel-arrow {
+  padding: 4px;
+}
+.carousel-item {
+  padding: 8px;
+  min-height: 0;
+  animation: fade 0.2s;
+}
+.level-card {
+  display: grid;
+  grid-template-columns: 66px 1fr;
+  gap: 8px;
+  align-items: center;
+}
+.bathroom-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-radius: var(--r-small);
+  padding: 6px;
+}
+.bathroom-card.locked {
+  filter: saturate(0.6);
+}
+.bathroom-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 18px;
+}
+.bathroom-mini {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+.mini-struct {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1.5px solid var(--ink);
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 2px;
+}
+.mini-struct.t0 {
+  border-style: dashed;
+  color: var(--muted);
+}
+.mini-struct small {
+  font-size: 12px;
+}
+.bathroom-start {
+  display: flex;
+  justify-content: space-around;
+  font-size: 18px;
+}
+.bathroom-start span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.unlock-btn {
+  border-color: #a07800;
+}
+.toilets {
+  gap: 8px;
+}
+.toilets-list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.toilet-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 2px solid var(--ink);
+  border-radius: var(--r);
+  padding: 6px;
+}
+.unlocked-tag {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  color: var(--good);
+}
+.gift-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.gift-emoji {
+  font-size: 40px;
+  line-height: 1;
+}
+.tut-bathroom {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  border: 1.5px solid var(--ink);
+  border-radius: 8px;
+  padding: 2px 8px;
+  font-size: 15px;
+}
+.tut-bathroom small {
+  font-size: 13px;
+}

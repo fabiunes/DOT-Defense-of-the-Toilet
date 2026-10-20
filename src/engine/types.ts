@@ -13,7 +13,8 @@ export type ItemId =
   | 'gameboy'
   | 'brownTowel'
   | 'yellowTowel'
-  | 'whiteTowel';
+  | 'whiteTowel'
+  | 'hammer';
 export type MerdomonKind = 'normal' | 'liquid' | 'fart';
 export type EnemyKind = 'phone' | 'book' | 'console';
 export type AbilityId =
@@ -37,6 +38,8 @@ export type StartBonusId = 'item' | 'merdomon' | 'resources';
 export type StructureId = 'stall' | 'sink' | 'bidet' | 'scrubber' | 'toilet' | 'holder';
 /** Difficulty level, chosen at the start: it picks the Boss and toughens normal enemies. */
 export type Level = 1 | 2 | 3;
+/** Starting bathroom setup, chosen together with the level. */
+export type BathroomId = 'homeA' | 'homeB' | 'officeA' | 'officeB' | 'publicA' | 'publicB' | 'hotelA' | 'hotelB';
 export type BossId = 'demonScroller' | 'bestseller' | 'streamDeck';
 /** Bosses show up twice: a medium form on wave 5 and the final form on wave 10. */
 export type BossForm = 'mid' | 'final';
@@ -152,7 +155,7 @@ export interface RunStats {
 export type Phase = 'boss' | 'starter' | 'startBonus' | 'preparation' | 'combat' | 'gameover' | 'victory';
 
 export interface RunState {
-  version: 6;
+  version: 7;
   phase: Phase;
   round: number;
   concentration: number;
@@ -163,11 +166,17 @@ export interface RunState {
   bonusAp: number;
   /** Difficulty level chosen at the start. */
   level: Level;
+  /** Starting bathroom setup chosen at the start. */
+  bathroom: BathroomId;
+  /** Structure tiers at the start (upgrades built during the run count for the score). */
+  startStructures: Record<StructureId, number>;
+  /** Gift after wave 5: items to pick one from (empty when none is pending). */
+  giftOffer: ItemId[];
   /** This run's Boss (set by the level): a run-wide modifier, then a medium form on wave 5 and the final form on wave 10. */
   boss: BossId;
   /** Free Re-Rolls left this round (Toilet Brush structure). */
   freeRerolls: number;
-  /** Bathroom structures' tiers (1..3). */
+  /** Bathroom structures' tiers (0..3). */
   structures: Record<StructureId, number>;
   team: Merdomon[];
   items: ItemId[];

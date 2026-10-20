@@ -4,6 +4,7 @@ import {
   ABILITY,
   ABILITY_CHOICES,
   BASE_AP,
+  BATHROOM_INFO,
   BIDET_CONCENTRATION,
   BUILD_COST,
   BRUSH_MERDASCORE,
@@ -12,7 +13,10 @@ import {
   GAMEBOY_CHOICES,
   COSTS,
   EVACUATE_COST,
+  FARTING,
   FLUSH_CONCENTRATION,
+  GIFT_CHOICES,
+  GIFT_WAVE,
   ITEMS,
   LEVEL_BOSS,
   LEVEL_ENEMY_BONUS,
@@ -28,11 +32,8 @@ import {
   SHOP_OFFER,
   SHOWER_DISCOUNT,
   STARTER_CHOICES,
-  STARTING_MERDASCORE,
   STAT_KEYS,
-  STARTING_TP,
   START_PACK,
-  STRUCTURES,
   STRUCTURE_INFO,
   TOWEL_TP,
   TRADE,
@@ -42,6 +43,7 @@ import { Rng } from './rng';
 import { apBonus, combatBonus, countTraits, traitValue } from './traits';
 import type {
   AbilityId,
+  BathroomId,
   CombatBonus,
   Level,
   ItemId,
@@ -88,18 +90,21 @@ function emptyStats(): RunStats {
 
 export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
   const s: RunState = {
-    version: 6,
+    version: 7,
     phase: 'boss',
     round: 1,
     concentration: MAX_CONCENTRATION,
-    tp: STARTING_TP,
-    merdascore: STARTING_MERDASCORE,
+    tp: BATHROOM_INFO.homeA.tp,
+    merdascore: BATHROOM_INFO.homeA.poop,
     ap: 0,
     bonusAp: 0,
     level: 1,
+    bathroom: 'homeA',
+    startStructures: { ...BATHROOM_INFO.homeA.structures },
+    giftOffer: [],
     boss: LEVEL_BOSS[1],
     freeRerolls: 0,
-    structures: Object.fromEntries(STRUCTURES.map((id) => [id, 1])) as Record<StructureId, number>,
+    structures: { ...BATHROOM_INFO.homeA.structures },
     team: [],
     items: [],
     shopOffer: [],
@@ -123,12 +128,22 @@ export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
   return s;
 }
 
-/** The player picks the difficulty level (and with it the Boss); then the starter pick. */
-export function beginRun(prev: RunState, level: Level = 1): RunState {
+/**
+ * The player picks the difficulty level (and with it the Boss) and the starting bathroom; then the starter pick.
+ * Whether the bathroom is unlocked is checked by the caller (it lives outside the run).
+ */
+export function beginRun(prev: RunState, level: Level = 1, bathroom: BathroomId = 'homeA'): RunState {
   if (prev.phase !== 'boss') return prev;
   const s = clone(prev);
+  const b = BATHROOM_INFO[bathroom];
   s.level = level;
   s.boss = LEVEL_BOSS[level];
+  s.bathroom = bathroom;
+  s.structures = { ...b.structures };
+  s.startStructures = { ...b.structures };
+  s.tp = b.tp;
+  s.merdascore = b.poop;
+  s.concentration = Math.min(b.concentration, concentrationCap(s));
   s.phase = 'starter';
   return s;
 }
@@ -136,7 +151,7 @@ export function beginRun(prev: RunState, level: Level = 1): RunState {
 // ---------- Structures: capacities ----------
 
 export function capacity(s: RunState, id: StructureId): number {
-  return STRUCTURE_INFO[id].capacities[s.structures[id] - 1];
+  return STRUCTURE_INFO[id].capacities[s.structures[id]];
 }
 export const itemCap = (s: RunState) => capacity(s, 'sink');
 export const poopCap = (s: RunState) => capacity(s, 'bidet');
@@ -172,7 +187,7 @@ function startPreparation(s: RunState) {
   // Unspent AP carry over, up to the Toilet Brush's limit.
   s.ap = Math.min(apCap(s), s.ap + BASE_AP + apBonus(s.team, s.items) + s.bonusAp);
   s.bonusAp = 0;
-  s.freeRerolls = STRUCTURE_INFO.scrubber.production[s.structures.scrubber - 1];
+  s.freeRerolls = STRUCTURE_INFO.scrubber.production[s.structures.scrubber];
   s.modifierDisabled = false;
   const extraPoints = LEVEL_ENEMY_BONUS[s.level];
   s.wave = withRng(s, (rng) =>
@@ -202,7 +217,8 @@ function drawChoices(s: RunState, rarity: Rarity) {
   );
 }
 
-const inPreparation = (s: RunState) => s.phase === 'preparation' && !s.pending && s.choices.length === 0;
+const inPreparation = (s: RunState) =>
+  s.phase === 'preparation' && !s.pending && s.choices.length === 0 && s.giftOffer.length === 0;
 
 /** A new Merdomon waits for its ability (1 of 3) and its +1 point. */
 function setPending(s: RunState, m: Merdomon) {
@@ -471,17 +487,65 @@ export function tradeStat(prev: RunState, id: number, stat: StatKey): RunState {
 
 // ---------- Build (1 AP + TP) ----------
 
+/** TP to build the next tier: 30 from Tier 0, 20 otherwise; 15 for any tier with the Hammer. */
+export function buildTp(s: RunState, id: StructureId): number {
+  if (s.items.includes('hammer')) return BUILD_COST.hammerTp;
+  return s.structures[id] === 0 ? BUILD_COST.fromZeroTp : BUILD_COST.tp;
+}
+
 export function canBuild(s: RunState, id: StructureId): boolean {
-  return inPreparation(s) && s.structures[id] < MAX_TIER && s.ap >= BUILD_COST.ap && s.tp >= BUILD_COST.tp;
+  return inPreparation(s) && s.structures[id] < MAX_TIER && s.ap >= BUILD_COST.ap && s.tp >= buildTp(s, id);
 }
 
 export function build(prev: RunState, id: StructureId): RunState {
   if (!canBuild(prev, id)) return prev;
   const s = clone(prev);
   s.ap -= BUILD_COST.ap;
-  s.tp -= BUILD_COST.tp;
+  s.tp -= buildTp(s, id);
   s.structures[id]++;
   return s;
+}
+
+// ---------- Farting (free action, TP) ----------
+
+export function canFart(s: RunState, id?: number): boolean {
+  if (!inPreparation(s) || s.tp < FARTING.tp) return false;
+  const hurt = (m: Merdomon) => m.hp < m.stats.hp;
+  return id === undefined ? s.team.some(hurt) : s.team.some((m) => m.id === id && hurt(m));
+}
+
+/** Heals one Merdomon a little. Repeatable. */
+export function fart(prev: RunState, id: number): RunState {
+  if (!canFart(prev, id)) return prev;
+  const s = clone(prev);
+  const m = s.team.find((x) => x.id === id)!;
+  s.tp -= FARTING.tp;
+  m.hp = Math.min(m.stats.hp, m.hp + FARTING.hp);
+  return s;
+}
+
+// ---------- Gift after wave 5 ----------
+
+function drawGift(s: RunState) {
+  const available = ITEMS.filter((i) => !s.items.includes(i));
+  s.giftOffer = withRng(s, (rng) => rng.shuffle([...available]).slice(0, GIFT_CHOICES));
+}
+
+/** Takes one gift item (dropping `discard` if the bag is full). */
+export function takeGift(prev: RunState, item: ItemId, discard?: ItemId): RunState {
+  if (!prev.giftOffer.includes(item)) return prev;
+  const full = prev.items.length >= itemCap(prev);
+  if (full && (discard === undefined || !prev.items.includes(discard))) return prev;
+  const s = clone(prev);
+  if (full) s.items = s.items.filter((i) => i !== discard);
+  s.items.push(item);
+  s.giftOffer = [];
+  return s;
+}
+
+export function skipGift(prev: RunState): RunState {
+  if (prev.giftOffer.length === 0) return prev;
+  return { ...clone(prev), giftOffer: [] };
 }
 
 // ---------- Wave modifier ----------
@@ -583,7 +647,7 @@ export function fight(prev: RunState): RunState {
   if (modifier && result.won && s.round < ROUNDS)
     rewards.push({ source: modifier, resource: 'ap', amount: MODIFIER_AP_REWARD });
   // Structures produce after every combat.
-  const produce = (id: StructureId) => STRUCTURE_INFO[id].production[s.structures[id] - 1];
+  const produce = (id: StructureId) => STRUCTURE_INFO[id].production[s.structures[id]];
   if (produce('stall') > 0) rewards.push({ source: 'stall', resource: 'hp', amount: produce('stall') });
   if (produce('sink') > 0) rewards.push({ source: 'sink', resource: 'ap', amount: produce('sink') });
   if (produce('bidet') > 0) rewards.push({ source: 'bidet', resource: 'concentration', amount: produce('bidet') });
@@ -636,6 +700,7 @@ export function continueAfterCombat(prev: RunState): RunState {
   else {
     s.round++;
     startPreparation(s);
+    if (s.round === GIFT_WAVE + 1) drawGift(s);
   }
   return s;
 }

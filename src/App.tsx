@@ -11,6 +11,7 @@ import { PrepScreen } from './ui/screens/PrepScreen';
 import { StartBonusScreen } from './ui/screens/StartBonusScreen';
 import { StarterScreen } from './ui/screens/StarterScreen';
 import { StatsScreen } from './ui/screens/StatsScreen';
+import { ToiletsScreen } from './ui/screens/ToiletsScreen';
 import { TutorialScreen } from './ui/screens/TutorialScreen';
 import type { Update } from './ui/update';
 
@@ -19,6 +20,7 @@ export default function App() {
   const [hasSave, setHasSave] = useState(() => loadRun() !== null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showToilets, setShowToilets] = useState(false);
 
   // Autosave during preparation; a finished run removes the save.
   useEffect(() => {
@@ -35,7 +37,9 @@ export default function App() {
   };
 
   let content;
-  if (showStats) {
+  if (showToilets) {
+    content = <ToiletsScreen onClose={() => setShowToilets(false)} />;
+  } else if (showStats) {
     content = <StatsScreen onClose={() => setShowStats(false)} />;
   } else if (showTutorial) {
     content = <TutorialScreen onClose={() => setShowTutorial(false)} />;
@@ -47,6 +51,7 @@ export default function App() {
         onContinue={() => setRun(loadRun())}
         onTutorial={() => setShowTutorial(true)}
         onStats={() => setShowStats(true)}
+        onToilets={() => setShowToilets(true)}
       />
     );
   } else if (run.phase === 'boss') {

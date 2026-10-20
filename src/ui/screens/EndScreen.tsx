@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BOSS_INFO } from '../../engine/data';
+import { BATHROOM_INFO, BOSS_INFO } from '../../engine/data';
 import { recordRun } from '../../engine/save';
 import { runScore } from '../../engine/score';
 import type { RunState } from '../../engine/types';
@@ -22,7 +22,7 @@ export function EndScreen({ run, onHome, onNew }: { run: RunState; onHome: () =>
         <Icon name={victory ? 'trophy' : 'skull'} size={52} fill="#fff" />
         <h1>{victory ? 'Victory!' : 'Game Over'}</h1>
         <p className="muted">
-          Level {run.level} · {boss.icon} {boss.name} · {victory ? 'Break completed in peace.' : `wave ${run.round}`}
+          {BATHROOM_INFO[run.bathroom].name} · Level {run.level} · {boss.icon} {boss.name} · {victory ? 'Break completed in peace.' : `wave ${run.round}`}
         </p>
       </div>
       <div className="end-stats sk">
@@ -40,6 +40,9 @@ export function EndScreen({ run, onHome, onNew }: { run: RunState; onHome: () =>
           <b>{total}</b>
         </div>
         <div className={`score-best ${newRecord ? 'new' : ''}`}>
+          <span className="points-earned">
+            +{total.toLocaleString('en')} <Icon name="toilet" size={15} fill="#f2c94c" /> Toilet Points
+          </span>
           {newRecord ? `★ New Level ${run.level} record!` : `Level ${run.level} best: ${previousBest}`}
         </div>
       </div>

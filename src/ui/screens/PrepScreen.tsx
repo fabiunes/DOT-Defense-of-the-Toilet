@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import {
+  BATHROOM_INFO,
   BOSS_INFO,
   BUILD_COST,
   COSTS,
+  FARTING,
   EVACUATE_COST,
   ITEM_INFO,
   KIND_NAME,
@@ -57,9 +59,9 @@ type Panel =
   | { kind: 'item'; item: ItemId }
   | { kind: 'trait'; trait: TraitId };
 
-type Mode = 'organize' | 'flush' | 'tradeStat' | null;
+type Mode = 'organize' | 'flush' | 'tradeStat' | 'fart' | null;
 
-const MODE_ICON: Record<Exclude<Mode, null>, IconName> = { organize: 'swap', flush: 'flush', tradeStat: 'upgrade' };
+const MODE_ICON: Record<Exclude<Mode, null>, IconName> = { organize: 'swap', flush: 'flush', tradeStat: 'upgrade', fart: 'heart' };
 
 export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
   const [panel, setPanel] = useState<Panel | null>(null);
@@ -85,6 +87,9 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       setPanel({ kind: 'flush', id: m.id });
     } else if (mode === 'tradeStat') {
       setPanel({ kind: 'tradeStat', id: m.id });
+    } else if (mode === 'fart') {
+      // Farting stays on: tap again to keep healing.
+      update((s) => G.fart(s, m.id));
     } else {
       setPanel({ kind: 'detail', id: m.id });
     }
@@ -117,9 +122,15 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       {mode ? (
         <div className="mode-bar sk">
           <Icon name={MODE_ICON[mode]} size={22} />
-          <span>{mode === 'organize' ? (swapFrom === null ? 'Tap a Merdomon' : 'Tap where to move it') : 'Tap a Merdomon'}</span>
+          <span>{mode === 'organize'
+              ? swapFrom === null
+                ? 'Tap a Merdomon'
+                : 'Tap where to move it'
+              : mode === 'fart'
+                ? `Tap to heal +${FARTING.hp} (${FARTING.tp} TP)`
+                : 'Tap a Merdomon'}</span>
           <button className="icon-btn" onClick={exitMode} aria-label="Done">
-            <Icon name={mode === 'organize' ? 'check' : 'close'} size={20} />
+            <Icon name={mode === 'organize' || mode === 'fart' ? 'check' : 'close'} size={20} />
           </button>
         </div>
       ) : (
@@ -179,6 +190,9 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       )}
       {panel?.kind === 'boss' && (
         <Modal onClose={close}>
+          <p className="run-bathroom center">
+            {BATHROOM_INFO[run.bathroom].name} · Level {run.level}
+          </p>
           <BossCard boss={run.boss} />
         </Modal>
       )}
@@ -188,11 +202,14 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
           <div className="panel-head">
             <Icon name="upgrade" size={26} />
             <b>Build</b>
-            <CostBadge ap={BUILD_COST.ap} tp={BUILD_COST.tp} />
           </div>
           <div className="build-list">
             {STRUCTURES.map((id) => (
-              <button key={id} className="build-row sk" onClick={() => setPanel({ kind: 'structure', id })}>
+              <button
+                key={id}
+                className={`build-row sk ${run.structures[id] === 0 ? 't0' : ''}`}
+                onClick={() => setPanel({ kind: 'structure', id })}
+              >
                 <StructureIcon id={id} tier={run.structures[id]} size={34} />
                 <span>
                   <b>{STRUCTURE_INFO[id].name}</b>
@@ -200,9 +217,14 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
                     {STRUCTURE_INFO[id].capacity} {G.capacity(run, id)}
                   </small>
                 </span>
-                <span className={`tier-badge t${run.structures[id]}`}>
-                  {run.structures[id] >= MAX_TIER ? 'MAX' : `T${run.structures[id]}`}
-                </span>
+                {run.structures[id] >= MAX_TIER ? (
+                  <span className="tier-badge t3">MAX</span>
+                ) : (
+                  <span className="build-row-cost">
+                    <span className={`tier-badge t${run.structures[id]}`}>T{run.structures[id]}</span>
+                    <CostBadge ap={BUILD_COST.ap} tp={G.buildTp(run, id)} />
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -292,6 +314,7 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       )}
 
       {run.choices.length > 0 && <ChoicesModal run={run} update={update} />}
+      {run.giftOffer.length > 0 && <GiftModal run={run} update={update} />}
       {run.pending && <NewMerdomonModal key={run.pending.id} run={run} m={run.pending} update={update} />}
     </div>
   );
@@ -319,13 +342,16 @@ function StructurePanel({ run, id, update, onClose }: { run: RunState; id: Struc
   const info = STRUCTURE_INFO[id];
   const tier = run.structures[id];
   const max = tier >= MAX_TIER;
-  const next = (list: readonly number[]) => (max ? null : list[tier]);
+  const next = (list: readonly number[]) => (max ? null : list[tier + 1]);
   return (
     <Modal onClose={onClose}>
       <div className="structure-head">
-        <StructureIcon id={id} tier={tier} size={72} />
+        <span className={tier === 0 ? 't0-art' : ''}>
+          <StructureIcon id={id} tier={tier} size={72} />
+        </span>
         <div>
           <h2>{info.name}</h2>
+          {tier === 0 && <small className="muted">Not built yet</small>}
           <span className="tier-pips">
             {[1, 2, 3].map((t) => (
               <span key={t} className={t <= tier ? 'on' : ''} />
@@ -337,14 +363,14 @@ function StructurePanel({ run, id, update, onClose }: { run: RunState; id: Struc
         <div>
           <span className="muted">Holds {info.capacity}</span>
           <b>
-            {info.capacities[tier - 1]}
+            {info.capacities[tier]}
             {next(info.capacities) !== null && <span className="next"> → {next(info.capacities)}</span>}
           </b>
         </div>
         <div>
           <span className="muted">After each wave: {info.produce}</span>
           <b>
-            +{info.production[tier - 1]}
+            +{info.production[tier]}
             {next(info.production) !== null && <span className="next"> → +{next(info.production)}</span>}
           </b>
         </div>
@@ -356,7 +382,7 @@ function StructurePanel({ run, id, update, onClose }: { run: RunState; id: Struc
       ) : (
         <button className="big-btn shadow" disabled={!G.canBuild(run, id)} onClick={() => update((s) => G.build(s, id))}>
           <Icon name="upgrade" size={22} /> Build T{tier + 1}
-          <CostBadge ap={BUILD_COST.ap} tp={BUILD_COST.tp} />
+          <CostBadge ap={BUILD_COST.ap} tp={G.buildTp(run, id)} />
         </button>
       )}
     </Modal>
@@ -455,7 +481,7 @@ function ActionPanel({
       icon: 'upgrade',
       label: 'Build',
       enabled: STRUCTURES.some((id) => G.canBuild(run, id)),
-      cost: { ap: BUILD_COST.ap, tp: BUILD_COST.tp },
+      cost: { ap: BUILD_COST.ap, tp: run.items.includes('hammer') ? BUILD_COST.hammerTp : BUILD_COST.tp },
       onClick: () => onOpen({ kind: 'build' }),
     },
   ];
@@ -483,6 +509,14 @@ function ActionPanel({
       enabled: G.canBonusAction(run),
       cost: { tp: G.tpCost(run, 'bonusAction') },
       onClick: () => update(G.bonusAction),
+    },
+    {
+      key: 'fart',
+      icon: 'heart',
+      label: 'Farting',
+      enabled: G.canFart(run),
+      cost: { tp: FARTING.tp },
+      onClick: () => onMode('fart'),
     },
     {
       key: 'scout',
@@ -559,6 +593,65 @@ function ChoicesModal({ run, update }: { run: RunState; update: Update }) {
         ))}
       </div>
       <RerollButton enabled={G.canRerollChoices(run)} onClick={() => update(G.rerollChoices)} free={run.freeRerolls} />
+    </Modal>
+  );
+}
+
+/** After wave 5: pick one free item (drop one first if the bag is full), or skip. */
+function GiftModal({ run, update }: { run: RunState; update: Update }) {
+  const [picked, setPicked] = useState<ItemId | null>(null);
+  const full = G.bagFull(run);
+  return (
+    <Modal className="gift-modal">
+      <div className="gift-title">
+        <span className="gift-emoji">🎁</span>
+        <h2>A gift!</h2>
+      </div>
+      {picked && full ? (
+        <>
+          <p className="center">
+            <b>Bag full – drop one item</b>
+          </p>
+          <div className="item-list">
+            {run.items.map((it) => (
+              <button key={it} className="item-row sk" onClick={() => update((s) => G.takeGift(s, picked, it))}>
+                <ItemIcon item={it} size={26} />
+                <span>
+                  <b>{ITEM_INFO[it].name}</b>
+                  <small>{ITEM_INFO[it].desc}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+          <button className="big-btn" onClick={() => setPicked(null)}>
+            <Icon name="close" size={20} /> Back
+          </button>
+        </>
+      ) : (
+        <>
+          <div className="shop-items single">
+            {run.giftOffer.map((it) => (
+              <button
+                key={it}
+                className="shop-item sk"
+                onClick={() => (full ? setPicked(it) : update((s) => G.takeGift(s, it)))}
+              >
+                <span className="shop-item-head">
+                  <ItemIcon item={it} size={28} />
+                  <b>{ITEM_INFO[it].name}</b>
+                  {ITEM_INFO[it].traits.map((t) => (
+                    <TraitIcon key={t} trait={t} size={16} />
+                  ))}
+                </span>
+                <small>{ITEM_INFO[it].desc}</small>
+              </button>
+            ))}
+          </div>
+          <button className="big-btn" onClick={() => update(G.skipGift)}>
+            Skip
+          </button>
+        </>
+      )}
     </Modal>
   );
 }

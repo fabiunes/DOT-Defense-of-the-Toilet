@@ -1,5 +1,37 @@
 # Changelog
 
+## v0.6
+
+### Nuove funzioni
+- **Tipi di bagno**: 8 bagni (Home, Office, Public e Hotel, versioni A e B). Ognuno ha:
+  - il Tier di partenza delle 6 strutture;
+  - TP, Concentration e Poop iniziali;
+  - un colore distintivo sui blocchi.
+- **Nuova schermata di inizio partita**: carosello dei livelli (Boss) in alto e carosello dei bagni in basso.
+- **Toilet Points**: valuta permanente, mostrata in alto a destra nella Home.
+  - Il punteggio di ogni partita conclusa si aggiunge ai Toilet Points.
+  - Servono a sbloccare i bagni, dalla schermata **Toilets** (ora attiva) o all'inizio della partita.
+  - Per i test si parte con 200.000 Toilet Points.
+- **Tier 0**: una struttura non ancora costruita è grigia e tratteggiata, ma dà comunque il suo limite minimo.
+- **Regalo dopo la wave 5**, vinta o persa: un oggetto gratis a scelta tra 3. Con la borsa piena si scarta un oggetto oppure si rinuncia.
+- **Farting** (azione gratuita): 3 TP per +1 HP a un Merdomon ferito. Si può ripetere e non ha lo sconto dell'Hand Shower.
+- **Nuovo oggetto Hammer** (Fighter): ogni Build costa 15 TP, anche dal Tier 0.
+
+### Modifiche alle regole
+- Strutture con 4 Tier (0–3). Limiti T0/T1/T2/T3:
+  - Shower: Concentration 8/10/12/14;
+  - Sink: oggetti 3/5/7/9;
+  - Bidet: Poop 10/15/20/25;
+  - Toilet Brush: AP 2/3/4/5;
+  - Toilet: Merdomon 3/4/5/6;
+  - Paper Holder: TP 30/40/50/60.
+- Nuove produzioni: Toilet Brush 0/1/2/3 Re-Roll gratuiti, Toilet 0/1/2/3 Poop, Paper Holder 0/2/5/8 TP. Shower, Sink e Bidet producono dal Tier 2 come prima.
+- **Build**: 30 TP + 1 AP dal Tier 0 al Tier 1, 20 TP + 1 AP per gli altri Tier.
+- La **wave 2** ha 2 Small (prima 3).
+- Punteggio: la voce "Structure upgrades" conta solo i potenziamenti costruiti durante la partita.
+
+> I salvataggi della v0.5 non sono compatibili: il tasto Continue li ignora. Storico e record restano.
+
 ## v0.5
 
 ### Grafica e impaginazione

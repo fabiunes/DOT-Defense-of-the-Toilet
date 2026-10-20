@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { simulateCombat } from './combat';
-import { BOSS_INFO, BUILD_COST } from './data';
+import { BOSS_INFO, BUILD_COST, ITEMS } from './data';
 import * as G from './game';
 import { createBoss } from './generate';
 import { Rng } from './rng';
@@ -32,8 +32,8 @@ describe('structures', () => {
   it('start at Tier 1 with their capacities', () => {
     const s = prep();
     expect(s.structures).toEqual({ stall: 1, sink: 1, bidet: 1, scrubber: 1, toilet: 1, holder: 1 });
-    expect([G.itemCap(s), G.poopCap(s), G.tpCap(s), G.teamCap(s)]).toEqual([3, 15, 30, 4]);
-    expect([G.concentrationCap(s), G.apCap(s)]).toEqual([10, 2]);
+    expect([G.itemCap(s), G.poopCap(s), G.tpCap(s), G.teamCap(s)]).toEqual([5, 15, 40, 4]);
+    expect([G.concentrationCap(s), G.apCap(s)]).toEqual([10, 3]);
   });
 
   it('Build costs 20 TP + 1 AP per tier, up to Tier 3', () => {
@@ -47,8 +47,8 @@ describe('structures', () => {
   });
 
   it('caps TP and Poop (excess is lost) and the team size', () => {
-    const s = G.trade(prep(4, { tp: 28 }), 'tp');
-    expect(s.tp).toBe(30);
+    const s = G.trade(prep(4, { tp: 38 }), 'tp');
+    expect(s.tp).toBe(40);
     const full = prep(4, { merdascore: 20 });
     full.team = [mk({}), mk({}), mk({}), mk({})];
     expect(G.canEvacuate(full, 'common')).toBe(false);
@@ -68,13 +68,16 @@ describe('structures', () => {
 
 describe('items bag', () => {
   it('a full bag needs a discard to buy', () => {
-    const s = prep(4, { tp: 30, items: ['plunger', 'magazine', 'window'] });
+    const base = prep(4, { tp: 30 });
+    // Fill the bag (5 at Sink Tier 1) with items that are not on sale.
+    const owned = ITEMS.filter((i) => !base.shopOffer.includes(i)).slice(0, G.itemCap(base));
+    const s = { ...base, items: owned };
     const item = s.shopOffer[0];
     expect(G.bagFull(s)).toBe(true);
     expect(G.canBuy(s, item)).toBe(false);
     expect(G.affordable(s, item)).toBe(true);
-    const after = G.buy(s, item, 'magazine');
-    expect(after.items).toEqual(['plunger', 'window', item]);
+    const after = G.buy(s, item, owned[1]);
+    expect(after.items).toEqual([...owned.filter((i) => i !== owned[1]), item]);
   });
 });
 

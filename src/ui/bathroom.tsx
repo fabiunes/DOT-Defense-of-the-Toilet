@@ -1,4 +1,4 @@
-import { MAX_TIER, STRUCTURES, STRUCTURE_INFO } from '../engine/data';
+import { BATHROOM_INFO, MAX_TIER, STRUCTURES, STRUCTURE_INFO } from '../engine/data';
 import type { RunState, StructureId } from '../engine/types';
 
 // Sketch art for the bathroom structures. Higher tiers add details: blue accents at Tier 2, gold at Tier 3.
@@ -109,7 +109,9 @@ function ToiletArt({ tier }: { tier: number }) {
   );
 }
 
-export function StructureArt({ id, tier, size = 56 }: { id: StructureId; tier: number; size?: number | string }) {
+/** Tier 0 (not built yet) is drawn like Tier 1; the block greys it out. */
+export function StructureArt({ id, tier: rawTier, size = 56 }: { id: StructureId; tier: number; size?: number | string }) {
+  const tier = Math.max(1, rawTier);
   return (
     <svg viewBox="0 0 60 60" width={size} height={size} aria-hidden>
       <g filter="url(#rough)" stroke={INK} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round">
@@ -135,9 +137,15 @@ export function TierBadge({ tier }: { tier: number }) {
 /** The bottom of the main screen: six blocks like the Merdomon slots, one structure each. All tappable. */
 export function Bathroom({ run, onOpen }: { run: RunState; onOpen: (id: StructureId) => void }) {
   return (
-    <div className="bathroom">
+    // Each bathroom type tints its blocks with its own colour.
+    <div className="bathroom" style={{ ['--bathroom' as string]: BATHROOM_INFO[run.bathroom].color }}>
       {STRUCTURES.map((id) => (
-        <button key={id} className={`struct-block sk ${id}`} onClick={() => onOpen(id)} aria-label={STRUCTURE_INFO[id].name}>
+        <button
+          key={id}
+          className={`struct-block sk ${id} ${run.structures[id] === 0 ? 't0' : ''}`}
+          onClick={() => onOpen(id)}
+          aria-label={STRUCTURE_INFO[id].name}
+        >
           <span className="block-label">{STRUCTURE_INFO[id].name}</span>
           <StructureArt id={id} tier={run.structures[id]} size="100%" />
           <TierBadge tier={run.structures[id]} />
