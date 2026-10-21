@@ -216,8 +216,8 @@ export const MODIFIER_INFO: Record<ModifierId, { name: string; icon: string; des
 /** In screen order: top row Shower, Sink, Bidet; bottom row Toilet Brush, Toilet, Paper Holder. */
 export const STRUCTURES: readonly StructureId[] = ['stall', 'sink', 'bidet', 'scrubber', 'toilet', 'holder'];
 export const MAX_TIER = 3;
-/** Build: 30 TP from Tier 0, 20 TP otherwise (15 TP with the Hammer), always + 1 AP. */
-export const BUILD_COST = { tp: 20, fromZeroTp: 30, hammerTp: 15, ap: 1 } as const;
+/** Build: TP by current tier (0→1, 1→2, 2→3), 15 TP for any tier with the Hammer, always + 1 AP. */
+export const BUILD_COST = { tp: [20, 25, 30], hammerTp: 15, ap: 1 } as const;
 
 export const STRUCTURE_INFO: Record<
   StructureId,
@@ -247,7 +247,8 @@ export const HISTORY_MAX = 50;
 
 // ---------- Bathroom types (starting setups, unlocked with Toilet Points) ----------
 
-export const BATHROOMS: readonly BathroomId[] = ['homeA', 'homeB', 'officeA', 'officeB', 'publicA', 'publicB', 'hotelA', 'hotelB'];
+/** From the weakest to the strongest. The first one is free and the default. */
+export const BATHROOMS: readonly BathroomId[] = ['officeA', 'officeB', 'publicA', 'publicB', 'homeA', 'homeB', 'hotelA', 'hotelB'];
 
 const tiers = (stall: number, sink: number, bidet: number, scrubber: number, toilet: number, holder: number) => ({
   stall,
@@ -271,18 +272,21 @@ export const BATHROOM_INFO: Record<
     poop: number;
   }
 > = {
-  homeA: { name: 'Home Bathroom A', color: '#e8f1fb', cost: 0, structures: tiers(1, 1, 1, 1, 1, 1), tp: 3, concentration: 10, poop: 5 },
-  homeB: { name: 'Home Bathroom B', color: '#d6e6f8', cost: 3000, structures: tiers(0, 1, 2, 1, 2, 0), tp: 0, concentration: 8, poop: 3 },
-  officeA: { name: 'Office Bathroom A', color: '#eeeeea', cost: 0, structures: tiers(0, 1, 0, 2, 1, 1), tp: 5, concentration: 8, poop: 7 },
-  officeB: { name: 'Office Bathroom B', color: '#e0e0da', cost: 5000, structures: tiers(0, 0, 0, 1, 1, 2), tp: 5, concentration: 6, poop: 10 },
-  publicA: { name: 'Public Toilet A', color: '#eef6e6', cost: 0, structures: tiers(0, 0, 0, 0, 3, 3), tp: 0, concentration: 5, poop: 10 },
+  officeA: { name: 'Office Bathroom A', color: '#eeeeea', cost: 0, structures: tiers(0, 1, 0, 1, 1, 1), tp: 5, concentration: 8, poop: 5 },
+  officeB: { name: 'Office Bathroom B', color: '#e0e0da', cost: 5000, structures: tiers(0, 0, 0, 0, 1, 3), tp: 5, concentration: 6, poop: 10 },
+  publicA: { name: 'Public Toilet A', color: '#eef6e6', cost: 5000, structures: tiers(0, 0, 0, 0, 3, 3), tp: 0, concentration: 5, poop: 10 },
   publicB: { name: 'Public Toilet B', color: '#dfeed3', cost: 10000, structures: tiers(0, 1, 1, 0, 2, 0), tp: 10, concentration: 6, poop: 12 },
-  hotelA: { name: 'Hotel Bathroom A', color: '#fbf1dc', cost: 20000, structures: tiers(2, 2, 2, 2, 2, 2), tp: 0, concentration: 4, poop: 0 },
-  hotelB: { name: 'Hotel Bathroom B', color: '#f6e2b8', cost: 40000, structures: tiers(3, 3, 3, 3, 3, 3), tp: 0, concentration: 1, poop: 0 },
+  homeA: { name: 'Home Bathroom A', color: '#e8f1fb', cost: 15000, structures: tiers(1, 1, 1, 1, 1, 1), tp: 3, concentration: 10, poop: 5 },
+  // Concentration capped by the Shower at Tier 0.
+  homeB: { name: 'Home Bathroom B', color: '#d6e6f8', cost: 30000, structures: tiers(0, 1, 2, 1, 2, 0), tp: 0, concentration: 8, poop: 3 },
+  hotelA: { name: 'Hotel Bathroom A', color: '#fbf1dc', cost: 40000, structures: tiers(2, 2, 2, 2, 2, 2), tp: 0, concentration: 4, poop: 0 },
+  hotelB: { name: 'Hotel Bathroom B', color: '#f6e2b8', cost: 100000, structures: tiers(3, 3, 3, 3, 3, 3), tp: 0, concentration: 1, poop: 0 },
 };
 
-/** Toilet Points a new player starts with (high for testing: everything can be unlocked). */
-export const STARTING_TOILET_POINTS = 200000;
+/** Toilet Points a new player starts with. */
+export const STARTING_TOILET_POINTS = 0;
+/** SHA-256 of the testers' password that unlocks every bathroom (the password itself is not in the code). */
+export const TESTING_PASSWORD_SHA256 = 'aeb1e8036f581fa27e9e3c78e6061e8ca40072c97367ea88392ca5fc14580b0f';
 
 // ---------- Extras ----------
 

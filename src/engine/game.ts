@@ -6,6 +6,7 @@ import {
   BASE_AP,
   BATHROOM_INFO,
   BIDET_CONCENTRATION,
+  BATHROOMS,
   BUILD_COST,
   BRUSH_MERDASCORE,
   CONCENTRATE_GAIN,
@@ -94,17 +95,17 @@ export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
     phase: 'boss',
     round: 1,
     concentration: MAX_CONCENTRATION,
-    tp: BATHROOM_INFO.homeA.tp,
-    merdascore: BATHROOM_INFO.homeA.poop,
+    tp: BATHROOM_INFO[BATHROOMS[0]].tp,
+    merdascore: BATHROOM_INFO[BATHROOMS[0]].poop,
     ap: 0,
     bonusAp: 0,
     level: 1,
-    bathroom: 'homeA',
-    startStructures: { ...BATHROOM_INFO.homeA.structures },
+    bathroom: BATHROOMS[0],
+    startStructures: { ...BATHROOM_INFO[BATHROOMS[0]].structures },
     giftOffer: [],
     boss: LEVEL_BOSS[1],
     freeRerolls: 0,
-    structures: { ...BATHROOM_INFO.homeA.structures },
+    structures: { ...BATHROOM_INFO[BATHROOMS[0]].structures },
     team: [],
     items: [],
     shopOffer: [],
@@ -132,7 +133,7 @@ export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
  * The player picks the difficulty level (and with it the Boss) and the starting bathroom; then the starter pick.
  * Whether the bathroom is unlocked is checked by the caller (it lives outside the run).
  */
-export function beginRun(prev: RunState, level: Level = 1, bathroom: BathroomId = 'homeA'): RunState {
+export function beginRun(prev: RunState, level: Level = 1, bathroom: BathroomId = BATHROOMS[0]): RunState {
   if (prev.phase !== 'boss') return prev;
   const s = clone(prev);
   const b = BATHROOM_INFO[bathroom];
@@ -487,10 +488,10 @@ export function tradeStat(prev: RunState, id: number, stat: StatKey): RunState {
 
 // ---------- Build (1 AP + TP) ----------
 
-/** TP to build the next tier: 30 from Tier 0, 20 otherwise; 15 for any tier with the Hammer. */
+/** TP to build the next tier: 20 / 25 / 30 by current tier; 15 for any tier with the Hammer. */
 export function buildTp(s: RunState, id: StructureId): number {
   if (s.items.includes('hammer')) return BUILD_COST.hammerTp;
-  return s.structures[id] === 0 ? BUILD_COST.fromZeroTp : BUILD_COST.tp;
+  return BUILD_COST.tp[Math.min(s.structures[id], BUILD_COST.tp.length - 1)];
 }
 
 export function canBuild(s: RunState, id: StructureId): boolean {

@@ -481,7 +481,7 @@ function ActionPanel({
       icon: 'upgrade',
       label: 'Build',
       enabled: STRUCTURES.some((id) => G.canBuild(run, id)),
-      cost: { ap: BUILD_COST.ap, tp: run.items.includes('hammer') ? BUILD_COST.hammerTp : BUILD_COST.tp },
+      cost: { ap: BUILD_COST.ap, tp: run.items.includes('hammer') ? BUILD_COST.hammerTp : BUILD_COST.tp[0] },
       onClick: () => onOpen({ kind: 'build' }),
     },
   ];

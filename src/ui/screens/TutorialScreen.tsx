@@ -466,7 +466,7 @@ const pages: Page[] = [
             { icon: 'shop', label: 'Shop', cost: { ap: 1, tp: COSTS.shop } },
             { icon: 'focus', label: 'Concentrate', cost: { ap: 1, ms: `+${CONCENTRATE_GAIN}`, conc: -COSTS.concentrate } },
             { icon: 'trade', label: 'Trade', cost: { ap: 1 } },
-            { icon: 'upgrade', label: 'Build', cost: { ap: BUILD_COST.ap, tp: BUILD_COST.tp } },
+            { icon: 'upgrade', label: 'Build', cost: { ap: BUILD_COST.ap, tp: BUILD_COST.tp[0] } },
           ]}
         />
         <Row icon={I('heal')} title="Heal">
@@ -584,7 +584,7 @@ const pages: Page[] = [
       <>
         <p className="tut-note">
           The six blocks at the bottom set how much you can hold and what you get after every wave. Grey = Tier 0, not
-          built yet. Build: {BUILD_COST.fromZeroTp} {ii('tp')} from Tier 0, {BUILD_COST.tp} {ii('tp')} after (
+          built yet. Build: {BUILD_COST.tp.join(' / ')} {ii('tp')} for Tier 1 / 2 / 3 (
           {BUILD_COST.hammerTp} with the Hammer), always + {BUILD_COST.ap} {ii('ap', '#1b1b1b')}.
         </p>
         <table className="tut-table">

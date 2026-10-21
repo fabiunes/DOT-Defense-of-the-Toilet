@@ -22,7 +22,7 @@ const bossFoe = (form: 'mid' | 'final', stats: Partial<Stats>): Enemy => ({
 
 /** A run in preparation (first ability, item bonus) with base values. */
 function prep(seed = 4, patch: Partial<RunState> = {}): RunState {
-  let s = G.chooseStarter(G.beginRun(G.newRun(seed)), 0);
+  let s = G.chooseStarter(G.beginRun(G.newRun(seed), 1, 'homeA'), 0);
   s = G.confirmMerdomon(s, 'hp', s.pendingAbilities[0]);
   s = G.chooseStartBonus(s, 'item');
   return { ...s, items: [], ap: 1, ...patch };
@@ -36,14 +36,15 @@ describe('structures', () => {
     expect([G.concentrationCap(s), G.apCap(s)]).toEqual([10, 3]);
   });
 
-  it('Build costs 20 TP + 1 AP per tier, up to Tier 3', () => {
+  it('Build costs 25 / 30 TP + 1 AP from Tier 1 / 2, up to Tier 3', () => {
     let s = prep(4, { tp: 30, ap: 2 });
     s = G.build(s, 'holder');
-    expect(s).toMatchObject({ tp: 30 - BUILD_COST.tp, ap: 1 });
+    expect(s).toMatchObject({ tp: 30 - BUILD_COST.tp[1], ap: 1 });
     expect(G.tpCap(s)).toBe(50);
-    s = G.build({ ...s, tp: 20 }, 'holder');
+    expect(G.canBuild({ ...s, tp: 29 }, 'holder')).toBe(false);
+    s = G.build({ ...s, tp: 30 }, 'holder');
     expect(s.structures.holder).toBe(3);
-    expect(G.canBuild({ ...s, tp: 20, ap: 1 }, 'holder')).toBe(false);
+    expect(G.canBuild({ ...s, tp: 30, ap: 1 }, 'holder')).toBe(false);
   });
 
   it('caps TP and Poop (excess is lost) and the team size', () => {

@@ -1,4 +1,4 @@
-import { BATHROOM_INFO, HISTORY_MAX, STARTING_TOILET_POINTS, STRUCTURES } from './data';
+import { BATHROOMS, BATHROOM_INFO, HISTORY_MAX, STARTING_TOILET_POINTS, STRUCTURES, TESTING_PASSWORD_SHA256 } from './data';
 import { runScore, type ScoreLine } from './score';
 import type { AbilityId, BathroomId, BossId, ItemId, Level, MerdomonKind, Rarity, RunState, StructureId } from './types';
 
@@ -155,4 +155,20 @@ export function unlockBathroom(id: BathroomId): boolean {
   } catch {
     return false;
   }
+}
+
+async function sha256(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Testing Privilege: the right password unlocks every bathroom for free. Returns whether it was right. */
+export async function unlockAllWithPassword(password: string): Promise<boolean> {
+  if ((await sha256(password)) !== TESTING_PASSWORD_SHA256) return false;
+  try {
+    localStorage.setItem(UNLOCKED_KEY, JSON.stringify([...BATHROOMS]));
+  } catch {
+    return false;
+  }
+  return true;
 }

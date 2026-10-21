@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.7
+
+### Bilanciamento
+- **Bagni** ordinati dal più debole al più forte: Office → Public → Home → Hotel (schermata Toilets e inizio partita).
+- Nuovi valori dei bagni:
+  - **Office A** (gratis, ora il bagno di default): Sink, Toilet Brush, Toilet e Paper Holder al Tier 1; 5 TP, 8 Concentration, 5 Poop;
+  - **Office B** (5.000): Toilet T1, Paper Holder T3;
+  - **Public A** (ora 5.000) e **Public B** (10.000): stesse strutture e risorse;
+  - **Home A** (ora 15.000): tutto al Tier 1;
+  - **Home B** (ora 30.000);
+  - **Hotel A** (ora 40.000) e **Hotel B** (ora 100.000).
+- **Costi del Build** per Tier: 20 TP per il Tier 1, 25 TP per il Tier 2, 30 TP per il Tier 3 (sempre + 1 AP). L'Hammer resta a 15 TP fissi.
+- Si parte con **0 Toilet Points** (prima 200.000 per i test). Chi ha già punti o bagni sbloccati li tiene.
+
+### Nuove funzioni
+- **Testing Privilege**: 5ª pagina della schermata Toilets. Il tasto **Unlock All Toilet** chiede la password e, se è giusta, sblocca tutti i bagni.
+
 ## v0.6
 
 ### Nuove funzioni

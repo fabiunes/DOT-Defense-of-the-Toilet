@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { BATHROOMS, BATHROOM_INFO, FARTING, STARTING_TOILET_POINTS } from './data';
+import { BATHROOMS, BATHROOM_INFO, FARTING } from './data';
 import * as G from './game';
-import { isUnlocked, loadToiletPoints, recordRun, unlockBathroom } from './save';
+import { isUnlocked, loadToiletPoints, recordRun, unlockAllWithPassword, unlockBathroom } from './save';
 import { runScore } from './score';
 import type { BathroomId, RunState } from './types';
 
@@ -32,13 +32,14 @@ describe('bathroom types', () => {
 });
 
 describe('building from Tier 0 and the Hammer', () => {
-  it('Tier 0 → 1 costs 30 TP + 1 AP; with the Hammer every build costs 15 TP', () => {
+  it('Build costs 20 / 25 / 30 TP + 1 AP by tier; with the Hammer every build costs 15 TP', () => {
     const s = prep('officeA', { tp: 40, ap: 2 });
     expect(s.structures.stall).toBe(0);
-    expect(G.buildTp(s, 'stall')).toBe(30);
-    expect(G.buildTp(s, 'sink')).toBe(20);
+    expect(G.buildTp(s, 'stall')).toBe(20);
+    expect(G.buildTp(s, 'sink')).toBe(25);
+    expect(G.buildTp({ ...s, structures: { ...s.structures, sink: 2 } }, 'sink')).toBe(30);
     const built = G.build(s, 'stall');
-    expect(built).toMatchObject({ tp: 10, ap: 1 });
+    expect(built).toMatchObject({ tp: 20, ap: 1 });
     expect(built.structures.stall).toBe(1);
     const hammer = { ...s, items: ['hammer' as const] };
     expect(G.buildTp(hammer, 'stall')).toBe(15);
@@ -99,13 +100,22 @@ describe('Toilet Points', () => {
     } as Storage;
   });
 
-  it('start at the testing amount and are spent to unlock bathrooms', () => {
-    expect(loadToiletPoints()).toBe(STARTING_TOILET_POINTS);
-    expect(isUnlocked('homeA')).toBe(true);
-    expect(isUnlocked('homeB')).toBe(false);
+  it('start at 0; only Office A is free; points are spent to unlock bathrooms', () => {
+    expect(loadToiletPoints()).toBe(0);
+    expect(BATHROOMS.filter(isUnlocked)).toEqual(['officeA']);
+    expect(unlockBathroom('homeB')).toBe(false);
+    localStorage.setItem('dot.toiletPoints', '50000');
     expect(unlockBathroom('homeB')).toBe(true);
     expect(isUnlocked('homeB')).toBe(true);
-    expect(loadToiletPoints()).toBe(STARTING_TOILET_POINTS - BATHROOM_INFO.homeB.cost);
+    expect(loadToiletPoints()).toBe(50000 - BATHROOM_INFO.homeB.cost);
+  });
+
+  it('the testing password unlocks every bathroom', async () => {
+    expect(await unlockAllWithPassword('pallemerda')).toBe(false);
+    expect(BATHROOMS.filter(isUnlocked)).toEqual(['officeA']);
+    expect(await unlockAllWithPassword('PalleMerda')).toBe(true);
+    expect(BATHROOMS.every(isUnlocked)).toBe(true);
+    expect(loadToiletPoints()).toBe(0);
   });
 
   it('a finished run adds its score', () => {

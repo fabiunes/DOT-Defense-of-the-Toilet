@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { ITEMS, STAT_KEYS } from './data';
+import { BATHROOMS, ITEMS, STAT_KEYS } from './data';
 import * as G from './game';
-import type { Rarity, RunState } from './types';
+import type { BathroomId, Rarity, RunState } from './types';
 
 /** A simple greedy bot, used to check runs always terminate and to get a rough difficulty read. */
 function playPreparation(s: RunState): RunState {
@@ -35,8 +35,8 @@ function playPreparation(s: RunState): RunState {
   return G.fight(s);
 }
 
-function playRun(seed: number): RunState {
-  let s = G.beginRun(G.newRun(seed));
+function playRun(seed: number, bathroom: BathroomId): RunState {
+  let s = G.beginRun(G.newRun(seed), 1, bathroom);
   s = G.chooseStarter(s, 0);
   s = G.confirmMerdomon(s, 'atk', s.pendingAbilities[0]);
   s = G.chooseStartBonus(s, 'resources');
@@ -49,11 +49,13 @@ function playRun(seed: number): RunState {
 }
 
 describe('simulation', () => {
-  it('every run terminates', () => {
-    const runs = Array.from({ length: 500 }, (_, i) => playRun(i + 1));
-    const wins = runs.filter((r) => r.phase === 'victory').length;
-    const avgRound = runs.reduce((sum, r) => sum + r.round, 0) / runs.length;
-    console.log(`[sim] greedy bot: ${((wins / runs.length) * 100).toFixed(1)}% wins, avg round reached ${avgRound.toFixed(2)}`);
-    expect(runs.every((r) => r.phase === 'gameover' || r.phase === 'victory')).toBe(true);
-  });
+  it('every run terminates, in every bathroom', () => {
+    for (const bathroom of BATHROOMS) {
+      const runs = Array.from({ length: 500 }, (_, i) => playRun(i + 1, bathroom));
+      const wins = runs.filter((r) => r.phase === 'victory').length;
+      const avgRound = runs.reduce((sum, r) => sum + r.round, 0) / runs.length;
+      console.log(`[sim] ${bathroom}: ${((wins / runs.length) * 100).toFixed(1)}% wins, avg round reached ${avgRound.toFixed(2)}`);
+      expect(runs.every((r) => r.phase === 'gameover' || r.phase === 'victory')).toBe(true);
+    }
+  }, 120_000);
 });

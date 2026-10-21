@@ -1,6 +1,6 @@
 # D.o.t.T. – Defense of the Toilet · Game Design Document
 
-> Versione regole: **v0.6** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
+> Versione regole: **v0.7** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
 >
 > Fonte ufficiale delle regole. Il gioco è interamente in **inglese**; questo documento è in italiano, con i termini di gioco in inglese.
 
@@ -32,7 +32,7 @@ Single player per smartphone, roguelite + auto-battler. Il giocatore difende la 
 | **Concentration** | 0 → limite Shower (§9d) | dal bagno (§9g) | "Vita" del giocatore, barra a riempimento. 0 = game over. |
 | **Poop** | 0 → limite Bidet (§9d) | dal bagno (§9g) | Spesa con *Evacuate*. L'eccesso va perso. |
 | **Action Points** (AP) | 0 → limite Toilet Brush (§9d) | 1 al primo round | A ogni preparazione: +1, + tratto Action, + Sink, + ricompense. **Quelli non spesi si accumulano** fino al limite. |
-| **Toilet Points** | illimitati | 200.000 (test) | Valuta permanente tra le partite: il punteggio di ogni partita conclusa si aggiunge. Servono a sbloccare i bagni (§9g). |
+| **Toilet Points** | illimitati | 0 | Valuta permanente tra le partite: il punteggio di ogni partita conclusa si aggiunge. Servono a sbloccare i bagni (§9g). |
 
 ## 5. Merdomon
 
@@ -191,7 +191,7 @@ A inizio partita il giocatore sceglie il **livello di difficoltà**, che determi
 
 Sei blocchi nella parte bassa della schermata, come gli slot dei Merdomon: in alto **Shower, Sink, Bidet**; in basso **Toilet Brush, Toilet** (il water con il giocatore), **Paper Holder**. Il Tier di partenza dipende dal bagno (§9g), da **0** a **3**; si toccano per vedere l'effetto e potenziarle. Una struttura al **Tier 0** (non ancora costruita) è grigia e tratteggiata, ma dà comunque il suo limite minimo.
 
-**Build**: 1 AP + **30 TP** dal Tier 0 al Tier 1, **20 TP** per gli altri Tier, fino al Tier 3. Con l'**Hammer** ogni Build costa 15 TP (+ 1 AP).
+**Build**: 1 AP + **20 TP** dal Tier 0 al Tier 1, **25 TP** dal Tier 1 al 2, **30 TP** dal Tier 2 al 3. Con l'**Hammer** ogni Build costa 15 TP (+ 1 AP).
 
 | Struttura | Limite (T0/T1/T2/T3) | Produzione dopo ogni combattimento (T0/T1/T2/T3) |
 |---|---|---|
@@ -227,16 +227,18 @@ A inizio partita si sceglie il bagno: decide il **Tier di partenza delle struttu
 
 | Bagno | Shower | Sink | Bidet | Toilet Brush | Toilet | Paper Holder | TP | Concentration | Poop | Costo |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **Home Bathroom A** | 1 | 1 | 1 | 1 | 1 | 1 | 3 | 10 | 5 | gratis |
-| **Home Bathroom B** | 0 | 1 | 2 | 1 | 2 | 0 | 0 | 8 | 3 | 3.000 |
-| **Office Bathroom A** | 0 | 1 | 0 | 2 | 1 | 1 | 5 | 8 | 7 | gratis |
-| **Office Bathroom B** | 0 | 0 | 0 | 1 | 1 | 2 | 5 | 6 | 10 | 5.000 |
-| **Public Toilet A** | 0 | 0 | 0 | 0 | 3 | 3 | 0 | 5 | 10 | gratis |
+| **Office Bathroom A** | 0 | 1 | 0 | 1 | 1 | 1 | 5 | 8 | 5 | gratis |
+| **Office Bathroom B** | 0 | 0 | 0 | 0 | 1 | 3 | 5 | 6 | 10 | 5.000 |
+| **Public Toilet A** | 0 | 0 | 0 | 0 | 3 | 3 | 0 | 5 | 10 | 5.000 |
 | **Public Toilet B** | 0 | 1 | 1 | 0 | 2 | 0 | 10 | 6 | 12 | 10.000 |
-| **Hotel Bathroom A** | 2 | 2 | 2 | 2 | 2 | 2 | 0 | 4 | 0 | 20.000 |
-| **Hotel Bathroom B** | 3 | 3 | 3 | 3 | 3 | 3 | 0 | 1 | 0 | 40.000 |
+| **Home Bathroom A** | 1 | 1 | 1 | 1 | 1 | 1 | 3 | 10 | 5 | 15.000 |
+| **Home Bathroom B** | 0 | 1 | 2 | 1 | 2 | 0 | 0 | 8 | 3 | 30.000 |
+| **Hotel Bathroom A** | 2 | 2 | 2 | 2 | 2 | 2 | 0 | 4 | 0 | 40.000 |
+| **Hotel Bathroom B** | 3 | 3 | 3 | 3 | 3 | 3 | 0 | 1 | 0 | 100.000 |
 
-Le risorse iniziali non superano il limite delle strutture. Per i test ogni giocatore parte con **200.000 Toilet Points**.
+L'ordine (Office → Public → Home → Hotel) è quello della forza, ed è lo stesso nella schermata Toilets e all'inizio della partita. Office A è l'unico gratuito ed è il bagno di default. Le risorse iniziali non superano il limite delle strutture. Si parte con **0 Toilet Points**.
+
+**Testing Privilege**: l'ultima pagina della schermata Toilets ha il tasto **Unlock All Toilet**; con la password dei tester sblocca tutti i bagni senza spendere Toilet Points. Nel codice c'è solo l'hash SHA-256 della password.
 
 ## 10. Preparation
 
@@ -248,7 +250,7 @@ Le risorse iniziali non superano il limite delle strutture. Per i test ogni gioc
 | Evacuate | **Evacuate** | Spendi 5 / 10 / 20 Poop → appaiono **2 Merdomon** (3 con il Game Boy) Small / Big / Huge tra cui sceglierne 1, poi il +1. **Re-Roll** delle opzioni: 2 TP, illimitato. Bloccata se il Toilet è pieno. |
 | Acquista | **Shop** | 10 TP → compri uno dei 3 oggetti in vendita |
 | Concentrate | **Concentrate** | −2 Concentration → +4 Poop. Non usabile con Concentration ≤ 2. |
-| Costruisci | **Build** | Potenzia una struttura: 1 AP + 30 TP dal Tier 0, 20 TP dopo (15 con l'Hammer) (§9d). |
+| Costruisci | **Build** | Potenzia una struttura: 1 AP + 20 / 25 / 30 TP per il Tier 1 / 2 / 3 (15 con l'Hammer) (§9d). |
 | Scambio | **Trade** | A scelta: +2 Poop, +5 TP, oppure +1 a una statistica di un Merdomon (max 10). Sempre disponibile. |
 
 ### Azioni gratuite
@@ -288,7 +290,7 @@ In entrambi i casi, poi:
 
 - **Home**: Toilet Points in alto a destra; New Game, Continue, Tutorial, Stats, Toilets; numero di versione in basso.
 - **Inizio partita**: carosello dei livelli (Boss) in alto e carosello dei bagni in basso, con Start o Unlock.
-- **Toilets**: collezione dei bagni, 2 per pagina, con strutture, risorse iniziali e tasto Unlock.
+- **Toilets**: collezione dei bagni, 2 per pagina, con strutture, risorse iniziali e tasto Unlock; 5ª pagina **Testing Privilege** (§9g).
 - **Tutorial**: 20 pagine con icone e regole, con esempi presi dalla schermata principale.
 - **Starter**: scelta tra 3 Merdomon Small, poi schermata abilità + +1 con Confirm.
 - **Starting bonus**: scelta tra oggetto, Merdomon Small e Supplies.

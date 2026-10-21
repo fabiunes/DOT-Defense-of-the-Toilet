@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { BATHROOMS, BATHROOM_INFO } from '../../engine/data';
-import { isUnlocked, loadToiletPoints, unlockBathroom } from '../../engine/save';
+import { isUnlocked, loadToiletPoints, unlockAllWithPassword, unlockBathroom } from '../../engine/save';
 import { Icon } from '../icons';
 import { BathroomCard } from './BossRevealScreen';
 
@@ -16,11 +16,12 @@ export function ToiletPoints() {
 
 const PAGE = 2;
 
-/** The bathroom collection: see every type and unlock new ones with Toilet Points. */
+/** The bathroom collection: see every type and unlock new ones with Toilet Points. The last page is for testers. */
 export function ToiletsScreen({ onClose }: { onClose: () => void }) {
   const [page, setPage] = useState(0);
   const [, refresh] = useState(0);
-  const pages = Math.ceil(BATHROOMS.length / PAGE);
+  const bathroomPages = Math.ceil(BATHROOMS.length / PAGE);
+  const pages = bathroomPages + 1;
   const shown = BATHROOMS.slice(page * PAGE, page * PAGE + PAGE);
   return (
     <div className="screen toilets">
@@ -31,30 +32,36 @@ export function ToiletsScreen({ onClose }: { onClose: () => void }) {
           <Icon name="close" size={22} />
         </button>
       </div>
-      <p className="tut-note">Your final score becomes Toilet Points. Spend them to unlock new bathrooms.</p>
-      <div className="toilets-list">
-        {shown.map((id) => (
-          <div key={id} className="toilet-entry">
-            <BathroomCard id={id} />
-            {isUnlocked(id) ? (
-              <span className="unlocked-tag">
-                <Icon name="check" size={16} /> Unlocked
-              </span>
-            ) : (
-              <button
-                className="big-btn unlock-btn"
-                disabled={loadToiletPoints() < BATHROOM_INFO[id].cost}
-                onClick={() => {
-                  unlockBathroom(id);
-                  refresh((n) => n + 1);
-                }}
-              >
-                🔒 Unlock
-              </button>
-            )}
+      {page < bathroomPages ? (
+        <>
+          <p className="tut-note">Your final score becomes Toilet Points. Spend them to unlock new bathrooms.</p>
+          <div className="toilets-list">
+            {shown.map((id) => (
+              <div key={id} className="toilet-entry">
+                <BathroomCard id={id} />
+                {isUnlocked(id) ? (
+                  <span className="unlocked-tag">
+                    <Icon name="check" size={16} /> Unlocked
+                  </span>
+                ) : (
+                  <button
+                    className="big-btn unlock-btn"
+                    disabled={loadToiletPoints() < BATHROOM_INFO[id].cost}
+                    onClick={() => {
+                      unlockBathroom(id);
+                      refresh((n) => n + 1);
+                    }}
+                  >
+                    🔒 Unlock
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      ) : (
+        <TestingPrivilege />
+      )}
       <div className="tut-nav">
         <button className="icon-btn sk" disabled={page === 0} onClick={() => setPage(page - 1)} aria-label="Previous">
           <Icon name="play" size={18} fill="#fff" className="flip" />
@@ -66,6 +73,60 @@ export function ToiletsScreen({ onClose }: { onClose: () => void }) {
           <Icon name="play" size={18} fill="#1b1b1b" />
         </button>
       </div>
+    </div>
+  );
+}
+
+/** Testers with the password can unlock every bathroom for free. */
+function TestingPrivilege() {
+  const [asking, setAsking] = useState(false);
+  const [password, setPassword] = useState('');
+  const [status, setStatus] = useState<'idle' | 'wrong' | 'done'>(
+    BATHROOMS.every(isUnlocked) ? 'done' : 'idle',
+  );
+
+  const submit = async () => {
+    setStatus((await unlockAllWithPassword(password)) ? 'done' : 'wrong');
+  };
+
+  return (
+    <div className="toilets-list testing">
+      <h3>Testing Privilege</h3>
+      <p className="tut-note">If you have the password to unlock all the content, tap the button below.</p>
+      {status === 'done' ? (
+        <span className="unlocked-tag">
+          <Icon name="check" size={16} /> All toilets unlocked
+        </span>
+      ) : asking ? (
+        <form
+          className="password-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submit();
+          }}
+        >
+          <input
+            className="sk"
+            type="password"
+            placeholder="Insert Password"
+            aria-label="Insert Password"
+            autoFocus
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setStatus('idle');
+            }}
+          />
+          {status === 'wrong' && <small className="wrong">Wrong password</small>}
+          <button className="big-btn shadow" type="submit" disabled={!password}>
+            <Icon name="check" size={20} /> Confirm
+          </button>
+        </form>
+      ) : (
+        <button className="big-btn shadow" onClick={() => setAsking(true)}>
+          🔒 Unlock All Toilet
+        </button>
+      )}
     </div>
   );
 }

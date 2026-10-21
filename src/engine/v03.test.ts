@@ -19,7 +19,7 @@ const foe = (stats: Partial<Stats>, extra: Partial<Enemy> = {}): Enemy => ({
 });
 /** A run past the starter pick (first ability offered), at the starting-bonus choice. */
 const start = (seed: number) => {
-  const s = G.chooseStarter(G.beginRun(G.newRun(seed)), 0);
+  const s = G.chooseStarter(G.beginRun(G.newRun(seed), 1, 'homeA'), 0);
   return G.confirmMerdomon(s, 'hp', s.pendingAbilities[0]);
 };
 const fight = (team: Merdomon[], wave: Enemy[], modifier: Parameters<typeof simulateCombat>[4] = {}) =>
@@ -29,7 +29,7 @@ const abilityEvents = (r: ReturnType<typeof fight>, a: AbilityId) =>
 
 describe('new Merdomon flow', () => {
   it('offers 3 distinct abilities and confirms ability + stat together', () => {
-    let s = G.chooseStarter(G.beginRun(G.newRun(5)), 1);
+    let s = G.chooseStarter(G.beginRun(G.newRun(5), 1, 'homeA'), 1);
     expect(new Set(s.pendingAbilities).size).toBe(3);
     expect(s.pendingAbilities.every((a) => ABILITIES.includes(a))).toBe(true);
     const notOffered = ABILITIES.find((a) => !s.pendingAbilities.includes(a))!;

@@ -2341,3 +2341,31 @@ button:disabled {
 .tut-bathroom small {
   font-size: 13px;
 }
+
+/* Toilets: Testing Privilege page */
+.toilets-list.testing {
+  justify-content: center;
+  text-align: center;
+  gap: 16px;
+}
+.toilets-list.testing h3 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+.password-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.password-form input {
+  font: inherit;
+  font-size: 1.1rem;
+  padding: 10px 12px;
+  border: 2px solid var(--ink);
+  border-radius: var(--r);
+  background: #fff;
+  text-align: center;
+}
+.password-form .wrong {
+  color: var(--bad, #d64545);
+}

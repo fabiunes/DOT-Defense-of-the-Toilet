@@ -25,7 +25,7 @@ const confirm = (s: RunState, stat: Parameters<typeof G.confirmMerdomon>[1] = 'h
 
 /** A run in preparation with a known team. */
 function prepRun(patch: Partial<RunState> = {}): RunState {
-  let s = G.beginRun(G.newRun(42));
+  let s = G.beginRun(G.newRun(42), 1, 'homeA');
   s = G.chooseStarter(s, 0);
   s = confirm(s, 'atk');
   s = G.chooseStartBonus(s, 'resources');
@@ -195,7 +195,7 @@ describe('combat', () => {
 describe('run flow', () => {
   it('starts (Home Bathroom A) with 3 TP, 5 Poop and 3 small starters, after the setup', () => {
     expect(G.newRun(1).phase).toBe('boss');
-    const s = G.beginRun(G.newRun(1));
+    const s = G.beginRun(G.newRun(1), 1, 'homeA');
     expect(s).toMatchObject({ phase: 'starter', concentration: 10, tp: 3, merdascore: 5, ap: 0 });
     expect(s.starters).toHaveLength(3);
     expect(s.starters.every((m) => m.rarity === 'common' && m.traits.length === 1)).toBe(true);

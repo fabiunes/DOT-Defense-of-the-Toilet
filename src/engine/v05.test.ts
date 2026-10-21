@@ -7,7 +7,7 @@ import { loadBest, loadHistory, recordRun } from './save';
 import type { Level, RunState, Stats } from './types';
 
 function prep(level: Level = 1, patch: Partial<RunState> = {}): RunState {
-  let s = G.chooseStarter(G.beginRun(G.newRun(12), level), 0);
+  let s = G.chooseStarter(G.beginRun(G.newRun(12), level, 'homeA'), 0);
   s = G.confirmMerdomon(s, 'hp', s.pendingAbilities[0]);
   s = G.chooseStartBonus(s, 'item');
   return { ...s, items: [], ap: 1, ...patch };
@@ -19,7 +19,7 @@ describe('difficulty levels', () => {
   it('pick the Boss: 1 Bestseller, 2 StreamDeck, 3 Demon Scroller', () => {
     expect(G.newRun(1).phase).toBe('boss');
     for (const level of [1, 2, 3] as Level[]) {
-      const s = G.beginRun(G.newRun(1), level);
+      const s = G.beginRun(G.newRun(1), level, 'homeA');
       expect(s).toMatchObject({ level, boss: LEVEL_BOSS[level], phase: 'starter' });
     }
   });
