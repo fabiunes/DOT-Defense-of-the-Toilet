@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.8
+
+### Nuove funzioni
+- **Statistiche di gioco anonime** con GoatCounter (senza cookie e senza dati personali), dashboard su https://fabiunes.goatcounter.com:
+  - visite al gioco;
+  - partite iniziate, per livello e bagno;
+  - partite finite, vinte o perse, con la wave della sconfitta e la fascia di punteggio;
+  - bagni sbloccati e uso della password Testing Privilege.
+- Nella Home, sotto la versione, l'avviso "anonymous play stats, no personal data".
+
 ## v0.7
 
 ### Bilanciamento

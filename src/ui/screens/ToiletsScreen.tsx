@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BATHROOMS, BATHROOM_INFO } from '../../engine/data';
 import { isUnlocked, loadToiletPoints, unlockAllWithPassword, unlockBathroom } from '../../engine/save';
+import { analytics } from '../analytics';
 import { Icon } from '../icons';
 import { BathroomCard } from './BossRevealScreen';
 
@@ -48,7 +49,7 @@ export function ToiletsScreen({ onClose }: { onClose: () => void }) {
                     className="big-btn unlock-btn"
                     disabled={loadToiletPoints() < BATHROOM_INFO[id].cost}
                     onClick={() => {
-                      unlockBathroom(id);
+                      if (unlockBathroom(id)) analytics.unlock(id);
                       refresh((n) => n + 1);
                     }}
                   >
@@ -86,7 +87,9 @@ function TestingPrivilege() {
   );
 
   const submit = async () => {
-    setStatus((await unlockAllWithPassword(password)) ? 'done' : 'wrong');
+    const ok = await unlockAllWithPassword(password);
+    if (ok) analytics.testingUnlock();
+    setStatus(ok ? 'done' : 'wrong');
   };
 
   return (

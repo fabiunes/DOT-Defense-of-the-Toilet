@@ -47,7 +47,7 @@ export function HomeScreen({
       <div className="home-art">
         <PlayerArt />
       </div>
-      <p className="version">v{__APP_VERSION__}</p>
+      <p className="version">v{__APP_VERSION__} · anonymous play stats, no personal data</p>
     </div>
   );
 }

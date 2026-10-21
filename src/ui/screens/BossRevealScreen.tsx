@@ -3,6 +3,7 @@ import { BATHROOMS, BATHROOM_INFO, BOSS_INFO, LEVELS, LEVEL_BOSS, LEVEL_ENEMY_BO
 import { beginRun } from '../../engine/game';
 import { isUnlocked, loadBest, loadToiletPoints, unlockBathroom } from '../../engine/save';
 import type { BathroomId, Level, RunState } from '../../engine/types';
+import { analytics } from '../analytics';
 import { EnemyArt } from '../art';
 import { StructureIcon } from '../bathroom';
 import { Icon } from '../icons';
@@ -38,7 +39,11 @@ export function BossRevealScreen({ run, update }: { run: RunState; update: Updat
       </Carousel>
 
       {unlocked ? (
-        <button className="big-btn shadow" onClick={() => update((s) => beginRun(s, level, bathroom))}>
+        <button className="big-btn shadow" onClick={() => {
+            analytics.runStart(level, bathroom);
+            update((s) => beginRun(s, level, bathroom));
+          }}
+        >
           <Icon name="play" size={22} fill="#1b1b1b" /> Start
         </button>
       ) : (
@@ -46,7 +51,7 @@ export function BossRevealScreen({ run, update }: { run: RunState; update: Updat
           className="big-btn shadow unlock-btn"
           disabled={loadToiletPoints() < BATHROOM_INFO[bathroom].cost}
           onClick={() => {
-            unlockBathroom(bathroom);
+            if (unlockBathroom(bathroom)) analytics.unlock(bathroom);
             refresh((n) => n + 1);
           }}
         >

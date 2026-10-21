@@ -3,6 +3,7 @@ import { BATHROOM_INFO, BOSS_INFO } from '../../engine/data';
 import { recordRun } from '../../engine/save';
 import { runScore } from '../../engine/score';
 import type { RunState } from '../../engine/types';
+import { analytics } from '../analytics';
 import { Icon } from '../icons';
 
 /** Unique id of a finished run, so it is recorded only once. */
@@ -12,7 +13,11 @@ export function EndScreen({ run, onHome, onNew }: { run: RunState; onHome: () =>
   const victory = run.phase === 'victory';
   const { lines, total } = runScore(run);
   // Records the run in the history (idempotent) and reads the level's previous record.
-  const [{ previousBest }] = useState(() => recordRun(run, runId(run)));
+  const [{ previousBest }] = useState(() => {
+    const result = recordRun(run, runId(run));
+    if (result.recorded) analytics.runEnd(run.level, run.bathroom, run.phase === 'victory', run.round, total);
+    return result;
+  });
   const newRecord = total > previousBest;
   const boss = BOSS_INFO[run.boss];
 

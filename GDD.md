@@ -1,6 +1,6 @@
 # D.o.t.T. – Defense of the Toilet · Game Design Document
 
-> Versione regole: **v0.7** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
+> Versione regole: **v0.8** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
 >
 > Fonte ufficiale delle regole. Il gioco è interamente in **inglese**; questo documento è in italiano, con i termini di gioco in inglese.
 
@@ -288,7 +288,7 @@ In entrambi i casi, poi:
 
 ## 12. Schermate
 
-- **Home**: Toilet Points in alto a destra; New Game, Continue, Tutorial, Stats, Toilets; numero di versione in basso.
+- **Home**: Toilet Points in alto a destra; New Game, Continue, Tutorial, Stats, Toilets; in basso il numero di versione e l'avviso sulle statistiche anonime (§14).
 - **Inizio partita**: carosello dei livelli (Boss) in alto e carosello dei bagni in basso, con Start o Unlock.
 - **Toilets**: collezione dei bagni, 2 per pagina, con strutture, risorse iniziali e tasto Unlock; 5ª pagina **Testing Privilege** (§9g).
 - **Tutorial**: 20 pagine con icone e regole, con esempi presi dalla schermata principale.
@@ -307,3 +307,18 @@ In entrambi i casi, poi:
 ## 13. Salvataggio
 
 Salvataggio automatico nel browser all'inizio di ogni Preparation → tasto **Continue**. Toilet Points e bagni sbloccati restano salvati tra le partite.
+
+## 14. Statistiche di gioco anonime
+
+Con **GoatCounter** (senza cookie, senza dati personali), dashboard: https://fabiunes.goatcounter.com. Le visite al gioco si contano da sole; in più il gioco invia questi eventi (in locale, su localhost, non viene contato nulla):
+
+| Evento | Quando |
+|---|---|
+| `run-start/L<livello>/<bagno>` | Start di una partita |
+| `run-end/L<livello>/<bagno>/win` o `/lose` | Fine partita |
+| `run-lost-at/wave-<n>` | Partita persa, con la wave |
+| `run-score/<fascia>` | Punteggio finale, a fasce di 1.000 |
+| `unlock/<bagno>` | Bagno sbloccato con i Toilet Points |
+| `testing-privilege` | Password Testing Privilege corretta |
+
+I dati sono aggregati: non si vede chi ha giocato, solo quante partite e con quali esiti.

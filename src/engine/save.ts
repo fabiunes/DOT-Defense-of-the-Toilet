@@ -82,10 +82,11 @@ export function loadHistory(): RunRecord[] {
  * Records a finished run (newest first, at most HISTORY_MAX) and its level record.
  * Returns the level's best score before this run. Safe to call twice for the same run.
  */
-export function recordRun(s: RunState, runId: string): { previousBest: number } {
+/** `recorded` is false when this run was already in the history (e.g. the end screen shown again). */
+export function recordRun(s: RunState, runId: string): { previousBest: number; recorded: boolean } {
   const history = loadHistory();
   const existing = history.find((r) => r.id === runId);
-  if (existing) return { previousBest: existing.previousBest };
+  if (existing) return { previousBest: existing.previousBest, recorded: false };
   const previousBest = loadBest(s.level);
   const { lines, total } = runScore(s);
   const record: RunRecord = {
@@ -115,7 +116,7 @@ export function recordRun(s: RunState, runId: string): { previousBest: number } 
   } catch {
     // Storage unavailable: nothing is recorded.
   }
-  return { previousBest };
+  return { previousBest, recorded: true };
 }
 
 // ---------- Toilet Points and unlocked bathrooms (kept between runs) ----------
