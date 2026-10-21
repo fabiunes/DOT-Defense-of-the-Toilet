@@ -234,14 +234,22 @@ export const STRUCTURE_INFO: Record<
 
 // ---------- Bosses ----------
 
-export const BOSSES: readonly BossId[] = ['bestseller', 'streamDeck', 'demonScroller'];
+export const BOSSES: readonly BossId[] = ['bestseller', 'streamDeck', 'demonScroller', 'plumber', 'groupAdmin'];
 
 // ---------- Difficulty levels ----------
 
-export const LEVELS: readonly Level[] = [1, 2, 3];
-export const LEVEL_BOSS: Record<Level, BossId> = { 1: 'bestseller', 2: 'streamDeck', 3: 'demonScroller' };
+export const LEVELS: readonly Level[] = [1, 2, 3, 4, 5];
+export const LEVEL_BOSS: Record<Level, BossId> = {
+  1: 'bestseller',
+  2: 'streamDeck',
+  3: 'demonScroller',
+  4: 'plumber',
+  5: 'groupAdmin',
+};
+/** Toilet Points earned = final score × this (the score itself does not change). */
+export const LEVEL_REWARD: Record<Level, number> = { 1: 1, 2: 1.1, 3: 1.25, 4: 1.5, 5: 2 };
 /** Extra stat points for every normal enemy. */
-export const LEVEL_ENEMY_BONUS: Record<Level, number> = { 1: 0, 2: 1, 3: 2 };
+export const LEVEL_ENEMY_BONUS: Record<Level, number> = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4 };
 /** Finished runs kept in the Stats history. */
 export const HISTORY_MAX = 50;
 
@@ -300,9 +308,28 @@ export const BOSS_TOTAL = { mid: 15, final: 22 } as const;
 /** Run-wide modifier: every enemy of the Boss's type gets this much ATK. */
 export const BOSS_TYPE_ATK = 1;
 
+/** The Plumber (level 4): structures without water, and Concentration lost when it fights. */
+export const PLUMBER = {
+  offline: ['stall', 'bidet'] as readonly StructureId[],
+  midConcentration: 1,
+  finalConcentration: 2,
+};
+/** The Group Admin (level 5): locked Merdomon slots from wave 5 (1) and on wave 10 (2). */
+export const GROUP_ADMIN = { pinnedFrom: 5, pinned: 1, finalPinned: 2 };
+
 export const BOSS_INFO: Record<
   BossId,
-  { name: string; icon: string; kind: EnemyKind; runDesc: string; ability: string; midDesc: string; finalDesc: string }
+  {
+    name: string;
+    icon: string;
+    kind: EnemyKind;
+    runDesc: string;
+    ability: string;
+    midDesc: string;
+    /** Name of the final form's ability, when different. */
+    finalAbility?: string;
+    finalDesc: string;
+  }
 > = {
   demonScroller: {
     name: 'Demon Scroller',
@@ -331,7 +358,28 @@ export const BOSS_INFO: Record<
     midDesc: 'Comes back once with half its HP',
     finalDesc: 'Comes back once with full HP',
   },
+  plumber: {
+    name: 'The Plumber',
+    icon: '🔧',
+    kind: 'console',
+    runDesc: 'All Consoles +1 ATK. Water Shut-Off: Shower and Bidet are off all run',
+    ability: 'Knock Knock',
+    midDesc: `−${PLUMBER.midConcentration} Concentration when the fight starts`,
+    finalAbility: 'Pipe Burst',
+    finalDesc: `−${PLUMBER.finalConcentration} Concentration when the fight starts, and its first attack hits twice`,
+  },
+  groupAdmin: {
+    name: 'The Group Admin',
+    icon: '📲',
+    kind: 'phone',
+    runDesc: 'All Smartphones +1 ATK. Muted: your most common trait gives no bonus',
+    ability: 'Pinned Message',
+    midDesc: 'From wave 5 your last Merdomon slot is locked',
+    finalAbility: '@everyone',
+    finalDesc: 'On wave 10, 2 slots are locked and 1 extra Small enemy joins',
+  },
 };
+
 
 // ---------- Final score ----------
 

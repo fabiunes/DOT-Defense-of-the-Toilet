@@ -130,7 +130,7 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       if (drag.moving) {
         justDragged.current = true;
         const to = slotAt(e.clientX, e.clientY);
-        if (to !== null && to < G.teamCap(run)) update((s) => G.moveMerdomon(s, drag.from, to));
+        if (to !== null && canDropOn(to)) update((s) => G.moveMerdomon(s, drag.from, to));
       }
       setDrag(null);
     };
@@ -143,6 +143,9 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       window.removeEventListener('pointercancel', end);
     };
   }, [drag, run, update]);
+
+  /** Open slots, or a benched Merdomon to swap with (to choose who sits out). */
+  const canDropOn = (to: number) => to < G.teamCap(run) || !!run.team[to];
 
   const onSlot = (index: number) => {
     const m = run.team[index];
@@ -174,17 +177,25 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       <div className={`slots ${drag?.moving ? 'dragging' : ''}`}>
         {Array.from({ length: 6 }, (_, i) => {
           const m = run.team[i];
-          const dropTarget = drag?.moving && drag.over === i && i !== drag.from && i < G.teamCap(run);
+          const dropTarget = drag?.moving && drag.over === i && i !== drag.from && canDropOn(i);
+          const benched = !!m && i >= G.teamCap(run);
           if (m)
             return (
               <div
                 key={m.id}
-                className={`slot-drag ${dropTarget ? 'drop-target' : ''} ${drag?.moving && drag.from === i ? 'drag-origin' : ''}`}
+                className={`slot-drag ${dropTarget ? 'drop-target' : ''} ${drag?.moving && drag.from === i ? 'drag-origin' : ''} ${benched ? 'benched' : ''}`}
                 data-slot={i}
                 onPointerDown={(e) => onPointerDown(i, e)}
               >
                 <MerdomonCard m={m} onClick={() => onSlot(i)} />
               </div>
+            );
+          if (i >= G.teamCap(run) && i < G.capacity(run, 'toilet'))
+            return (
+              <button key={`pin-${i}`} className="card empty locked pinned" onClick={() => setPanel({ kind: 'boss' })}>
+                <span>📲</span>
+                <small>Pinned</small>
+              </button>
             );
           if (i >= G.teamCap(run))
             return (
@@ -443,7 +454,7 @@ function BonusPanel({ run, onClose }: { run: RunState; onClose: () => void }) {
       <h4 className="bonus-section">Bathroom</h4>
       <div className="bonus-structures">
         {STRUCTURES.map((id) => {
-          const amount = STRUCTURE_INFO[id].production[run.structures[id]];
+          const amount = G.production(run, id);
           return (
             <span key={id} className={`bonus-structure sk ${amount > 0 ? '' : 'none'}`}>
               <StructureIcon id={id} tier={run.structures[id]} size={24} />
@@ -555,7 +566,8 @@ function StructurePanel({ run, id, update, onClose }: { run: RunState; id: Struc
   const info = STRUCTURE_INFO[id];
   const tier = run.structures[id];
   const max = tier >= MAX_TIER;
-  const next = (list: readonly number[]) => (max ? null : list[tier + 1]);
+  const offline = G.isOffline(run, id);
+  const next = (list: readonly number[]) => (max || offline ? null : list[tier + 1]);
   return (
     <Modal onClose={onClose} className="structure-panel">
       <div className="structure-head">
@@ -564,7 +576,8 @@ function StructurePanel({ run, id, update, onClose }: { run: RunState; id: Struc
         </span>
         <div>
           <h2>{info.name}</h2>
-          {tier === 0 && <small className="muted">Not built yet</small>}
+          {tier === 0 && !offline && <small className="muted">Not built yet</small>}
+          {offline && <small className="offline-note">🔧 Water Shut-Off: off this run</small>}
           <span className="tier-pips">
             {[1, 2, 3].map((t) => (
               <span key={t} className={t <= tier ? 'on' : ''} />
@@ -576,14 +589,14 @@ function StructurePanel({ run, id, update, onClose }: { run: RunState; id: Struc
         <div>
           <span className="muted">Holds {info.capacity}</span>
           <b>
-            {info.capacities[tier]}
+            {G.capacity(run, id)}
             {next(info.capacities) !== null && <span className="next"> → {next(info.capacities)}</span>}
           </b>
         </div>
         <div>
           <span className="muted">After each wave: {info.produce}</span>
           <b>
-            +{info.production[tier]}
+            +{G.production(run, id)}
             {next(info.production) !== null && <span className="next"> → +{next(info.production)}</span>}
           </b>
         </div>
@@ -1034,7 +1047,7 @@ function ScoutPanel({
         {run.wave.map((e, i) => (
           <div key={e.id} className={`scout-row ${e.boss ? 'boss' : ''}`}>
             <span className="scout-index">{i + 1}</span>
-            <EnemyArt size={40} kind={e.kind} rarity={e.rarity} boss={e.boss} />
+            <EnemyArt size={40} kind={e.kind} rarity={e.rarity} boss={e.boss} bossId={run.boss} />
             <span className="scout-name">
               <Stars rarity={e.rarity} size={10} />
               <small>{e.boss ? BOSS_INFO[run.boss].name : KIND_NAME[e.kind]}</small>

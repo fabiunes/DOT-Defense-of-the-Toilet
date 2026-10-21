@@ -37,10 +37,10 @@ export type ModifierId = 'groupChat' | 'wifiDown' | 'rushHour' | 'doomscrolling'
 export type StartBonusId = 'item' | 'merdomon' | 'resources';
 export type StructureId = 'stall' | 'sink' | 'bidet' | 'scrubber' | 'toilet' | 'holder';
 /** Difficulty level, chosen at the start: it picks the Boss and toughens normal enemies. */
-export type Level = 1 | 2 | 3;
+export type Level = 1 | 2 | 3 | 4 | 5;
 /** Starting bathroom setup, chosen together with the level. */
 export type BathroomId = 'homeA' | 'homeB' | 'officeA' | 'officeB' | 'publicA' | 'publicB' | 'hotelA' | 'hotelB';
-export type BossId = 'demonScroller' | 'bestseller' | 'streamDeck';
+export type BossId = 'demonScroller' | 'bestseller' | 'streamDeck' | 'plumber' | 'groupAdmin';
 /** Bosses show up twice: a medium form on wave 5 and the final form on wave 10. */
 export type BossForm = 'mid' | 'final';
 
@@ -108,7 +108,7 @@ export type CombatEvent =
   | { type: 'end'; won: boolean };
 
 export type Resource = 'tp' | 'merdascore' | 'concentration' | 'ap' | 'hp';
-export type RewardSource = 'survivors' | 'enemies' | 'damage' | TraitId | ItemId | AbilityId | ModifierId | StructureId;
+export type RewardSource = 'survivors' | 'enemies' | 'damage' | TraitId | ItemId | AbilityId | ModifierId | StructureId | BossId;
 
 export interface Reward {
   source: RewardSource;
@@ -125,6 +125,8 @@ export interface CombatBonus {
 
 export interface CombatReport {
   round: number;
+  /** The run's Boss, to draw it (absent in reports saved before v0.11). */
+  bossId?: BossId;
   bonuses: CombatBonus[];
   modifier: ModifierId | null;
   won: boolean;

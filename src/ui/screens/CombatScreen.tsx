@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { ABILITY_INFO, BOSS_INFO, ITEM_INFO, MODIFIER_INFO, ROUNDS, STAT_KEYS, STRUCTURE_INFO, TRAIT_INFO } from '../../engine/data';
 import type {
   AbilityId,
+  BossForm,
+  BossId,
   CombatBonus,
   CombatEvent,
   CombatReport,
@@ -73,6 +75,12 @@ function replay(report: CombatReport, upto: number): View {
   return { php, ehp, p, e, last: upto > 0 ? report.events[upto - 1] : null };
 }
 
+/** The Boss ability shown in combat: the final form may have its own name. */
+function bossAbilityName(boss: BossId, form?: BossForm) {
+  const info = BOSS_INFO[boss];
+  return form === 'final' && info.finalAbility ? info.finalAbility : info.ability;
+}
+
 export function CombatScreen({ report, onDone }: { report: CombatReport; onDone: () => void }) {
   const [step, setStep] = useState(0);
   const [speedIdx, setSpeedIdx] = useState(0);
@@ -111,7 +119,7 @@ export function CombatScreen({ report, onDone }: { report: CombatReport; onDone:
       : last?.type === 'modifier'
         ? { side: 'e', text: `${MODIFIER_INFO[last.modifier].icon} +1 ATK` }
         : last?.type === 'boss'
-          ? { side: 'e', text: `${BOSS_INFO[last.boss].icon} ${BOSS_INFO[last.boss].ability}` }
+          ? { side: 'e', text: `${BOSS_INFO[last.boss].icon} ${bossAbilityName(last.boss, report.enemies[last.index]?.bossForm)}` }
           : null;
 
   return (
@@ -123,7 +131,7 @@ export function CombatScreen({ report, onDone }: { report: CombatReport; onDone:
         <Icon name="fight" size={22} />
       </div>
 
-      <Queue fighters={report.enemies} hp={view.ehp} active={view.e} enemy />
+      <Queue fighters={report.enemies} hp={view.ehp} active={view.e} enemy bossId={report.bossId} />
 
       <div className="arena">
         <div className="duel-slot top">
@@ -133,6 +141,7 @@ export function CombatScreen({ report, onDone }: { report: CombatReport; onDone:
               f={report.enemies[view.e]}
               hp={view.ehp[view.e]}
               enemy
+              bossId={report.bossId}
               anim={anim('e')}
               dmg={dmgOn('e')}
               double={last?.type === 'attack' && last.double}
@@ -183,7 +192,9 @@ function BigFighter({
   anim,
   dmg,
   double,
+  bossId,
 }: {
+  bossId?: BossId;
   f: Fighter;
   hp: number;
   enemy?: boolean;
@@ -195,7 +206,7 @@ function BigFighter({
     <div className={`big-fighter ${anim} ${hp <= 0 ? 'dead' : ''}`}>
       <div className="art-wrap">
         {enemy ? (
-          <EnemyArt size={f.boss ? 104 : 90} kind={f.kind as EnemyKind} rarity={f.rarity} boss={f.boss} />
+          <EnemyArt size={f.boss ? 104 : 90} kind={f.kind as EnemyKind} rarity={f.rarity} boss={f.boss} bossId={bossId} />
         ) : (
           <MerdomonArt size={90} kind={f.kind as MerdomonKind} rarity={f.rarity} />
         )}
@@ -225,13 +236,25 @@ function BigFighter({
   );
 }
 
-function Queue({ fighters, hp, active, enemy = false }: { fighters: Fighter[]; hp: number[]; active: number; enemy?: boolean }) {
+function Queue({
+  fighters,
+  hp,
+  active,
+  enemy = false,
+  bossId,
+}: {
+  fighters: Fighter[];
+  hp: number[];
+  active: number;
+  enemy?: boolean;
+  bossId?: BossId;
+}) {
   return (
     <div className="queue">
       {fighters.map((f, i) => (
         <div key={f.id} className={`queue-item ${i === active ? 'active' : ''} ${hp[i] <= 0 ? 'dead' : ''}`}>
           {enemy ? (
-            <EnemyArt size={32} kind={f.kind as EnemyKind} rarity={f.rarity} boss={f.boss} />
+            <EnemyArt size={32} kind={f.kind as EnemyKind} rarity={f.rarity} boss={f.boss} bossId={bossId} />
           ) : (
             <MerdomonArt size={32} kind={f.kind as MerdomonKind} rarity={f.rarity} />
           )}
@@ -258,6 +281,10 @@ export function SourceIcon({ source }: { source: RewardSource }) {
       if (source in ABILITY_INFO) return <AbilityBadge ability={source as AbilityId} size={24} />;
       if (source in MODIFIER_INFO) return <span className="mod-emoji">{MODIFIER_INFO[source as ModifierId].icon}</span>;
       if (source in STRUCTURE_INFO) return <StructureIcon id={source as StructureId} tier={2} size={26} />;
+      if (source in BOSS_INFO) {
+        const boss = source as BossId;
+        return <EnemyArt size={26} kind={BOSS_INFO[boss].kind} rarity="epic" boss bossId={boss} />;
+      }
       return null;
   }
 }

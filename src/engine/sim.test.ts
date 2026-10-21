@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { BATHROOMS, ITEMS, STAT_KEYS } from './data';
+import { BATHROOMS, ITEMS, LEVELS, STAT_KEYS } from './data';
 import * as G from './game';
-import type { BathroomId, Rarity, RunState } from './types';
+import type { BathroomId, Level, Rarity, RunState } from './types';
 
 /** A simple greedy bot, used to check runs always terminate and to get a rough difficulty read. */
 function playPreparation(s: RunState): RunState {
@@ -35,8 +35,8 @@ function playPreparation(s: RunState): RunState {
   return G.fight(s);
 }
 
-function playRun(seed: number, bathroom: BathroomId): RunState {
-  let s = G.beginRun(G.newRun(seed), 1, bathroom);
+function playRun(seed: number, bathroom: BathroomId, level: Level = 1): RunState {
+  let s = G.beginRun(G.newRun(seed), level, bathroom);
   s = G.chooseStarter(s, 0);
   s = G.confirmMerdomon(s, 'atk', s.pendingAbilities[0]);
   s = G.chooseStartBonus(s, 'resources');
@@ -55,6 +55,16 @@ describe('simulation', () => {
       const wins = runs.filter((r) => r.phase === 'victory').length;
       const avgRound = runs.reduce((sum, r) => sum + r.round, 0) / runs.length;
       console.log(`[sim] ${bathroom}: ${((wins / runs.length) * 100).toFixed(1)}% wins, avg round reached ${avgRound.toFixed(2)}`);
+      expect(runs.every((r) => r.phase === 'gameover' || r.phase === 'victory')).toBe(true);
+    }
+  }, 120_000);
+
+  it('every run terminates, at every level (Home Bathroom A)', () => {
+    for (const level of LEVELS) {
+      const runs = Array.from({ length: 500 }, (_, i) => playRun(i + 1, 'homeA', level));
+      const wins = runs.filter((r) => r.phase === 'victory').length;
+      const avgRound = runs.reduce((sum, r) => sum + r.round, 0) / runs.length;
+      console.log(`[sim] level ${level}: ${((wins / runs.length) * 100).toFixed(1)}% wins, avg round reached ${avgRound.toFixed(2)}`);
       expect(runs.every((r) => r.phase === 'gameover' || r.phase === 'victory')).toBe(true);
     }
   }, 120_000);

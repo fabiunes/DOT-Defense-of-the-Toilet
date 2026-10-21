@@ -20,9 +20,16 @@ export function traitValue(trait: TraitId, count: number): number {
   return tier === 0 ? 0 : TRAIT_VALUES[trait][tier - 1];
 }
 
-/** Stat bonus applied to every Merdomon at the start of combat. */
-export function combatBonus(team: readonly Merdomon[], items: readonly ItemId[]): Stats {
+/** Trait counts for bonuses: a muted trait (Group Admin) counts 0. */
+export function activeTraits(team: readonly Merdomon[], items: readonly ItemId[], muted: TraitId | null = null) {
   const c = countTraits(team, items);
+  if (muted) c[muted] = 0;
+  return c;
+}
+
+/** Stat bonus applied to every Merdomon at the start of combat. */
+export function combatBonus(team: readonly Merdomon[], items: readonly ItemId[], muted: TraitId | null = null): Stats {
+  const c = activeTraits(team, items, muted);
   return {
     hp: traitValue('healthy', c.healthy),
     atk: traitValue('fighter', c.fighter),
@@ -32,6 +39,6 @@ export function combatBonus(team: readonly Merdomon[], items: readonly ItemId[])
 }
 
 /** Extra Action Points each round from the Action trait. */
-export function apBonus(team: readonly Merdomon[], items: readonly ItemId[]): number {
-  return traitValue('action', countTraits(team, items).action);
+export function apBonus(team: readonly Merdomon[], items: readonly ItemId[], muted: TraitId | null = null): number {
+  return traitValue('action', activeTraits(team, items, muted).action);
 }

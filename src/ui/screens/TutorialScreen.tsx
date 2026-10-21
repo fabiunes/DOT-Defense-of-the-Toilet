@@ -14,6 +14,7 @@ import {
   LEVELS,
   LEVEL_BOSS,
   LEVEL_ENEMY_BONUS,
+  LEVEL_REWARD,
   BOSS_INFO,
   BATHROOMS,
   BATHROOM_INFO,
@@ -629,19 +630,20 @@ const pages: Page[] = [
     ),
   },
   {
-    title: 'Levels & Bosses',
+    title: 'Levels & Bosses (1/2)',
     body: (
       <>
         <p className="tut-note">
           Pick a level at the start: it sets the Boss. Its type gets +1 ATK all run, and it fights on wave 5 (Big) and wave
-          10 (Huge). Higher levels also toughen every enemy.
+          10 (Huge). Higher levels toughen every enemy. <b>Win a level to unlock the next</b>; higher levels give more
+          Toilet Points (×{LEVEL_REWARD[2]} up to ×{LEVEL_REWARD[5]}).
         </p>
-        {LEVELS.map((l) => {
+        {LEVELS.filter((l) => l <= 3).map((l) => {
           const b = LEVEL_BOSS[l];
           return (
             <Row
               key={l}
-              icon={<EnemyArt size={36} kind={BOSS_INFO[b].kind} rarity="epic" boss />}
+              icon={<EnemyArt size={36} kind={BOSS_INFO[b].kind} rarity="epic" boss bossId={b} />}
               title={`Level ${l} · ${BOSS_INFO[b].name}`}
             >
               {BOSS_INFO[b].runDesc}
@@ -655,6 +657,37 @@ const pages: Page[] = [
           {SCORE.merdomon.common}–{SCORE.merdomon.epic}, {SCORE.item} per item, upgrade, Poop and Concentration left,{' '}
           {SCORE.tp} per Toilet Paper.
         </p>
+      </>
+    ),
+  },
+  {
+    title: 'Levels & Bosses (2/2)',
+    body: (
+      <>
+        <p className="tut-note">The last two Bosses also sabotage your bathroom.</p>
+        {LEVELS.filter((l) => l >= 4).map((l) => {
+          const b = LEVEL_BOSS[l];
+          const info = BOSS_INFO[b];
+          return (
+            <Row
+              key={l}
+              icon={<EnemyArt size={40} kind={info.kind} rarity="epic" boss bossId={b} />}
+              title={`Level ${l} · ${info.name}`}
+            >
+              {info.runDesc}, enemies +{LEVEL_ENEMY_BONUS[l]} stat. <b>{info.ability}</b> (wave 5): {info.midDesc}.{' '}
+              <b>{info.finalAbility ?? info.ability}</b> (wave 10): {info.finalDesc}.
+            </Row>
+          );
+        })}
+        <Row icon={<span className="mod-emoji">🔧</span>} title="Off structures">
+          They work as Tier 0 and can't be built.
+        </Row>
+        <Row icon={<span className="mod-emoji">📲</span>} title="Locked slots">
+          The Merdomon there sit on the bench and don't fight: drag the ones you want to keep fighting.
+        </Row>
+        <Row icon={<span className="mod-emoji">🔇</span>} title="Muted trait">
+          Shown crossed out: it counts 0 for bonuses.
+        </Row>
       </>
     ),
   },

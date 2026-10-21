@@ -11,7 +11,7 @@ import {
   TRAIT_THRESHOLDS,
   TRAIT_VALUES,
 } from '../engine/data';
-import { apCap, concentrationCap, itemCap, poopCap, tpCap } from '../engine/game';
+import { activeTeam, apCap, concentrationCap, itemCap, mutedTrait, poopCap, tpCap } from '../engine/game';
 import { countTraits, traitTier } from '../engine/traits';
 import type { AbilityId, BossId, Merdomon, Rarity, RunState, Stats, TraitId } from '../engine/types';
 import { EnemyArt, MerdomonArt } from './art';
@@ -229,7 +229,7 @@ export function BossCard({ boss }: { boss: BossId }) {
   return (
     <div className="boss-card">
       <div className="boss-card-head">
-        <EnemyArt size={84} kind={info.kind} rarity="epic" boss />
+        <EnemyArt size={84} kind={info.kind} rarity="epic" boss bossId={boss} />
         <div>
           <h2>{info.name}</h2>
           <span className="boss-run">
@@ -256,14 +256,16 @@ export function BossCard({ boss }: { boss: BossId }) {
 }
 
 export function TraitsRow({ run, onTrait }: { run: RunState; onTrait: (t: TraitId) => void }) {
-  const counts = countTraits(run.team, run.items);
+  // Benched Merdomon (locked slots) don't count; the Group Admin mutes the most common trait.
+  const counts = countTraits(activeTeam(run), run.items);
+  const muted = mutedTrait(run);
   const active = TRAITS.filter((t) => counts[t] > 0);
   return (
     <div className="traitsrow">
       {active.map((t) => {
         const tier = traitTier(counts[t]);
         return (
-          <button key={t} className={`trait-chip ${tier > 0 ? 'on' : ''}`} onClick={() => onTrait(t)}>
+          <button key={t} className={`trait-chip ${tier > 0 && t !== muted ? 'on' : ''} ${t === muted ? 'muted' : ''}`} onClick={() => onTrait(t)}>
             <TraitIcon trait={t} size={16} />
             <b>{counts[t]}</b>
           </button>

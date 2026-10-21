@@ -1,4 +1,4 @@
-import type { EnemyKind, MerdomonKind, Rarity } from '../engine/types';
+import type { BossId, EnemyKind, MerdomonKind, Rarity } from '../engine/types';
 
 // Placeholder sketch art: one drawing per kind, scaled by size (Small / Big / Huge).
 
@@ -121,17 +121,69 @@ function Crown({ top }: { top: number }) {
   return <path fill="#f2c94c" d={`M32 ${top + 2} 28 ${top - 16}l11 8 11-12 11 12 11-8-4 18z`} />;
 }
 
+/** The level 4 Boss: a plumber with a cap, a moustache and a plunger. */
+function PlumberArt() {
+  return (
+    <>
+      <Crown top={12} />
+      <path fill="#3b6fb6" d="M24 94V72q0-16 26-16t26 16v22z" />
+      <path fill="none" strokeWidth="3" d="M38 58v16h24V58" />
+      <circle cx="44" cy="80" r="2" fill={INK} stroke="none" />
+      <circle cx="56" cy="80" r="2" fill={INK} stroke="none" />
+      <circle cx="50" cy="40" r="15" fill="#f3d2b0" />
+      <path fill="#d9534f" d="M34 36q1-16 16-16t16 16z" />
+      <path strokeWidth="4" d="M62 35h12" />
+      <path strokeWidth="3" d="M42 37l5 2M58 37l-5 2" />
+      <path fill={INK} d="M40 46q10-6 20 0-10 5-20 0z" />
+      <path stroke="#8a5a2b" strokeWidth="4" d="M86 26v50" />
+      <path fill="#c0392b" d="M76 84q10-14 20 0z" />
+      <circle cx="80" cy="64" r="6" fill="#f3d2b0" strokeWidth="3" />
+    </>
+  );
+}
+
+/** The level 5 Boss: a smartphone flooded with group messages. */
+function GroupAdminArt() {
+  return (
+    <>
+      <Crown top={22} />
+      <rect x="30" y="22" width="40" height="70" rx="8" fill={ENEMY_COLOR.phone} />
+      <rect x="35" y="30" width="30" height="52" rx="3" fill="#fff" strokeWidth="2.5" />
+      <AngryFace x={50} y={52} />
+      <path fill="#fff" strokeWidth="3" d="M4 34h18q4 0 4 4v8q0 4-4 4H12l-6 5v-5q-2 0-2-4z" />
+      <path fill="#fff" strokeWidth="3" d="M96 58H78q-4 0-4 4v8q0 4 4 4h10l6 5v-5q2 0 2-4z" />
+      <path strokeWidth="2" d="M9 40h12M9 45h8M79 64h12M79 69h8" />
+      <circle cx="72" cy="22" r="11" fill="#e74c3c" />
+      <text x="72" y="26" fontSize="10" fontWeight="bold" textAnchor="middle" fill="#fff" stroke="none">
+        99+
+      </text>
+    </>
+  );
+}
+
 export function EnemyArt({
   size = 56,
   kind = 'phone',
   rarity = 'common',
   boss = false,
+  bossId,
 }: {
   size?: number;
   kind?: EnemyKind;
   rarity?: Rarity;
   boss?: boolean;
+  /** Bosses with their own drawing (levels 4 and 5); the others use their type's art with a crown. */
+  bossId?: BossId;
 }) {
+  if (boss && (bossId === 'plumber' || bossId === 'groupAdmin')) {
+    return (
+      <svg viewBox="0 0 100 100" width={size} height={size} aria-hidden>
+        <g filter="url(#rough)" stroke={INK} strokeWidth="4" strokeLinejoin="round" strokeLinecap="round">
+          {bossId === 'plumber' ? <PlumberArt /> : <GroupAdminArt />}
+        </g>
+      </svg>
+    );
+  }
   return (
     <svg viewBox="0 0 100 100" width={size} height={size} aria-hidden>
       <g transform={scaled(boss ? 'epic' : rarity)}>

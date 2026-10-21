@@ -1,4 +1,5 @@
 import { BATHROOM_INFO, MAX_TIER, STRUCTURES, STRUCTURE_INFO } from '../engine/data';
+import { capacity, isOffline, production } from '../engine/game';
 import type { RunState, StructureId } from '../engine/types';
 import { MerdomonArt } from './art';
 import { Icon, type IconName } from './icons';
@@ -157,13 +158,12 @@ const PRODUCES_ICON: Record<StructureId, IconName> = {
 /** Two small badges: the limit it gives and, if any, its production per wave. */
 export function StructureBadges({ run, id }: { run: RunState; id: StructureId }) {
   const info = STRUCTURE_INFO[id];
-  const tier = run.structures[id];
-  const produces = info.production[tier];
+  const produces = production(run, id);
   return (
     <span className="struct-badges">
       <span className="struct-badge" title={info.capacity}>
         {id === 'toilet' ? <MerdomonArt size={12} /> : <Icon name={HOLDS_ICON[id]} size={11} fill="#fff" />}
-        {info.capacities[tier]}
+        {capacity(run, id)}
       </span>
       {produces > 0 && (
         <span className="struct-badge prod" title={`${info.produce} after each wave`}>
@@ -183,7 +183,7 @@ export function Bathroom({ run, onOpen }: { run: RunState; onOpen: (id: Structur
       {STRUCTURES.map((id) => (
         <button
           key={id}
-          className={`struct-block sk ${id} ${run.structures[id] === 0 ? 't0' : ''}`}
+          className={`struct-block sk ${id} ${run.structures[id] === 0 ? 't0' : ''} ${isOffline(run, id) ? 'offline' : ''}`}
           onClick={() => onOpen(id)}
           aria-label={STRUCTURE_INFO[id].name}
         >
@@ -191,6 +191,11 @@ export function Bathroom({ run, onOpen }: { run: RunState; onOpen: (id: Structur
           <StructureBadges run={run} id={id} />
           <StructureArt id={id} tier={run.structures[id]} size="100%" />
           <TierBadge tier={run.structures[id]} />
+          {isOffline(run, id) && (
+            <span className="offline-tag" title="Water Shut-Off">
+              🔧
+            </span>
+          )}
         </button>
       ))}
     </div>

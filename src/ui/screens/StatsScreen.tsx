@@ -74,7 +74,7 @@ function RunRow({ r, open, onToggle }: { r: RunRecord; open: boolean; onToggle: 
   return (
     <div className={`run-row sk ${open ? 'open' : ''} ${r.victory ? 'win' : 'lose'}`}>
       <button className="run-head" onClick={onToggle}>
-        <EnemyArt size={30} kind={boss.kind} rarity="epic" boss />
+        <EnemyArt size={30} kind={boss.kind} rarity="epic" boss bossId={r.boss} />
         <span className="run-result">{r.victory ? '✅' : '❌'}</span>
         <span className="run-main">
           <b>L{r.level}</b> · {r.victory ? 'Victory' : `Wave ${r.round}`}

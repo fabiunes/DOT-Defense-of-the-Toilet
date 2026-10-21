@@ -8,6 +8,9 @@ import {
   BIDET_CONCENTRATION,
   BATHROOMS,
   BUILD_COST,
+  GROUP_ADMIN,
+  PLUMBER,
+  TRAITS,
   BRUSH_MERDASCORE,
   CONCENTRATE_GAIN,
   EVACUATE_CHOICES,
@@ -42,7 +45,7 @@ import {
 } from './data';
 import { createEnemy, createMerdomon, createWave } from './generate';
 import { Rng } from './rng';
-import { apBonus, combatBonus, countTraits, traitValue } from './traits';
+import { activeTraits, apBonus, combatBonus, countTraits, traitValue } from './traits';
 import type {
   AbilityId,
   BathroomId,
@@ -58,6 +61,7 @@ import type {
   StartBonusId,
   StatKey,
   StructureId,
+  TraitId,
 } from './types';
 
 // Every action is a pure function: it returns a new state, or the same state if the action isn't allowed.
@@ -155,13 +159,46 @@ export function beginRun(prev: RunState, level: Level = 1, bathroom: BathroomId 
 
 // ---------- Structures: capacities ----------
 
+/** Structures that don't work this run (the Plumber's Water Shut-Off): they act as Tier 0. */
+export function isOffline(s: RunState, id: StructureId): boolean {
+  return s.boss === 'plumber' && PLUMBER.offline.includes(id);
+}
+
+/** The tier a structure works at (0 while offline). */
+export function workingTier(s: RunState, id: StructureId): number {
+  return isOffline(s, id) ? 0 : s.structures[id];
+}
+
 export function capacity(s: RunState, id: StructureId): number {
-  return STRUCTURE_INFO[id].capacities[s.structures[id]];
+  return STRUCTURE_INFO[id].capacities[workingTier(s, id)];
+}
+
+/** What a structure produces after each wave. */
+export function production(s: RunState, id: StructureId): number {
+  return STRUCTURE_INFO[id].production[workingTier(s, id)];
 }
 export const itemCap = (s: RunState) => capacity(s, 'sink');
 export const poopCap = (s: RunState) => capacity(s, 'bidet');
 export const tpCap = (s: RunState) => capacity(s, 'holder');
-export const teamCap = (s: RunState) => capacity(s, 'toilet');
+/** Merdomon slots locked by the Group Admin (Pinned Message, @everyone). */
+export function pinnedSlots(s: RunState): number {
+  if (s.boss !== 'groupAdmin' || s.round < GROUP_ADMIN.pinnedFrom) return 0;
+  return s.round >= ROUNDS ? GROUP_ADMIN.finalPinned : GROUP_ADMIN.pinned;
+}
+/** Merdomon that can fight: the Toilet's limit minus the locked slots (at least 1). */
+export const teamCap = (s: RunState) => Math.max(1, capacity(s, 'toilet') - pinnedSlots(s));
+/** The Merdomon that fight; those beyond the open slots sit out (benched). */
+export const activeTeam = (s: RunState) => s.team.slice(0, teamCap(s));
+
+/** Group Admin's Muted: the most common trait in the fighting team gives no bonus (ties change each round). */
+export function mutedTrait(s: RunState): TraitId | null {
+  if (s.boss !== 'groupAdmin') return null;
+  const counts = countTraits(activeTeam(s), s.items);
+  const order = TRAITS.map((_, i) => TRAITS[(i + s.round) % TRAITS.length]);
+  let best: TraitId | null = null;
+  for (const t of order) if (counts[t] > 0 && (best === null || counts[t] > counts[best])) best = t;
+  return best;
+}
 export const concentrationCap = (s: RunState) => capacity(s, 'stall');
 export const apCap = (s: RunState) => capacity(s, 'scrubber');
 
@@ -192,9 +229,9 @@ export function activeModifier(s: RunState): ModifierId | null {
 function startPreparation(s: RunState) {
   s.phase = 'preparation';
   // Unspent AP carry over, up to the Toilet Brush's limit.
-  s.ap = Math.min(apCap(s), s.ap + BASE_AP + apBonus(s.team, s.items) + s.bonusAp);
+  s.ap = Math.min(apCap(s), s.ap + BASE_AP + apBonus(activeTeam(s), s.items, mutedTrait(s)) + s.bonusAp);
   s.bonusAp = 0;
-  s.freeRerolls = STRUCTURE_INFO.scrubber.production[s.structures.scrubber];
+  s.freeRerolls = production(s, 'scrubber');
   s.modifierDisabled = false;
   const extraPoints = LEVEL_ENEMY_BONUS[s.level];
   s.wave = withRng(s, (rng) =>
@@ -204,6 +241,10 @@ function startPreparation(s: RunState) {
   if (s.modifiers[s.round] === 'groupChat') {
     const extra = withRng(s, (rng) => createEnemy(rng, s.nextId++, 'common', s.boss, extraPoints));
     s.wave.unshift({ ...extra, extra: true });
+  }
+  // The Group Admin's @everyone: one more Small enemy on the last wave.
+  if (s.boss === 'groupAdmin' && s.round === ROUNDS) {
+    s.wave.unshift(withRng(s, (rng) => createEnemy(rng, s.nextId++, 'common', s.boss, extraPoints)));
   }
   drawShop(s);
 }
@@ -517,7 +558,7 @@ export function buildTp(s: RunState, id: StructureId): number {
 }
 
 export function canBuild(s: RunState, id: StructureId): boolean {
-  return inPreparation(s) && s.structures[id] < MAX_TIER && s.ap >= BUILD_COST.ap && s.tp >= buildTp(s, id);
+  return inPreparation(s) && !isOffline(s, id) && s.structures[id] < MAX_TIER && s.ap >= BUILD_COST.ap && s.tp >= buildTp(s, id);
 }
 
 export function build(prev: RunState, id: StructureId): RunState {
@@ -626,7 +667,7 @@ function applyReward(s: RunState, r: Reward) {
 
 /** End-of-wave rewards from traits and items, the same whatever happens in the fight. */
 function passiveRewards(s: RunState): Reward[] {
-  const traits = countTraits(s.team, s.items);
+  const traits = activeTraits(activeTeam(s), s.items, mutedTrait(s));
   const rewards: Reward[] = [];
   const paper = traitValue('paper', traits.paper);
   if (paper > 0) rewards.push({ source: 'paper', resource: 'tp', amount: paper });
@@ -634,6 +675,12 @@ function passiveRewards(s: RunState): Reward[] {
   if (merdon > 0) rewards.push({ source: 'merdon', resource: 'merdascore', amount: merdon });
   if (s.items.includes('plunger')) rewards.push({ source: 'plunger', resource: 'merdascore', amount: BRUSH_MERDASCORE });
   if (s.items.includes('towel')) rewards.push({ source: 'towel', resource: 'tp', amount: TOWEL_TP });
+  // The Plumber's Knock Knock / Pipe Burst: Concentration lost on its waves.
+  const boss = s.wave.find((e) => e.boss);
+  if (s.boss === 'plumber' && boss) {
+    const amount = boss.bossForm === 'final' ? PLUMBER.finalConcentration : PLUMBER.midConcentration;
+    rewards.push({ source: 'plumber', resource: 'concentration', amount: -amount });
+  }
   return rewards;
 }
 
@@ -650,7 +697,7 @@ export function structureProduction(s: RunState): Reward[] {
   return STRUCTURES.filter((id) => resource[id] !== 'reroll').map((id) => ({
     source: id,
     resource: resource[id] as Reward['resource'],
-    amount: STRUCTURE_INFO[id].production[s.structures[id]],
+    amount: production(s, id),
   }));
 }
 
@@ -677,13 +724,18 @@ export function fight(prev: RunState): RunState {
   const toothbrushHp = s.items.includes('toothbrush') ? s.ap : 0;
   const modifier = activeModifier(s);
   const result = withRng(s, (rng) =>
-    simulateCombat(s.team, s.wave, s.items, rng, { extraHp: toothbrushHp, modifier, bossId: s.boss }),
+    simulateCombat(activeTeam(s), s.wave, s.items, rng, {
+      extraHp: toothbrushHp,
+      modifier,
+      bossId: s.boss,
+      muted: mutedTrait(s),
+    }),
   );
 
   // What changes at combat start, for the pre-fight recap.
   const bonuses: CombatBonus[] = [];
   const statBonus =
-    modifier === 'wifiDown' ? { hp: 0, atk: 0, def: 0, spd: 0 } : combatBonus(s.team, s.items);
+    modifier === 'wifiDown' ? { hp: 0, atk: 0, def: 0, spd: 0 } : combatBonus(activeTeam(s), s.items, mutedTrait(s));
   const BONUS_TRAIT = { hp: 'healthy', atk: 'fighter', def: 'defender', spd: 'haste' } as const;
   for (const k of STAT_KEYS) if (statBonus[k] > 0) bonuses.push({ source: BONUS_TRAIT[k], stat: k, amount: statBonus[k] });
   if (toothbrushHp > 0) bonuses.push({ source: 'toothbrush', stat: 'hp', amount: toothbrushHp });
@@ -712,12 +764,13 @@ export function fight(prev: RunState): RunState {
   if (modifier && result.won && s.round < ROUNDS)
     rewards.push({ source: modifier, resource: 'ap', amount: MODIFIER_AP_REWARD });
   rewards.push(...structureRewards(s));
-  const produce = (id: StructureId) => STRUCTURE_INFO[id].production[s.structures[id]];
+  const produce = (id: StructureId) => production(s, id);
   for (const r of rewards) applyReward(s, r);
 
   // Combat-only bonus HP is dropped; fallen Merdomon come back with half their max HP.
   s.team.forEach((m, i) => {
-    const hp = result.hpAfter[i];
+    // Benched Merdomon (locked slots) did not fight: their HP stay.
+    const hp = i < result.hpAfter.length ? result.hpAfter[i] : m.hp;
     m.hp = hp > 0 ? Math.min(hp, m.stats.hp) : Math.ceil(m.stats.hp / 2);
     // The Shower heals everyone a little after each wave.
     m.hp = Math.min(m.stats.hp, m.hp + produce('stall'));
@@ -738,6 +791,7 @@ export function fight(prev: RunState): RunState {
 
   s.lastCombat = {
     round: s.round,
+    bossId: s.boss,
     bonuses,
     modifier,
     won: result.won,

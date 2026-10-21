@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.11
+
+### Nuove funzioni
+- **Livello 4 – 🔧 The Plumber** (tipo Console, nemici +3 punti statistica):
+  - per tutta la partita, *Water Shut-Off*: Shower e Bidet spenti (Tier 0, non costruibili);
+  - wave 5, *Knock Knock*: −1 Concentration all'inizio del combattimento;
+  - wave 10, *Pipe Burst*: −2 Concentration e il suo primo attacco colpisce 2 volte.
+- **Livello 5 – 📲 The Group Admin** (tipo Smartphone, nemici +4 punti statistica):
+  - per tutta la partita, *Muted*: il tratto più presente non dà bonus;
+  - dalla wave 5, *Pinned Message*: l'ultimo slot delle Merdomon è bloccato e chi c'è resta in panchina;
+  - wave 10, *@everyone*: 2 slot bloccati e un nemico Small in più.
+- Disegni dedicati per i due nuovi Boss.
+- **Livelli da sbloccare**: si parte dal livello 1; vincere un livello sblocca il successivo. Le vittorie già nello storico valgono, e la password Testing Privilege sblocca tutto.
+- **Ricompensa per livello**: i Toilet Points guadagnati sono lo score × 1 / 1,1 / 1,25 / 1,5 / 2. Lo score resta invariato.
+- Rules: la pagina "Levels & Bosses" è divisa in due, con i sabotaggi spiegati.
+
 ## v0.10
 
 ### Nuove funzioni

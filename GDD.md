@@ -1,6 +1,6 @@
 # D.o.t.T. – Defense of the Toilet · Game Design Document
 
-> Versione regole: **v0.10** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
+> Versione regole: **v0.11** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
 >
 > Fonte ufficiale delle regole. Il gioco è interamente in **inglese**; questo documento è in italiano, con i termini di gioco in inglese.
 
@@ -179,13 +179,27 @@ Le wave **3, 6 e 9** hanno un modificatore, estratto a inizio partita tra questi
 
 ### 9c. Boss
 
-A inizio partita il giocatore sceglie il **livello di difficoltà**, che determina il Boss: **Livello 1 – The Bestseller**, **Livello 2 – The StreamDeck**, **Livello 3 – Demon Scroller** (per ora tutti selezionabili; in futuro da sbloccare). Ai livelli 2 e 3 ogni nemico normale ha anche **+1 / +2 punti statistica**. Ogni Boss dà **+1 ATK a tutti i nemici del suo tipo** per tutta la partita, e combatte due volte: in forma **media** alla wave 5 (Big, 15 punti) e in forma **finale** alla wave 10 (Huge, 22 punti). È sempre l'ultimo della fila.
+A inizio partita il giocatore sceglie il **livello di difficoltà**, che determina il Boss: **Livello 1 – The Bestseller**, **Livello 2 – The StreamDeck**, **Livello 3 – Demon Scroller**, **Livello 4 – The Plumber**, **Livello 5 – The Group Admin**. Dal livello 2 ogni nemico normale ha **+1 / +2 / +3 / +4 punti statistica**.
+
+**Sblocco**: all'inizio è aperto solo il livello 1; **vincere il livello N sblocca N+1** (le vittorie delle versioni precedenti, presenti nello storico, valgono). La password Testing Privilege sblocca tutti i livelli.
+
+**Ricompensa**: lo score non cambia, ma i **Toilet Points** guadagnati sono score × **1 / 1,1 / 1,25 / 1,5 / 2** (livelli 1–5).
+ Ogni Boss dà **+1 ATK a tutti i nemici del suo tipo** per tutta la partita, e combatte due volte: in forma **media** alla wave 5 (Big, 15 punti) e in forma **finale** alla wave 10 (Huge, 22 punti). È sempre l'ultimo della fila.
 
 | Boss | Tipo | Abilità (forma media) | Abilità (forma finale) |
 |---|---|---|---|
 | 📱 **Demon Scroller** | Smartphone | **Endless Feed**: +1 HP per ogni punto di Concentration perso finora nella partita | Uguale |
 | 📚 **The Bestseller** | Book | **Plot Twist**: +1 DEF dopo ogni suo attacco | +1 DEF e +1 ATK dopo ogni suo attacco |
 | 🎮 **The StreamDeck** | Console | **Extra Life**: torna in vita una volta con metà HP | Torna in vita una volta con tutti gli HP |
+| 🔧 **The Plumber** (liv. 4) | Console | **Knock Knock**: −1 Concentration all'inizio del combattimento | **Pipe Burst**: −2 Concentration all'inizio del combattimento, e il suo primo attacco colpisce 2 volte |
+| 📲 **The Group Admin** (liv. 5) | Smartphone | **Pinned Message**: dalla preparazione della wave 5 l'ultimo slot delle Merdomon è bloccato | **@everyone**: alla wave 10 gli slot bloccati sono 2 e arriva 1 nemico Small in più in testa |
+
+**Sabotaggi per tutta la partita** (oltre al +1 ATK al loro tipo):
+- **The Plumber – Water Shut-Off**: **Shower e Bidet sono spenti**, funzionano come al Tier 0 (limite minimo, nessuna produzione) e non si possono costruire. Sui blocchi c'è 🔧.
+- **The Group Admin – Muted**: il **tratto più presente** tra le Merdomon che combattono (e gli oggetti) non dà bonus (conta 0); a parità ne viene scelto uno, che cambia a ogni round. Il tratto appare barrato con 🔇.
+- **Slot bloccati**: le Merdomon oltre gli slot aperti restano **in panchina** (🔒 Bench): non combattono, non contano per i tratti e tengono i loro HP. Trascinandole si sceglie chi resta fuori. Evacuate è possibile solo se c'è uno slot aperto libero.
+
+Il Plumber e il Group Admin hanno un disegno dedicato.
 
 ### 9d. Strutture del bagno
 
@@ -240,7 +254,7 @@ A inizio partita si sceglie il bagno: decide il **Tier di partenza delle struttu
 
 L'ordine (Office → Public → Home → Hotel) è quello della forza, ed è lo stesso nella schermata Toilets e all'inizio della partita. Office A è l'unico gratuito ed è il bagno di default. Le risorse iniziali non superano il limite delle strutture. Si parte con **0 Toilet Points**.
 
-**Testing Privilege**: l'ultima pagina della schermata Toilets ha il tasto **Unlock All Toilet**; con la password dei tester sblocca tutti i bagni senza spendere Toilet Points. Nel codice c'è solo l'hash SHA-256 della password.
+**Testing Privilege**: l'ultima pagina della schermata Toilets ha il tasto **Unlock All Toilet**; con la password dei tester sblocca tutti i bagni (e tutti i livelli) senza spendere Toilet Points. Nel codice c'è solo l'hash SHA-256 della password.
 
 ## 10. Preparation
 
@@ -290,7 +304,7 @@ In entrambi i casi, poi:
 
 - **Home**: Toilet Points in alto a destra; New Game, Tutorial Game, Continue, Rules, Stats, Toilets; in basso il numero di versione e l'avviso sulle statistiche anonime (§14).
 - **Tutorial Game**: partita guidata di 2 round (§15).
-- **Inizio partita**: carosello dei livelli (Boss) in alto e carosello dei bagni in basso, con Start o Unlock.
+- **Inizio partita**: carosello dei livelli (Boss) in alto e carosello dei bagni in basso, con Start o Unlock. Ogni livello mostra il moltiplicatore dei Toilet Points; quelli bloccati mostrano "🔒 Win Level N".
 - **Toilets**: collezione dei bagni, 2 per pagina, con strutture, risorse iniziali e tasto Unlock; 5ª pagina **Testing Privilege** (§9g).
 - **Rules** (ex Tutorial): 20 pagine con icone e regole, con esempi presi dalla schermata principale.
 - **Starter**: scelta tra 3 Merdomon Small, poi schermata abilità + +1 con Confirm.

@@ -1,7 +1,7 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { BATHROOMS, BATHROOM_INFO, BOSS_INFO, LEVELS, LEVEL_BOSS, LEVEL_ENEMY_BONUS, STRUCTURES, STRUCTURE_INFO } from '../../engine/data';
+import { BATHROOMS, BATHROOM_INFO, BOSS_INFO, LEVELS, LEVEL_BOSS, LEVEL_ENEMY_BONUS, LEVEL_REWARD, STRUCTURES, STRUCTURE_INFO } from '../../engine/data';
 import { beginRun } from '../../engine/game';
-import { isUnlocked, loadBest, loadToiletPoints, unlockBathroom } from '../../engine/save';
+import { isLevelUnlocked, isUnlocked, loadBest, loadToiletPoints, unlockBathroom } from '../../engine/save';
 import type { BathroomId, Level, RunState } from '../../engine/types';
 import { analytics } from '../analytics';
 import { EnemyArt } from '../art';
@@ -17,6 +17,7 @@ export function BossRevealScreen({ run, update }: { run: RunState; update: Updat
   const [, refresh] = useState(0);
   const bathroom = BATHROOMS[bathroomIdx];
   const unlocked = isUnlocked(bathroom);
+  const levelOpen = isLevelUnlocked(level);
 
   return (
     <div className="screen setup">
@@ -38,7 +39,11 @@ export function BossRevealScreen({ run, update }: { run: RunState; update: Updat
         <BathroomCard id={bathroom} />
       </Carousel>
 
-      {unlocked ? (
+      {!levelOpen ? (
+        <button className="big-btn shadow" disabled>
+          🔒 Win Level {level - 1} to unlock
+        </button>
+      ) : unlocked ? (
         <button className="big-btn shadow" onClick={() => {
             analytics.runStart(level, bathroom);
             update((s) => beginRun(s, level, bathroom));
@@ -122,9 +127,10 @@ function Carousel({
 function LevelCard({ level }: { level: Level }) {
   const info = BOSS_INFO[LEVEL_BOSS[level]];
   const best = loadBest(level);
+  const open = isLevelUnlocked(level);
   return (
-    <div className="level-card">
-      <EnemyArt size={64} kind={info.kind} rarity="epic" boss />
+    <div className={`level-card ${open ? '' : 'level-locked'}`}>
+      <EnemyArt size={64} kind={info.kind} rarity="epic" boss bossId={LEVEL_BOSS[level]} />
       <span className="level-text">
         <span className="level-head">
           <b>Level {level}</b>
@@ -136,9 +142,12 @@ function LevelCard({ level }: { level: Level }) {
           {LEVEL_ENEMY_BONUS[level] > 0 && ` · enemies +${LEVEL_ENEMY_BONUS[level]} stat`}
         </small>
         <small>
-          <b>{info.ability}</b>: {info.finalDesc}
+          <b>{info.finalAbility ?? info.ability}</b>: {info.finalDesc}
         </small>
-        {best > 0 && <small className="level-best">Best: {best}</small>}
+        <small className="level-best">
+          {open ? (best > 0 ? `Best: ${best} · ` : '') : `🔒 Win Level ${level - 1} · `}
+          Toilet Points ×{LEVEL_REWARD[level]}
+        </small>
       </span>
     </div>
   );

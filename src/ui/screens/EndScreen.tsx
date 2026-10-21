@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { BATHROOM_INFO, BOSS_INFO } from '../../engine/data';
-import { recordRun } from '../../engine/save';
+import { BATHROOM_INFO, BOSS_INFO, LEVEL_REWARD } from '../../engine/data';
+import { recordRun, toiletPointsFor } from '../../engine/save';
 import { runScore } from '../../engine/score';
 import type { RunState } from '../../engine/types';
 import { analytics } from '../analytics';
@@ -46,7 +46,8 @@ export function EndScreen({ run, onHome, onNew }: { run: RunState; onHome: () =>
         </div>
         <div className={`score-best ${newRecord ? 'new' : ''}`}>
           <span className="points-earned">
-            +{total.toLocaleString('en')} <Icon name="toilet" size={15} fill="#f2c94c" /> Toilet Points
+            +{toiletPointsFor(total, run.level).toLocaleString('en')} <Icon name="toilet" size={15} fill="#f2c94c" /> Toilet
+            Points{LEVEL_REWARD[run.level] !== 1 && ` (×${LEVEL_REWARD[run.level]})`}
           </span>
           {newRecord ? `★ New Level ${run.level} record!` : `Level ${run.level} best: ${previousBest}`}
         </div>

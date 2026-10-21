@@ -1,4 +1,13 @@
-import { BATHROOMS, BATHROOM_INFO, HISTORY_MAX, STARTING_TOILET_POINTS, STRUCTURES, TESTING_PASSWORD_SHA256 } from './data';
+import {
+  BATHROOMS,
+  BATHROOM_INFO,
+  HISTORY_MAX,
+  LEVELS,
+  LEVEL_REWARD,
+  STARTING_TOILET_POINTS,
+  STRUCTURES,
+  TESTING_PASSWORD_SHA256,
+} from './data';
 import { runScore, type ScoreLine } from './score';
 import type { AbilityId, BathroomId, BossId, ItemId, Level, MerdomonKind, Rarity, RunState, StructureId } from './types';
 
@@ -112,8 +121,10 @@ export function recordRun(s: RunState, runId: string): { previousBest: number; r
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify([record, ...history].slice(0, HISTORY_MAX)));
     if (total > previousBest) localStorage.setItem(bestKey(s.level), String(total));
-    // The final score is also earned as Toilet Points.
-    localStorage.setItem(POINTS_KEY, String(loadToiletPoints() + total));
+    // The final score is also earned as Toilet Points, multiplied by the level's reward.
+    localStorage.setItem(POINTS_KEY, String(loadToiletPoints() + toiletPointsFor(total, s.level)));
+    // Winning a level unlocks the next one.
+    if (record.victory) unlockLevel((s.level + 1) as Level);
   } catch {
     // Storage unavailable: nothing is recorded.
   }
@@ -169,6 +180,7 @@ export async function unlockAllWithPassword(password: string): Promise<boolean> 
   if ((await sha256(password)) !== TESTING_PASSWORD_SHA256) return false;
   try {
     localStorage.setItem(UNLOCKED_KEY, JSON.stringify([...BATHROOMS]));
+    localStorage.setItem(LEVELS_KEY, JSON.stringify([...LEVELS]));
   } catch {
     return false;
   }
@@ -189,4 +201,36 @@ export function claimTutorialReward(points: number): number {
   } catch {
     return 0;
   }
+}
+
+// ---------- Levels (unlocked by winning the previous one) ----------
+
+const LEVELS_KEY = 'dot.unlockedLevels';
+
+/** Toilet Points earned by a run: its score times the level's reward (rounded). */
+export function toiletPointsFor(score: number, level: Level): number {
+  return Math.round(score * LEVEL_REWARD[level]);
+}
+
+function storedLevels(): Level[] {
+  try {
+    return JSON.parse(localStorage.getItem(LEVELS_KEY) ?? '[]') as Level[];
+  } catch {
+    return [];
+  }
+}
+
+function unlockLevel(level: Level) {
+  if (!LEVELS.includes(level) || storedLevels().includes(level)) return;
+  try {
+    localStorage.setItem(LEVELS_KEY, JSON.stringify([...storedLevels(), level]));
+  } catch {
+    // Storage unavailable: nothing is unlocked.
+  }
+}
+
+/** Level 1 is always open; the others need a win on the previous level (also before v0.11, from the history). */
+export function isLevelUnlocked(level: Level): boolean {
+  if (level === 1 || storedLevels().includes(level)) return true;
+  return loadHistory().some((r) => r.victory && r.level === level - 1);
 }

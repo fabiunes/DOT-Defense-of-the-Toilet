@@ -1,7 +1,7 @@
 import { ABILITY, JACKPOT, TOWEL_BONUS, TOWEL_KIND } from './data';
 import type { Rng } from './rng';
 import { combatBonus } from './traits';
-import type { AbilityId, BossId, CombatEvent, Enemy, Fighter, ItemId, Merdomon, ModifierId, Side } from './types';
+import type { AbilityId, BossId, CombatEvent, Enemy, Fighter, ItemId, Merdomon, ModifierId, Side, TraitId } from './types';
 
 export interface CombatResult {
   won: boolean;
@@ -28,6 +28,8 @@ export interface CombatOptions {
   modifier?: ModifierId | null;
   /** The run's Boss, for its in-fight ability. */
   bossId?: BossId;
+  /** Trait giving no bonus (Group Admin). */
+  muted?: TraitId | null;
 }
 
 /** Defense blocks half its value (rounded down); at least 1 damage always goes through. */
@@ -45,14 +47,14 @@ export function simulateCombat(
   wave: readonly Enemy[],
   items: readonly ItemId[],
   rng: Rng,
-  { extraHp = 0, modifier = null, bossId }: CombatOptions = {},
+  { extraHp = 0, modifier = null, bossId, muted = null }: CombatOptions = {},
 ): CombatResult {
   const events: CombatEvent[] = [];
   const silent = modifier === 'silentMode';
   const has = (i: number, a: AbilityId) => !silent && team[i]?.ability === a;
 
   const bonus =
-    modifier === 'wifiDown' ? { hp: 0, atk: 0, def: 0, spd: 0 } : combatBonus(team, items);
+    modifier === 'wifiDown' ? { hp: 0, atk: 0, def: 0, spd: 0 } : combatBonus(team, items, muted);
   bonus.hp += extraHp;
   const towel = (m: Merdomon) => items.some((i) => TOWEL_KIND[i] === m.kind);
   const ps: Fighter[] = team.map((m) => {
@@ -110,6 +112,7 @@ export function simulateCombat(
   const flipFlops = items.includes('flipflops');
   const secondWindUsed = ps.map(() => false);
   let extraLifeUsed = false;
+  let pipeBurstUsed = false;
   const kills = ps.map(() => 0);
   let damageDealt = 0;
   let merdomonFallen = 0;
@@ -189,9 +192,17 @@ export function simulateCombat(
         }
       } else {
         const reduction = has(pi, 'thickSkin') ? ABILITY.thickSkin : 0;
-        const dealt = Math.min(damage(e.atk, p.def, reduction), p.hp);
-        p.hp -= dealt;
-        events.push({ type: 'attack', side: 'e', damage: dealt, hp: p.hp, double: false });
+        // Pipe Burst: the final Plumber's first attack hits twice.
+        const pipeBurst = e.boss && bossId === 'plumber' && e.bossForm === 'final' && !pipeBurstUsed;
+        if (pipeBurst) {
+          pipeBurstUsed = true;
+          events.push({ type: 'boss', boss: bossId, index: ei });
+        }
+        for (let h = 0; h < (pipeBurst ? 2 : 1) && p.hp > 0; h++) {
+          const dealt = Math.min(damage(e.atk, p.def, reduction), p.hp);
+          p.hp -= dealt;
+          events.push({ type: 'attack', side: 'e', damage: dealt, hp: p.hp, double: h > 0 });
+        }
         if (e.boss && bossId === 'bestseller') {
           e.def += 1;
           if (e.bossForm === 'final') e.atk += 1;
