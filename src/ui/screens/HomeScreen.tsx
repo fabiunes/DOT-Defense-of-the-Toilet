@@ -5,6 +5,7 @@ import { ToiletPoints } from './ToiletsScreen';
 export function HomeScreen({
   hasSave,
   onNew,
+  onTutorialGame,
   onContinue,
   onTutorial,
   onStats,
@@ -12,6 +13,7 @@ export function HomeScreen({
 }: {
   hasSave: boolean;
   onNew: () => void;
+  onTutorialGame: () => void;
   onContinue: () => void;
   onTutorial: () => void;
   onStats: () => void;
@@ -31,11 +33,14 @@ export function HomeScreen({
         <button className="big-btn shadow" onClick={onNew}>
           <Icon name="play" size={22} fill="#1b1b1b" /> New Game
         </button>
+        <button className="big-btn shadow" onClick={onTutorialGame}>
+          <Icon name="star" size={22} fill="#f2c94c" /> Tutorial Game
+        </button>
         <button className="big-btn shadow" onClick={onContinue} disabled={!hasSave}>
           <Icon name="ff" size={22} fill="#fff" /> Continue
         </button>
         <button className="big-btn shadow" onClick={onTutorial}>
-          <Icon name="question" size={22} fill="#fff" /> Tutorial
+          <Icon name="question" size={22} fill="#fff" /> Rules
         </button>
         <button className="big-btn shadow" onClick={onStats}>
           <Icon name="trophy" size={22} fill="#fff" /> Stats

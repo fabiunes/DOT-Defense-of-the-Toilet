@@ -785,7 +785,7 @@ export function TutorialScreen({ onClose }: { onClose: () => void }) {
     >
       <div className="tut-head">
         <h2>{page.title}</h2>
-        <button className="icon-btn" onClick={onClose} aria-label="Close tutorial">
+        <button className="icon-btn" onClick={onClose} aria-label="Close rules">
           <Icon name="close" size={22} />
         </button>
       </div>

@@ -1,6 +1,6 @@
 # D.o.t.T. – Defense of the Toilet · Game Design Document
 
-> Versione regole: **v0.9** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
+> Versione regole: **v0.10** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
 >
 > Fonte ufficiale delle regole. Il gioco è interamente in **inglese**; questo documento è in italiano, con i termini di gioco in inglese.
 
@@ -288,10 +288,11 @@ In entrambi i casi, poi:
 
 ## 12. Schermate
 
-- **Home**: Toilet Points in alto a destra; New Game, Continue, Tutorial, Stats, Toilets; in basso il numero di versione e l'avviso sulle statistiche anonime (§14).
+- **Home**: Toilet Points in alto a destra; New Game, Tutorial Game, Continue, Rules, Stats, Toilets; in basso il numero di versione e l'avviso sulle statistiche anonime (§14).
+- **Tutorial Game**: partita guidata di 2 round (§15).
 - **Inizio partita**: carosello dei livelli (Boss) in alto e carosello dei bagni in basso, con Start o Unlock.
 - **Toilets**: collezione dei bagni, 2 per pagina, con strutture, risorse iniziali e tasto Unlock; 5ª pagina **Testing Privilege** (§9g).
-- **Tutorial**: 20 pagine con icone e regole, con esempi presi dalla schermata principale.
+- **Rules** (ex Tutorial): 20 pagine con icone e regole, con esempi presi dalla schermata principale.
 - **Starter**: scelta tra 3 Merdomon Small, poi schermata abilità + +1 con Confirm.
 - **Starting bonus**: scelta tra oggetto, Merdomon Small e Supplies.
 - **Main / Preparation** (dall'alto verso il basso):
@@ -322,3 +323,17 @@ Con **GoatCounter** (senza cookie, senza dati personali), dashboard: https://fab
 | `testing-privilege` | Password Testing Privilege corretta |
 
 I dati sono aggregati: non si vede chi ha giocato, solo quante partite e con quali esiti.
+
+## 15. Tutorial Game
+
+Partita guidata di **2 round** dalla Home (tasto **Tutorial Game**, sotto New Game). È preparata in anticipo, sempre uguale: Home Bathroom A, livello 1, nessun modificatore, starter fissi, wave con nemici deboli (1 al round 1, 2 al round 2) che si vincono sempre; all'inizio del round 2 si hanno almeno 40 TP per provare Shop e Build.
+
+**Percorso obbligato**: ogni passo oscura lo schermo tranne l'elemento da usare e mostra un fumetto. I passi informativi hanno il tasto Next; quelli d'azione proseguono quando il giocatore fa l'azione. C'è sempre **Skip tutorial**.
+
+| Round | Passi |
+|---|---|
+| Inizio | benvenuto; scelta dello starter (taglia, tipo, statistiche); abilità e +1; bonus di partenza (Supplies) |
+| 1 | Concentration; TP e Poop; Action Points; Preparation → Evacuate (Small) → scelta → abilità e +1; tratti; trascinare per cambiare l'ordine; Next Wave → Fight; combattimento; ricompense |
+| 2 | il bagno (limiti e produzione); Shop → acquisto; Build → struttura → Build; tasto Bonus; Next Wave → Fight; ricompense |
+
+Alla fine: schermata **Tutorial complete!** con **+500 Toilet Points** (solo la prima volta), il rimando a Rules e i tasti New Game, Rules, Home. Il tutorial non viene salvato (Continue), non va nello storico né nei record. Eventi GoatCounter: `tutorial-start`, `tutorial-complete`, `tutorial-skip`.

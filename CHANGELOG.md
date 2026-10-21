@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.10
+
+### Nuove funzioni
+- **Tutorial Game**: una partita guidata di 2 round, con tasto in Home sotto New Game.
+  - Percorso obbligato: lo schermo si oscura tranne l'elemento da usare, con un fumetto che spiega.
+  - Round 1: starter, abilità e +1, bonus di partenza, Concentration, TP e Poop, Action Points, Evacuate, tratti, ordine della squadra trascinando, Next Wave e combattimento.
+  - Round 2: il bagno, Shop, Build, tasto Bonus e secondo combattimento.
+  - Wave facili, sempre vinte. **Skip tutorial** sempre disponibile.
+  - Alla fine **+500 Toilet Points**, solo la prima volta.
+  - Non viene salvato e non entra nello storico. Su GoatCounter si vedono inizio, completamento e abbandono.
+- Il vecchio Tutorial (le pagine con le regole) si chiama ora **Rules**.
+
 ## v0.9
 
 ### Punteggio

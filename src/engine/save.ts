@@ -174,3 +174,19 @@ export async function unlockAllWithPassword(password: string): Promise<boolean> 
   }
   return true;
 }
+
+// ---------- Tutorial Game ----------
+
+const TUTORIAL_KEY = 'dot.tutorialDone';
+
+/** Gives the tutorial's Toilet Points the first time only. Returns the points given (0 if already claimed). */
+export function claimTutorialReward(points: number): number {
+  try {
+    if (localStorage.getItem(TUTORIAL_KEY)) return 0;
+    localStorage.setItem(TUTORIAL_KEY, '1');
+    localStorage.setItem(POINTS_KEY, String(loadToiletPoints() + points));
+    return points;
+  } catch {
+    return 0;
+  }
+}

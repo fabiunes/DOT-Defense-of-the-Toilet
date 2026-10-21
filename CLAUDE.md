@@ -27,6 +27,6 @@ Roguelite auto-battler for smartphones (web app). Rules live in [GDD.md](GDD.md)
 
 1. Update rules in `src/engine`, add/adjust tests (`src/engine/*.test.ts`), run `npm test` and `npm run build`.
 2. If the saved state shape changes, bump `RunState.version` and the save key in `save.ts`.
-3. Update the **tutorial** (`TutorialScreen.tsx`), **GDD.md** and **CHANGELOG.md** (Italian).
+3. Update the **Rules** pages (`TutorialScreen.tsx`), the guided **Tutorial Game** if the basics changed (`src/engine/tutorial.ts`, `src/ui/TutorialGuide.tsx`), **GDD.md** and **CHANGELOG.md** (Italian).
 4. Bump `version` in `package.json` (shown on the Home screen as vX.Y).
 5. Commit, tag `vX.Y`, push, create the GitHub release from the CHANGELOG section; GitHub Actions deploys to https://fabiunes.github.io/DOT-Defense-of-the-Toilet/.

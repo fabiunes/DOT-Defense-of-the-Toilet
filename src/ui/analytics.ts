@@ -33,4 +33,7 @@ export const analytics = {
   },
   unlock: (bathroom: BathroomId) => track(`unlock/${bathroom}`),
   testingUnlock: () => track('testing-privilege'),
+  tutorialStart: () => track('tutorial-start'),
+  tutorialComplete: () => track('tutorial-complete'),
+  tutorialSkip: () => track('tutorial-skip'),
 };

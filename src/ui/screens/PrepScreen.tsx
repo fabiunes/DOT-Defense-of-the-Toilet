@@ -287,7 +287,7 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       )}
       {panel?.kind === 'structure' && <StructurePanel run={run} id={panel.id} update={update} onClose={close} />}
       {panel?.kind === 'build' && (
-        <Modal onClose={close}>
+        <Modal onClose={close} className="build-panel">
           <div className="panel-head">
             <Icon name="upgrade" size={26} />
             <b>Build</b>
@@ -557,7 +557,7 @@ function StructurePanel({ run, id, update, onClose }: { run: RunState; id: Struc
   const max = tier >= MAX_TIER;
   const next = (list: readonly number[]) => (max ? null : list[tier + 1]);
   return (
-    <Modal onClose={onClose}>
+    <Modal onClose={onClose} className="structure-panel">
       <div className="structure-head">
         <span className={tier === 0 ? 't0-art' : ''}>
           <StructureIcon id={id} tier={tier} size={72} />
@@ -726,7 +726,7 @@ function ActionPanel({
   ];
 
   const renderTile = (t: Tile) => (
-    <button key={t.key} className="tile sk" disabled={!t.enabled} onClick={t.onClick}>
+    <button key={t.key} className="tile sk" data-tut={`tile-${t.key}`} disabled={!t.enabled} onClick={t.onClick}>
       <Icon name={t.icon} size={30} fill="#fff" />
       <span className="tile-label">{t.label}</span>
       <CostBadge {...t.cost} />
@@ -750,7 +750,7 @@ function ActionPanel({
 function EvacuatePanel({ run, update, onClose }: { run: RunState; update: Update; onClose: () => void }) {
   const rarities: Rarity[] = ['common', 'rare', 'epic'];
   return (
-    <Modal onClose={onClose}>
+    <Modal onClose={onClose} className="evacuate-panel">
       <div className="panel-head">
         <Icon name="toilet" size={28} fill="#fff" />
         <CostBadge ap={1} />
