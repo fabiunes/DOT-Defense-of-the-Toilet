@@ -2369,3 +2369,151 @@ button:disabled {
 .password-form .wrong {
   color: var(--bad, #d64545);
 }
+
+/* ---------- v0.9: structure badges, Bonus panel, drag to reorder ---------- */
+.struct-block {
+  flex-direction: column;
+  gap: 2px;
+}
+.struct-block svg.struct-art,
+.struct-block > svg {
+  flex: 1;
+  min-height: 0;
+}
+.struct-badges {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.struct-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  font-size: 11px;
+  line-height: 1;
+  padding: 1px 4px;
+  border: 1.5px solid var(--ink);
+  border-radius: 8px;
+  background: #fff;
+}
+.struct-badge svg {
+  flex: none !important;
+  width: 11px;
+  height: 11px;
+}
+.struct-badge.prod {
+  background: #e3f3e4;
+  border-color: var(--good);
+  color: var(--good);
+}
+.struct-block .tier-badge {
+  top: auto;
+  bottom: 3px;
+}
+.struct-block.t0 .struct-badges {
+  filter: none;
+  opacity: 0.7;
+}
+.prep .main-buttons {
+  grid-template-columns: 1fr 1.3fr auto;
+}
+.bonus-btn {
+  flex-direction: column;
+  gap: 0;
+  padding: 4px 8px;
+  min-width: 0;
+}
+.bonus-btn small {
+  font-size: 13px;
+  line-height: 1;
+}
+.slot-drag {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  border-radius: var(--r);
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.slot-drag > .card {
+  flex: 1;
+  min-width: 0;
+}
+.slot-drag.drag-origin > .card {
+  opacity: 0.3;
+}
+.slot-drag.drop-target {
+  outline: 3px dashed var(--good);
+  outline-offset: 2px;
+}
+.drag-ghost {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  pointer-events: none;
+  transform: rotate(-3deg) scale(1.05);
+  opacity: 0.92;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.25));
+}
+.drag-ghost > .card {
+  flex: 1;
+}
+.bonus-panel .panel-head b {
+  font-size: 20px;
+}
+.bonus-section {
+  margin: 8px 0 2px;
+  font-size: 13px;
+  font-weight: normal;
+  color: #666;
+  border-bottom: 1px dashed #bbb;
+}
+.bonus-structures {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+.bonus-structure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 2px 4px;
+}
+.bonus-structure.none {
+  opacity: 0.4;
+}
+.bonus-row {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  font-size: 15px;
+}
+.bonus-row > :first-child {
+  justify-self: center;
+}
+.bonus-gain {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+.bonus-panel .bonus-section {
+  margin-top: 6px;
+}
+.bonus-panel .bonus-row {
+  min-height: 22px;
+  font-size: 14px;
+}
+.bonus-panel .bonus-structure .mod-emoji,
+.bonus-panel .bonus-row .mod-emoji {
+  font-size: 18px;
+}
+.modal.bonus-panel {
+  gap: 4px;
+}

@@ -1,6 +1,6 @@
 # D.o.t.T. – Defense of the Toilet · Game Design Document
 
-> Versione regole: **v0.8** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
+> Versione regole: **v0.9** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
 >
 > Fonte ufficiale delle regole. Il gioco è interamente in **inglese**; questo documento è in italiano, con i termini di gioco in inglese.
 
@@ -175,7 +175,7 @@ Le wave **3, 6 e 9** hanno un modificatore, estratto a inizio partita tra questi
 | 🎰 **Jackpot** | Nemici +1 ATK e +1 HP, ma TP e Poop della wave raddoppiati |
 
 - **Ricompensa**: se vinci una wave con il modificatore attivo, **+1 AP** nella preparazione del round successivo.
-- **Corrupt**: nel recap che compare premendo Next Wave (o dallo Scout), per **3 TP** (senza sconto). Si perde anche la ricompensa.
+- **Corrupt**: nel recap che compare premendo Next Wave, per **3 TP** (senza sconto). Si perde anche la ricompensa.
 
 ### 9c. Boss
 
@@ -204,22 +204,24 @@ Sei blocchi nella parte bassa della schermata, come gli slot dei Merdomon: in al
 
 ### 9e. Punteggio finale
 
-Mostrato a fine partita con il dettaglio. C'è un **record per ogni livello**, salvato nel browser. Il punteggio si aggiunge ai **Toilet Points** (§9g), sia in caso di vittoria sia di sconfitta.
+Mostrato a fine partita con il dettaglio. Conta solo quello che si fa durante la partita: **vincere non dà punti**. C'è un **record per ogni livello**, salvato nel browser (azzerato nella v0.9 con la nuova formula). Il punteggio si aggiunge ai **Toilet Points** (§9g), sia in caso di vittoria sia di sconfitta.
+
+| Voce | Punti |
+|---|---|
+| Distrazione sconfitta | Small 10, Big 15, Boss medio 20, Boss finale 30 |
+| Merdomon creato (starter, bonus iniziale, Evacuate; anche se poi eliminato) | Small 10, Big 15, Huge 20 |
+| Oggetto ottenuto (Shop, regalo, bonus iniziale; anche se poi scartato) | 10 |
+| Potenziamento di struttura costruito durante la partita | 10 per Tier |
+| Poop prodotta (ricompense di fine wave e strutture) | 10 per punto |
+| Toilet Paper guadagnata (tutta: wave, strutture, Trade, Supplies) | 1 per punto |
+| Concentration rimasta | 10 per punto |
+
+Con il bot una partita vale in media circa 700–1.200 punti con i bagni base (1.300–1.750 se vinta).
 
 ### 9f. Statistiche
 
 Schermata **Stats** dalla Home: riepilogo (partite, vittorie, record per livello) e lo storico delle **ultime 50 partite concluse** (quelle abbandonate non vengono salvate), dalla più recente, 6 per pagina. Ogni partita è una riga (icona del Boss, vinta o persa, livello, wave, punteggio, data) che toccata si espande con: bagno, dettaglio del punteggio, squadra finale, oggetti, Tier delle strutture, danni, Merdomon creati, TP e Poop prodotti.
 
-| Voce | Punti |
-|---|---|
-| Wave vinta | 100 |
-| Distrazione sconfitta | 10 |
-| Wave con modificatore vinta senza Corrupt | 50 |
-| Boss medio / finale sconfitto | 150 / 300 |
-| Vittoria | 500 |
-| Concentration rimasta | 30 per punto |
-| Potenziamento di struttura costruito durante la partita | 25 |
-| Poop prodotta (ricompense di fine wave e strutture) | 10 per punto |
 
 ### 9g. Tipi di bagno e Toilet Points
 
@@ -228,13 +230,13 @@ A inizio partita si sceglie il bagno: decide il **Tier di partenza delle struttu
 | Bagno | Shower | Sink | Bidet | Toilet Brush | Toilet | Paper Holder | TP | Concentration | Poop | Costo |
 |---|---|---|---|---|---|---|---|---|---|---|
 | **Office Bathroom A** | 0 | 1 | 0 | 1 | 1 | 1 | 5 | 8 | 5 | gratis |
-| **Office Bathroom B** | 0 | 0 | 0 | 0 | 1 | 3 | 5 | 6 | 10 | 5.000 |
-| **Public Toilet A** | 0 | 0 | 0 | 0 | 3 | 3 | 0 | 5 | 10 | 5.000 |
-| **Public Toilet B** | 0 | 1 | 1 | 0 | 2 | 0 | 10 | 6 | 12 | 10.000 |
-| **Home Bathroom A** | 1 | 1 | 1 | 1 | 1 | 1 | 3 | 10 | 5 | 15.000 |
-| **Home Bathroom B** | 0 | 1 | 2 | 1 | 2 | 0 | 0 | 8 | 3 | 30.000 |
-| **Hotel Bathroom A** | 2 | 2 | 2 | 2 | 2 | 2 | 0 | 4 | 0 | 40.000 |
-| **Hotel Bathroom B** | 3 | 3 | 3 | 3 | 3 | 3 | 0 | 1 | 0 | 100.000 |
+| **Office Bathroom B** | 0 | 0 | 0 | 0 | 1 | 3 | 5 | 6 | 10 | 2.000 |
+| **Public Toilet A** | 0 | 0 | 0 | 0 | 3 | 3 | 0 | 5 | 10 | 2.000 |
+| **Public Toilet B** | 0 | 1 | 1 | 0 | 2 | 0 | 10 | 6 | 12 | 4.000 |
+| **Home Bathroom A** | 1 | 1 | 1 | 1 | 1 | 1 | 3 | 10 | 5 | 6.000 |
+| **Home Bathroom B** | 0 | 1 | 2 | 1 | 2 | 0 | 0 | 8 | 3 | 10.000 |
+| **Hotel Bathroom A** | 2 | 2 | 2 | 2 | 2 | 2 | 0 | 4 | 0 | 15.000 |
+| **Hotel Bathroom B** | 3 | 3 | 3 | 3 | 3 | 3 | 0 | 1 | 0 | 30.000 |
 
 L'ordine (Office → Public → Home → Hotel) è quello della forza, ed è lo stesso nella schermata Toilets e all'inizio della partita. Office A è l'unico gratuito ed è il bagno di default. Le risorse iniziali non superano il limite delle strutture. Si parte con **0 Toilet Points**.
 
@@ -257,11 +259,9 @@ L'ordine (Office → Public → Home → Hotel) è quello della forza, ed è lo 
 
 | Azione | Nome | Costo | Effetto |
 |---|---|---|---|
-| Organize | **Organize** | – | Riordina la squadra |
 | Flush | **Flush** | 5 TP | Elimina un Merdomon → +1 Concentration (fino al limite). Non sull'ultimo Merdomon. |
 | Bonus Action | **Bonus Action** | 15 TP | +1 AP (fino al limite del Toilet Brush) |
 | Scoreggia | **Farting** | 3 TP | +1 HP a un Merdomon ferito. Ripetibile, senza sconto dell'Hand Shower |
-| Anteprima | **Scout** | – | Mostra le statistiche dei nemici in arrivo, nell'ordine di combattimento |
 | Combat | **Fight** | – | Avvia la wave |
 
 ## 11. Combattimento (automatico)
@@ -295,9 +295,9 @@ In entrambi i casi, poi:
 - **Starter**: scelta tra 3 Merdomon Small, poi schermata abilità + +1 con Confirm.
 - **Starting bonus**: scelta tra oggetto, Merdomon Small e Supplies.
 - **Main / Preparation** (dall'alto verso il basso):
-  - griglia 2×3 dei Merdomon, con il nome del tipo sul bordo di ogni carta;
-  - bottoni **Preparation** e **Next Wave**, tra le due griglie;
-  - griglia 2×3 del bagno con le strutture (§9d);
+  - griglia 2×3 dei Merdomon, con il nome del tipo sul bordo di ogni carta. **L'ordine si cambia trascinando** una Merdomon su un altro slot: su un'altra Merdomon le scambia, su uno slot vuoto la sposta in fondo. Un tocco senza trascinare apre il dettaglio;
+  - bottoni **Preparation**, **Next Wave** (con il recap della wave in arrivo) e **Bonus**, tra le due griglie. **Bonus** apre il pannello con tutto quello che si ottiene dopo la wave e la sua origine: produzione di tutte le strutture, tratti e oggetti, regalo; quello che dipende dal combattimento (TP dai danni, Collector, Fertilizer, Jackpot); se vinci (Poop per sopravvissuto, AP del modificatore); se perdi (−Concentration per nemico sopravvissuto);
+  - griglia 2×3 del bagno con le strutture (§9d): sotto il nome di ogni blocco due badge, il limite e la produzione per wave (se maggiore di 0);
   - in alto: TP (sinistra), barra Concentration (centro), Poop (destra), con i limiti; sotto, "Round X/10", borsa oggetti (n/limite), Boss, "Actions ◆ /limite", poi i tratti. Gli slot oltre il limite del Toilet sono mostrati bloccati.
 - **Preparation panel**: griglia di icone con il costo indicato (AP per le azioni costose, TP per le altre).
 - **Merdomon detail**: popup con statistiche e tratti, a icone.

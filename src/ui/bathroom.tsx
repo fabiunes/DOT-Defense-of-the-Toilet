@@ -1,5 +1,7 @@
 import { BATHROOM_INFO, MAX_TIER, STRUCTURES, STRUCTURE_INFO } from '../engine/data';
 import type { RunState, StructureId } from '../engine/types';
+import { MerdomonArt } from './art';
+import { Icon, type IconName } from './icons';
 
 // Sketch art for the bathroom structures. Higher tiers add details: blue accents at Tier 2, gold at Tier 3.
 
@@ -134,6 +136,45 @@ export function TierBadge({ tier }: { tier: number }) {
   return <span className={`tier-badge t${tier}`}>{tier >= MAX_TIER ? 'MAX' : `T${tier}`}</span>;
 }
 
+/** What each structure holds and what it produces after every wave, as icons. */
+const HOLDS_ICON: Record<StructureId, IconName> = {
+  stall: 'focus',
+  sink: 'shop',
+  bidet: 'poop',
+  scrubber: 'ap',
+  toilet: 'toilet',
+  holder: 'tp',
+};
+const PRODUCES_ICON: Record<StructureId, IconName> = {
+  stall: 'heart',
+  sink: 'ap',
+  bidet: 'focus',
+  scrubber: 'dice',
+  toilet: 'poop',
+  holder: 'tp',
+};
+
+/** Two small badges: the limit it gives and, if any, its production per wave. */
+export function StructureBadges({ run, id }: { run: RunState; id: StructureId }) {
+  const info = STRUCTURE_INFO[id];
+  const tier = run.structures[id];
+  const produces = info.production[tier];
+  return (
+    <span className="struct-badges">
+      <span className="struct-badge" title={info.capacity}>
+        {id === 'toilet' ? <MerdomonArt size={12} /> : <Icon name={HOLDS_ICON[id]} size={11} fill="#fff" />}
+        {info.capacities[tier]}
+      </span>
+      {produces > 0 && (
+        <span className="struct-badge prod" title={`${info.produce} after each wave`}>
+          +{produces}
+          <Icon name={PRODUCES_ICON[id]} size={11} fill="#fff" />
+        </span>
+      )}
+    </span>
+  );
+}
+
 /** The bottom of the main screen: six blocks like the Merdomon slots, one structure each. All tappable. */
 export function Bathroom({ run, onOpen }: { run: RunState; onOpen: (id: StructureId) => void }) {
   return (
@@ -147,6 +188,7 @@ export function Bathroom({ run, onOpen }: { run: RunState; onOpen: (id: Structur
           aria-label={STRUCTURE_INFO[id].name}
         >
           <span className="block-label">{STRUCTURE_INFO[id].name}</span>
+          <StructureBadges run={run} id={id} />
           <StructureArt id={id} tier={run.structures[id]} size="100%" />
           <TierBadge tier={run.structures[id]} />
         </button>

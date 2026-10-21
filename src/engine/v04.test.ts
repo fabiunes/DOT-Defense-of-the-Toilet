@@ -133,8 +133,8 @@ describe('bosses', () => {
   });
 });
 
-describe('final score', () => {
-  it('adds up the run', () => {
+describe('final score (v0.9)', () => {
+  it('counts only what was done during the run, not the victory', () => {
     const s = prep();
     const scored: RunState = {
       ...s,
@@ -143,15 +143,19 @@ describe('final score', () => {
       structures: { stall: 1, sink: 2, bidet: 1, scrubber: 1, holder: 3, toilet: 1 },
       stats: {
         ...s.stats,
-        wavesWon: 9,
-        enemiesDefeated: 40,
-        modifierWavesWon: 2,
+        enemiesBySize: { common: 20, rare: 10, epic: 0 },
         midBossDefeated: true,
         finalBossDefeated: true,
+        merdomonBySize: { common: 3, rare: 2, epic: 1 },
+        itemsObtained: 4,
         merdascoreEarned: 25,
+        tpEarned: 130,
       },
     };
-    const { total } = runScore(scored);
-    expect(total).toBe(900 + 400 + 100 + 150 + 300 + 500 + 120 + 75 + 250);
+    const { lines, total } = runScore(scored);
+    // enemies 200 + 150 + bosses 20 + 30; Merdomon 30 + 30 + 20; items 40; upgrades 3 x 10; Poop 250; TP 130; Concentration 40
+    expect(total).toBe(400 + 80 + 40 + 30 + 250 + 130 + 40);
+    expect(runScore({ ...scored, phase: 'gameover' }).total).toBe(total);
+    expect(lines.find((l) => l.label === 'Distractions defeated')!.count).toBe(32);
   });
 });

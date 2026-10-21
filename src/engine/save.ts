@@ -2,7 +2,7 @@ import { BATHROOMS, BATHROOM_INFO, HISTORY_MAX, STARTING_TOILET_POINTS, STRUCTUR
 import { runScore, type ScoreLine } from './score';
 import type { AbilityId, BathroomId, BossId, ItemId, Level, MerdomonKind, Rarity, RunState, StructureId } from './types';
 
-const KEY = 'dot.save.v7';
+const KEY = 'dot.save.v8';
 
 export function saveRun(s: RunState): void {
   try {
@@ -17,7 +17,7 @@ export function loadRun(): RunState | null {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as RunState;
-    return s?.version === 7 && s.phase === 'preparation' ? s : null;
+    return s?.version === 8 && s.phase === 'preparation' ? s : null;
   } catch {
     return null;
   }
@@ -33,7 +33,8 @@ export function clearSave(): void {
 
 // ---------- Records and history (finished runs only) ----------
 
-const bestKey = (level: Level) => `dot.best.${level}`;
+// v0.9 changed the score formula: records start again under a new key.
+const bestKey = (level: Level) => `dot.best.v2.${level}`;
 const HISTORY_KEY = 'dot.history';
 
 /** Best final score for a difficulty level on this device (0 if none). */

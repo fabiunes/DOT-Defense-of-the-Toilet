@@ -1,5 +1,5 @@
 import { SCORE, STRUCTURES } from './data';
-import type { RunState } from './types';
+import type { Rarity, RunState } from './types';
 
 export interface ScoreLine {
   label: string;
@@ -7,22 +7,31 @@ export interface ScoreLine {
   points: number;
 }
 
-/** Final score of a run, with the breakdown shown on the end screen. */
+const SIZES: readonly Rarity[] = ['common', 'rare', 'epic'];
+const bySize = (counts: Record<Rarity, number>, points: Record<Rarity, number>) =>
+  SIZES.reduce((t, r) => t + (counts[r] ?? 0) * points[r], 0);
+const total = (counts: Record<Rarity, number>) => SIZES.reduce((t, r) => t + (counts[r] ?? 0), 0);
+
+/** Final score of a run, with the breakdown shown on the end screen. Winning itself gives no points. */
 export function runScore(s: RunState): { lines: ScoreLine[]; total: number } {
   const st = s.stats;
   // Only upgrades built during the run count.
   const tiers = STRUCTURES.reduce((t, id) => t + Math.max(0, s.structures[id] - s.startStructures[id]), 0);
-  const victory = s.phase === 'victory';
+  const bosses = (st.midBossDefeated ? 1 : 0) + (st.finalBossDefeated ? 1 : 0);
+  const bossPoints = (st.midBossDefeated ? SCORE.midBoss : 0) + (st.finalBossDefeated ? SCORE.finalBoss : 0);
+  const concentration = Math.max(0, s.concentration);
   const lines: ScoreLine[] = [
-    { label: 'Waves won', count: st.wavesWon, points: st.wavesWon * SCORE.waveWon },
-    { label: 'Distractions defeated', count: st.enemiesDefeated, points: st.enemiesDefeated * SCORE.enemy },
-    { label: 'Modifier waves won', count: st.modifierWavesWon, points: st.modifierWavesWon * SCORE.modifierWave },
-    { label: 'Mid Boss defeated', count: st.midBossDefeated ? 1 : 0, points: st.midBossDefeated ? SCORE.midBoss : 0 },
-    { label: 'Final Boss defeated', count: st.finalBossDefeated ? 1 : 0, points: st.finalBossDefeated ? SCORE.finalBoss : 0 },
-    { label: 'Victory', count: victory ? 1 : 0, points: victory ? SCORE.victory : 0 },
-    { label: 'Concentration left', count: s.concentration, points: s.concentration * SCORE.concentration },
+    {
+      label: 'Distractions defeated',
+      count: total(st.enemiesBySize) + bosses,
+      points: bySize(st.enemiesBySize, SCORE.enemy) + bossPoints,
+    },
+    { label: 'Merdomon created', count: total(st.merdomonBySize), points: bySize(st.merdomonBySize, SCORE.merdomon) },
+    { label: 'Items obtained', count: st.itemsObtained, points: st.itemsObtained * SCORE.item },
     { label: 'Structure upgrades', count: tiers, points: tiers * SCORE.structureTier },
     { label: 'Poop produced', count: st.merdascoreEarned, points: st.merdascoreEarned * SCORE.poop },
+    { label: 'Toilet Paper earned', count: st.tpEarned, points: st.tpEarned * SCORE.tp },
+    { label: 'Concentration left', count: concentration, points: concentration * SCORE.concentration },
   ];
   return { lines, total: lines.reduce((t, l) => t + l.points, 0) };
 }

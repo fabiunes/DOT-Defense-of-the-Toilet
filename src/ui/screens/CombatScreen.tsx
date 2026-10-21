@@ -244,7 +244,7 @@ function Queue({ fighters, hp, active, enemy = false }: { fighters: Fighter[]; h
   );
 }
 
-function SourceIcon({ source }: { source: RewardSource }) {
+export function SourceIcon({ source }: { source: RewardSource }) {
   switch (source) {
     case 'survivors':
       return <MerdomonArt size={24} />;

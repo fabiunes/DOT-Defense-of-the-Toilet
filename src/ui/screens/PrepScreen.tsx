@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
+  ABILITY,
   BATHROOM_INFO,
   BOSS_INFO,
   BUILD_COST,
   COSTS,
   FARTING,
+  GIFT_WAVE,
   EVACUATE_COST,
   ITEM_INFO,
   KIND_NAME,
@@ -18,11 +20,12 @@ import {
   STRUCTURES,
   STRUCTURE_INFO,
   CONCENTRATE_GAIN,
+  TRAIT_INFO,
   TRADE,
 } from '../../engine/data';
 import * as G from '../../engine/game';
 import { countTraits } from '../../engine/traits';
-import type { ItemId, Rarity, RunState, StructureId, TraitId } from '../../engine/types';
+import type { ItemId, ModifierId, Rarity, Reward, RunState, StructureId, TraitId } from '../../engine/types';
 import { EnemyArt } from '../art';
 import { Bathroom, StructureIcon } from '../bathroom';
 import {
@@ -39,12 +42,14 @@ import {
   TraitDetail,
   TraitsRow,
 } from '../components';
-import { Icon, ItemIcon, STAT_ICON, TraitIcon, type IconName } from '../icons';
+import { Icon, ItemIcon, RESOURCE_ICON, STAT_ICON, TraitIcon, type IconName } from '../icons';
 import type { Update } from '../update';
+import { SourceIcon } from './CombatScreen';
 import { NewMerdomonModal } from './NewMerdomonModal';
 
 type Panel =
   | { kind: 'actions' }
+  | { kind: 'bonus' }
   | { kind: 'evacuate' }
   | { kind: 'shop' }
   | { kind: 'trade' }
@@ -59,31 +64,94 @@ type Panel =
   | { kind: 'item'; item: ItemId }
   | { kind: 'trait'; trait: TraitId };
 
-type Mode = 'organize' | 'flush' | 'tradeStat' | 'fart' | null;
+type Mode = 'flush' | 'tradeStat' | 'fart' | null;
 
-const MODE_ICON: Record<Exclude<Mode, null>, IconName> = { organize: 'swap', flush: 'flush', tradeStat: 'upgrade', fart: 'heart' };
+const MODE_ICON: Record<Exclude<Mode, null>, IconName> = { flush: 'flush', tradeStat: 'upgrade', fart: 'heart' };
+
+/** A Merdomon being dragged to a new slot (pointer position and the card's size, for the floating copy). */
+interface Drag {
+  from: number;
+  pointerId: number;
+  startX: number;
+  startY: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  moving: boolean;
+  over: number | null;
+}
+
+/** Movement (px) after which a press becomes a drag instead of a tap. */
+const DRAG_THRESHOLD = 8;
+
+const slotAt = (x: number, y: number) => {
+  const el = document.elementFromPoint(x, y)?.closest('[data-slot]');
+  return el ? Number(el.getAttribute('data-slot')) : null;
+};
 
 export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
   const [panel, setPanel] = useState<Panel | null>(null);
   const [mode, setMode] = useState<Mode>(null);
-  const [swapFrom, setSwapFrom] = useState<number | null>(null);
+  const [drag, setDrag] = useState<Drag | null>(null);
+  // The click that ends a drag must not open the Merdomon detail.
+  const justDragged = useRef(false);
   const close = () => setPanel(null);
 
-  const exitMode = () => {
-    setMode(null);
-    setSwapFrom(null);
+  const exitMode = () => setMode(null);
+
+  const onPointerDown = (index: number, e: React.PointerEvent) => {
+    justDragged.current = false;
+    if (mode || !run.team[index] || !G.canOrganize(run)) return;
+    const card = (e.target as Element).closest('.card')!.getBoundingClientRect();
+    setDrag({
+      from: index,
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      x: e.clientX,
+      y: e.clientY,
+      width: card.width,
+      height: card.height,
+      moving: false,
+      over: null,
+    });
   };
+
+  useEffect(() => {
+    if (!drag) return;
+    const move = (e: PointerEvent) => {
+      if (e.pointerId !== drag.pointerId) return;
+      const moving = drag.moving || Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > DRAG_THRESHOLD;
+      setDrag({ ...drag, x: e.clientX, y: e.clientY, moving, over: moving ? slotAt(e.clientX, e.clientY) : null });
+    };
+    const end = (e: PointerEvent) => {
+      if (e.pointerId !== drag.pointerId) return;
+      if (drag.moving) {
+        justDragged.current = true;
+        const to = slotAt(e.clientX, e.clientY);
+        if (to !== null && to < G.teamCap(run)) update((s) => G.moveMerdomon(s, drag.from, to));
+      }
+      setDrag(null);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+    };
+  }, [drag, run, update]);
 
   const onSlot = (index: number) => {
     const m = run.team[index];
     if (!m) return;
-    if (mode === 'organize') {
-      if (swapFrom === null) setSwapFrom(index);
-      else {
-        update((s) => G.swap(s, swapFrom, index));
-        setSwapFrom(null);
-      }
-    } else if (mode === 'flush') {
+    if (justDragged.current) {
+      justDragged.current = false;
+      return;
+    }
+    if (mode === 'flush') {
       setPanel({ kind: 'flush', id: m.id });
     } else if (mode === 'tradeStat') {
       setPanel({ kind: 'tradeStat', id: m.id });
@@ -103,11 +171,21 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       <InfoRow run={run} onItems={() => setPanel({ kind: 'items' })} onBoss={() => setPanel({ kind: 'boss' })} />
       <TraitsRow run={run} onTrait={(trait) => setPanel({ kind: 'trait', trait })} />
 
-      <div className="slots">
+      <div className={`slots ${drag?.moving ? 'dragging' : ''}`}>
         {Array.from({ length: 6 }, (_, i) => {
           const m = run.team[i];
+          const dropTarget = drag?.moving && drag.over === i && i !== drag.from && i < G.teamCap(run);
           if (m)
-            return <MerdomonCard key={m.id} m={m} onClick={() => onSlot(i)} selected={mode === 'organize' && swapFrom === i} />;
+            return (
+              <div
+                key={m.id}
+                className={`slot-drag ${dropTarget ? 'drop-target' : ''} ${drag?.moving && drag.from === i ? 'drag-origin' : ''}`}
+                data-slot={i}
+                onPointerDown={(e) => onPointerDown(i, e)}
+              >
+                <MerdomonCard m={m} onClick={() => onSlot(i)} />
+              </div>
+            );
           if (i >= G.teamCap(run))
             return (
               <button key={`lock-${i}`} className="card empty locked" onClick={() => setPanel({ kind: 'structure', id: 'toilet' })}>
@@ -115,22 +193,28 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
                 <small>Toilet T{i - 2}</small>
               </button>
             );
-          return <EmptySlot key={`empty-${i}`} index={i} />;
+          return (
+            <div key={`empty-${i}`} className={`slot-drag ${dropTarget ? 'drop-target' : ''}`} data-slot={i}>
+              <EmptySlot index={i} />
+            </div>
+          );
         })}
       </div>
+      {drag?.moving && run.team[drag.from] && (
+        <div
+          className="drag-ghost"
+          style={{ left: drag.x - drag.width / 2, top: drag.y - drag.height / 2, width: drag.width, height: drag.height }}
+        >
+          <MerdomonCard m={run.team[drag.from]} />
+        </div>
+      )}
 
       {mode ? (
         <div className="mode-bar sk">
           <Icon name={MODE_ICON[mode]} size={22} />
-          <span>{mode === 'organize'
-              ? swapFrom === null
-                ? 'Tap a Merdomon'
-                : 'Tap where to move it'
-              : mode === 'fart'
-                ? `Tap to heal +${FARTING.hp} (${FARTING.tp} TP)`
-                : 'Tap a Merdomon'}</span>
+          <span>{mode === 'fart' ? `Tap to heal +${FARTING.hp} (${FARTING.tp} TP)` : 'Tap a Merdomon'}</span>
           <button className="icon-btn" onClick={exitMode} aria-label="Done">
-            <Icon name={mode === 'organize' || mode === 'fart' ? 'check' : 'close'} size={20} />
+            <Icon name={mode === 'fart' ? 'check' : 'close'} size={20} />
           </button>
         </div>
       ) : (
@@ -147,6 +231,10 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
               <Icon name="fight" size={22} /> Next Wave
             </span>
             <WavePreview run={run} />
+          </button>
+          <button className="big-btn shadow bonus-btn" onClick={() => setPanel({ kind: 'bonus' })}>
+            <Icon name="star" size={20} fill="#f2c94c" />
+            <small>Bonus</small>
           </button>
         </div>
       )}
@@ -165,7 +253,8 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
           }}
         />
       )}
-      {panel?.kind === 'evacuate' && <EvacuatePanel run={run} update={update} onClose={close} />}
+      {panel?.kind === 'bonus' && <BonusPanel run={run} onClose={close} />}
+      {panel?.kind === 'evacuate' &&<EvacuatePanel run={run} update={update} onClose={close} />}
       {panel?.kind === 'shop' && <ShopPanel run={run} update={update} onClose={close} />}
       {panel?.kind === 'scout' && <ScoutPanel run={run} update={update} onClose={close} fight={panel.fight} />}
       {panel?.kind === 'items' && (
@@ -319,6 +408,130 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
     </div>
   );
 }
+
+/** Name of a reward source, for the Bonus panel. */
+function sourceName(source: Reward['source']): string {
+  if (source in TRAIT_INFO) return TRAIT_INFO[source as TraitId].name;
+  if (source in ITEM_INFO) return ITEM_INFO[source as ItemId].name;
+  if (source in MODIFIER_INFO) return MODIFIER_INFO[source as ModifierId].name;
+  if (source in STRUCTURE_INFO) return STRUCTURE_INFO[source as StructureId].name;
+  return '';
+}
+
+function Gain({ amount, icon }: { amount: number | string; icon: IconName }) {
+  return (
+    <b className="bonus-gain">
+      {typeof amount === 'number' && amount > 0 ? '+' : ''}
+      {amount}
+      <Icon name={icon} size={15} fill="#fff" />
+    </b>
+  );
+}
+
+/** Everything the coming wave gives, and where it comes from. */
+function BonusPanel({ run, onClose }: { run: RunState; onClose: () => void }) {
+  const { sure, ifWon } = G.previewRewards(run);
+  const modifier = G.activeModifier(run);
+  const abilities = modifier === 'silentMode' ? [] : run.team.map((m) => m.ability);
+  return (
+    <Modal onClose={onClose} className="bonus-panel">
+      <div className="panel-head">
+        <Icon name="star" size={24} fill="#f2c94c" />
+        <b>After this wave</b>
+      </div>
+
+      <h4 className="bonus-section">Bathroom</h4>
+      <div className="bonus-structures">
+        {STRUCTURES.map((id) => {
+          const amount = STRUCTURE_INFO[id].production[run.structures[id]];
+          return (
+            <span key={id} className={`bonus-structure sk ${amount > 0 ? '' : 'none'}`}>
+              <StructureIcon id={id} tier={run.structures[id]} size={24} />
+              <Gain amount={amount} icon={STRUCTURE_ICON[id]} />
+            </span>
+          );
+        })}
+      </div>
+
+      {(sure.length > 0 || run.round === GIFT_WAVE) && <h4 className="bonus-section">Traits and items</h4>}
+      {(sure.length > 0 || run.round === GIFT_WAVE) && (
+        <div className="bonus-structures">
+          {sure.map((r) => (
+            <span key={r.source} className="bonus-structure sk" title={sourceName(r.source)}>
+              <SourceIcon source={r.source} />
+              <Gain amount={r.amount} icon={RESOURCE_ICON[r.resource]} />
+            </span>
+          ))}
+          {run.round === GIFT_WAVE && (
+            <span className="bonus-structure sk" title="Gift: pick a free item">
+              <span className="mod-emoji">🎁</span>
+              <b className="bonus-gain">+1 item</b>
+            </span>
+          )}
+        </div>
+      )}
+
+      <h4 className="bonus-section">From the fight</h4>
+      <div className="bonus-row">
+        <Icon name="fist" size={22} fill="#fff" />
+        <span>Damage dealt</span>
+        <Gain amount="+1 each" icon="tp" />
+      </div>
+      {abilities.includes('collector') && (
+        <div className="bonus-row">
+          <SourceIcon source="collector" />
+          <span>Collector: per enemy defeated</span>
+          <Gain amount={ABILITY.collectorTp} icon="tp" />
+        </div>
+      )}
+      {abilities.includes('fertilizer') && (
+        <div className="bonus-row">
+          <SourceIcon source="fertilizer" />
+          <span>Fertilizer: if it survives</span>
+          <Gain amount={ABILITY.fertilizerMerdascore} icon="poop" />
+        </div>
+      )}
+      {modifier === 'jackpot' && (
+        <div className="bonus-row">
+          <SourceIcon source="jackpot" />
+          <span>Jackpot: wave TP and Poop</span>
+          <b className="bonus-gain">×2</b>
+        </div>
+      )}
+
+      <h4 className="bonus-section">If you win</h4>
+      <div className="bonus-row">
+        <SourceIcon source="survivors" />
+        <span>Each surviving Merdomon</span>
+        <Gain amount={1} icon="poop" />
+      </div>
+      {ifWon.map((r) => (
+        <div key={r.source} className="bonus-row">
+          <SourceIcon source={r.source} />
+          <span>{sourceName(r.source)}: next round</span>
+          <Gain amount={r.amount} icon={RESOURCE_ICON[r.resource]} />
+        </div>
+      ))}
+
+      <h4 className="bonus-section">If you lose</h4>
+      <div className="bonus-row">
+        <SourceIcon source="enemies" />
+        <span>Each surviving Distraction</span>
+        <Gain amount={-1} icon="focus" />
+      </div>
+    </Modal>
+  );
+}
+
+/** Icon of what each structure produces after a wave (the Toilet Brush gives free Re-Rolls). */
+const STRUCTURE_ICON: Record<StructureId, IconName> = {
+  stall: 'heart',
+  sink: 'ap',
+  bidet: 'focus',
+  scrubber: 'dice',
+  toilet: 'poop',
+  holder: 'tp',
+};
 
 function ItemRow({ item }: { item: ItemId }) {
   return (
@@ -487,14 +700,6 @@ function ActionPanel({
   ];
   const free: Tile[] = [
     {
-      key: 'organize',
-      icon: 'swap',
-      label: 'Organize',
-      enabled: G.canOrganize(run),
-      cost: {},
-      onClick: () => onMode('organize'),
-    },
-    {
       key: 'flush',
       icon: 'flush',
       label: 'Flush',
@@ -517,14 +722,6 @@ function ActionPanel({
       enabled: G.canFart(run),
       cost: { tp: FARTING.tp },
       onClick: () => onMode('fart'),
-    },
-    {
-      key: 'scout',
-      icon: 'eye',
-      label: 'Scout',
-      enabled: run.wave.length > 0,
-      cost: {},
-      onClick: () => onOpen({ kind: 'scout' }),
     },
   ];
 

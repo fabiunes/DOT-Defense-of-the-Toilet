@@ -41,6 +41,7 @@ import {
   TRADE,
 } from '../../engine/data';
 import type { Merdomon, Rarity, RunState } from '../../engine/types';
+import * as G from '../../engine/game';
 import { EnemyArt, MerdomonArt } from '../art';
 import { StructureIcon } from '../bathroom';
 import { AbilityBadge, CostBadge, InfoRow, MerdomonCard, Stars, StatValue, TopBar, TraitsRow } from '../components';
@@ -56,7 +57,7 @@ const demoTeam: Merdomon[] = [
 ];
 
 const demoRun: RunState = {
-  version: 7,
+  version: 8,
   phase: 'preparation',
   round: 3,
   concentration: 7,
@@ -89,21 +90,7 @@ const demoRun: RunState = {
   lastCombat: null,
   rngState: 1,
   nextId: 100,
-  stats: {
-    wavesWon: 0,
-    wavesLost: 0,
-    enemiesDefeated: 0,
-    damageDealt: 0,
-    merdomonCreated: 0,
-    merdomonFallen: 0,
-    tpEarned: 0,
-    merdascoreEarned: 0,
-    concentrationLost: 0,
-    itemsBought: 0,
-    modifierWavesWon: 0,
-    midBossDefeated: false,
-    finalBossDefeated: false,
-  },
+  stats: G.emptyStats(),
 };
 
 const noop = () => {};
@@ -498,24 +485,20 @@ const pages: Page[] = [
         <p className="tut-note">The bottom actions need no {ii('ap', '#1b1b1b')}:</p>
         <TileDemo
           tiles={[
-            { icon: 'swap', label: 'Organize', cost: {} },
             { icon: 'flush', label: 'Flush', cost: { tp: COSTS.flush } },
             { icon: 'bonus', label: 'Bonus Action', cost: { tp: COSTS.bonusAction } },
-            { icon: 'eye', label: 'Scout', cost: {} },
             { icon: 'heart', label: 'Farting', cost: { tp: FARTING.tp } },
           ]}
         />
-        <Row icon={I('swap')} title="Organize">
-          Tap a Merdomon, then where it goes. Slot 1 fights first!
-        </Row>
+
         <Row icon={I('flush')} title="Flush">
           Remove a Merdomon and get +1 Concentration.
         </Row>
         <Row icon={I('bonus')} title="Bonus Action">
           +1 {ii('ap', '#1b1b1b')} for this round.
         </Row>
-        <Row icon={I('eye')} title="Scout">
-          See the incoming Distractions, in fighting order.
+        <Row icon={I('swap')} title="Change the order">
+          On the main screen, drag a Merdomon onto another slot. Slot 1 fights first!
         </Row>
         <Row icon={I('heart')} title="Farting">
           +{FARTING.hp} HP to one Merdomon, as often as you like.
@@ -556,6 +539,9 @@ const pages: Page[] = [
           Tap Next Wave to see who is coming. Then <b>Corrupt</b> the wave modifier, or <b>Fight</b>: the battle plays out
           by itself.
         </p>
+        <Row icon={I('star', '#f2c94c')} title="Bonus">
+          The button next to Next Wave lists everything you get after the wave, and where it comes from.
+        </Row>
       </>
     ),
   },
@@ -564,7 +550,7 @@ const pages: Page[] = [
     body: (
       <>
         <p className="tut-note">
-          Waves {MODIFIER_WAVES.join(', ')} come with a twist, shown on Next Wave and in Scout. Win it for{' '}
+          Waves {MODIFIER_WAVES.join(', ')} come with a twist, shown on Next Wave and in its recap. Win it for{' '}
           <b>
             +{MODIFIER_AP_REWARD} {ii('ap', '#1b1b1b')}
           </b>{' '}
@@ -583,7 +569,7 @@ const pages: Page[] = [
     body: (
       <>
         <p className="tut-note">
-          The six blocks at the bottom set how much you can hold and what you get after every wave. Grey = Tier 0, not
+          The six blocks at the bottom set how much you can hold and what you get after every wave (the two badges under the name). Grey = Tier 0, not
           built yet. Build: {BUILD_COST.tp.join(' / ')} {ii('tp')} for Tier 1 / 2 / 3 (
           {BUILD_COST.hammerTp} with the Hammer), always + {BUILD_COST.ap} {ii('ap', '#1b1b1b')}.
         </p>
@@ -665,8 +651,9 @@ const pages: Page[] = [
           );
         })}
         <p className="tut-note">
-          Final score: {SCORE.waveWon} per wave won, {SCORE.enemy} per Distraction, Bosses, victory, Concentration left,
-          upgrades and {SCORE.poop} per Poop produced.
+          Final score (no points for winning): Distractions {SCORE.enemy.common}–{SCORE.finalBoss}, Merdomon created{' '}
+          {SCORE.merdomon.common}–{SCORE.merdomon.epic}, {SCORE.item} per item, upgrade, Poop and Concentration left,{' '}
+          {SCORE.tp} per Toilet Paper.
         </p>
       </>
     ),

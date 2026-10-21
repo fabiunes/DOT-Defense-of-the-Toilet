@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.9
+
+### Punteggio
+- Nuova formula: conta solo quello che si fa durante la partita, **vincere non dà punti**.
+  - Distrazioni sconfitte: Small 10, Big 15, Boss medio 20, Boss finale 30.
+  - Merdomon creati: Small 10, Big 15, Huge 20.
+  - Oggetti ottenuti: 10.
+  - Potenziamenti delle strutture: 10 per Tier.
+  - Poop prodotta: 10.
+  - Toilet Paper guadagnata (tutta): 1.
+  - Concentration rimasta: 10.
+- Eliminate le voci wave vinte, wave con modificatore, Boss medio, Boss finale e vittoria.
+- **Record per livello azzerati**. Storico partite e Toilet Points restano.
+
+### Bilanciamento
+- Costi dei bagni riscalati sul nuovo punteggio: Office B e Public A 2.000, Public B 4.000, Home A 6.000, Home B 10.000, Hotel A 15.000, Hotel B 30.000.
+
+### Interfaccia
+- **Badge sulle strutture**: sotto il nome di ogni blocco, il limite e la produzione per wave.
+- Nuovo tasto **Bonus** accanto a Next Wave: tutto quello che si ottiene dopo la wave, con la sua origine.
+- **Ordine della squadra trascinando** le Merdomon direttamente nella schermata principale.
+- Rimossi i tasti **Organize** e **Scout** (il recap della wave è già in Next Wave).
+
+> I salvataggi della v0.8 non sono compatibili: il tasto Continue li ignora.
+
 ## v0.8
 
 ### Nuove funzioni

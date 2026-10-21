@@ -147,6 +147,12 @@ export interface RunStats {
   merdascoreEarned: number;
   concentrationLost: number;
   itemsBought: number;
+  /** Shop, gift and starting bonus (discarded items count too). */
+  itemsObtained: number;
+  /** Created Merdomon by size (starter, starting bonus, Evacuate), flushed ones too. */
+  merdomonBySize: Record<Rarity, number>;
+  /** Defeated normal enemies by size (the Boss is counted by the two flags below). */
+  enemiesBySize: Record<Rarity, number>;
   modifierWavesWon: number;
   midBossDefeated: boolean;
   finalBossDefeated: boolean;
@@ -155,7 +161,7 @@ export interface RunStats {
 export type Phase = 'boss' | 'starter' | 'startBonus' | 'preparation' | 'combat' | 'gameover' | 'victory';
 
 export interface RunState {
-  version: 7;
+  version: 8;
   phase: Phase;
   round: number;
   concentration: number;

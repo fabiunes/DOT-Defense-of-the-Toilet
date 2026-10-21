@@ -273,14 +273,14 @@ export const BATHROOM_INFO: Record<
   }
 > = {
   officeA: { name: 'Office Bathroom A', color: '#eeeeea', cost: 0, structures: tiers(0, 1, 0, 1, 1, 1), tp: 5, concentration: 8, poop: 5 },
-  officeB: { name: 'Office Bathroom B', color: '#e0e0da', cost: 5000, structures: tiers(0, 0, 0, 0, 1, 3), tp: 5, concentration: 6, poop: 10 },
-  publicA: { name: 'Public Toilet A', color: '#eef6e6', cost: 5000, structures: tiers(0, 0, 0, 0, 3, 3), tp: 0, concentration: 5, poop: 10 },
-  publicB: { name: 'Public Toilet B', color: '#dfeed3', cost: 10000, structures: tiers(0, 1, 1, 0, 2, 0), tp: 10, concentration: 6, poop: 12 },
-  homeA: { name: 'Home Bathroom A', color: '#e8f1fb', cost: 15000, structures: tiers(1, 1, 1, 1, 1, 1), tp: 3, concentration: 10, poop: 5 },
+  officeB: { name: 'Office Bathroom B', color: '#e0e0da', cost: 2000, structures: tiers(0, 0, 0, 0, 1, 3), tp: 5, concentration: 6, poop: 10 },
+  publicA: { name: 'Public Toilet A', color: '#eef6e6', cost: 2000, structures: tiers(0, 0, 0, 0, 3, 3), tp: 0, concentration: 5, poop: 10 },
+  publicB: { name: 'Public Toilet B', color: '#dfeed3', cost: 4000, structures: tiers(0, 1, 1, 0, 2, 0), tp: 10, concentration: 6, poop: 12 },
+  homeA: { name: 'Home Bathroom A', color: '#e8f1fb', cost: 6000, structures: tiers(1, 1, 1, 1, 1, 1), tp: 3, concentration: 10, poop: 5 },
   // Concentration capped by the Shower at Tier 0.
-  homeB: { name: 'Home Bathroom B', color: '#d6e6f8', cost: 30000, structures: tiers(0, 1, 2, 1, 2, 0), tp: 0, concentration: 8, poop: 3 },
-  hotelA: { name: 'Hotel Bathroom A', color: '#fbf1dc', cost: 40000, structures: tiers(2, 2, 2, 2, 2, 2), tp: 0, concentration: 4, poop: 0 },
-  hotelB: { name: 'Hotel Bathroom B', color: '#f6e2b8', cost: 100000, structures: tiers(3, 3, 3, 3, 3, 3), tp: 0, concentration: 1, poop: 0 },
+  homeB: { name: 'Home Bathroom B', color: '#d6e6f8', cost: 10000, structures: tiers(0, 1, 2, 1, 2, 0), tp: 0, concentration: 8, poop: 3 },
+  hotelA: { name: 'Hotel Bathroom A', color: '#fbf1dc', cost: 15000, structures: tiers(2, 2, 2, 2, 2, 2), tp: 0, concentration: 4, poop: 0 },
+  hotelB: { name: 'Hotel Bathroom B', color: '#f6e2b8', cost: 30000, structures: tiers(3, 3, 3, 3, 3, 3), tp: 0, concentration: 1, poop: 0 },
 };
 
 /** Toilet Points a new player starts with. */
@@ -335,16 +335,17 @@ export const BOSS_INFO: Record<
 
 // ---------- Final score ----------
 
+/** Final score: only things done during the run, winning itself gives nothing. */
 export const SCORE = {
-  waveWon: 100,
-  enemy: 10,
-  modifierWave: 50,
-  midBoss: 150,
-  finalBoss: 300,
-  victory: 500,
-  concentration: 30,
-  structureTier: 25,
+  enemy: { common: 10, rare: 15, epic: 15 } as Record<Rarity, number>,
+  midBoss: 20,
+  finalBoss: 30,
+  merdomon: { common: 10, rare: 15, epic: 20 } as Record<Rarity, number>,
+  item: 10,
+  structureTier: 10,
   poop: 10,
+  tp: 1,
+  concentration: 10,
 } as const;
 
 export const BRUSH_MERDASCORE = 2;

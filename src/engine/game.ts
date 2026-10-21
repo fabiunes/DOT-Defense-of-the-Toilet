@@ -35,6 +35,7 @@ import {
   STARTER_CHOICES,
   STAT_KEYS,
   START_PACK,
+  STRUCTURES,
   STRUCTURE_INFO,
   TOWEL_TP,
   TRADE,
@@ -71,7 +72,7 @@ function withRng<T>(s: RunState, fn: (rng: Rng) => T): T {
   return result;
 }
 
-function emptyStats(): RunStats {
+export function emptyStats(): RunStats {
   return {
     wavesWon: 0,
     wavesLost: 0,
@@ -83,6 +84,9 @@ function emptyStats(): RunStats {
     merdascoreEarned: 0,
     concentrationLost: 0,
     itemsBought: 0,
+    itemsObtained: 0,
+    merdomonBySize: { common: 0, rare: 0, epic: 0 },
+    enemiesBySize: { common: 0, rare: 0, epic: 0 },
     modifierWavesWon: 0,
     midBossDefeated: false,
     finalBossDefeated: false,
@@ -91,7 +95,7 @@ function emptyStats(): RunStats {
 
 export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
   const s: RunState = {
-    version: 7,
+    version: 8,
     phase: 'boss',
     round: 1,
     concentration: MAX_CONCENTRATION,
@@ -165,7 +169,9 @@ function addConcentration(s: RunState, amount: number) {
   s.concentration = clamp(s.concentration + amount, 0, concentrationCap(s));
 }
 
+/** Every TP gained counts as produced for the score, even the part lost over the limit. */
 function addTp(s: RunState, amount: number) {
+  if (amount > 0) s.stats.tpEarned += amount;
   s.tp = clamp(s.tp + amount, 0, tpCap(s));
 }
 function addPoop(s: RunState, amount: number) {
@@ -265,6 +271,7 @@ export function confirmMerdomon(prev: RunState, stat: StatKey, ability: AbilityI
   s.pendingAbilities = [];
   s.team.push(m);
   s.stats.merdomonCreated++;
+  s.stats.merdomonBySize[m.rarity]++;
   if (s.phase === 'starter') {
     s.starters = [];
     s.phase = 'startBonus';
@@ -288,7 +295,10 @@ export function chooseStartBonus(prev: RunState, choice: StartBonusId): RunState
     setPending(s, options.merdomon);
     return s;
   }
-  if (choice === 'item') s.items.push(options.item);
+  if (choice === 'item') {
+    s.items.push(options.item);
+    s.stats.itemsObtained++;
+  }
   else {
     addTp(s, START_PACK.tp);
     addPoop(s, START_PACK.merdascore);
@@ -398,6 +408,7 @@ export function buy(prev: RunState, item: ItemId, discard?: ItemId): RunState {
   s.items.push(item);
   s.shopOffer = s.shopOffer.filter((i) => i !== item);
   s.stats.itemsBought++;
+  s.stats.itemsObtained++;
   return s;
 }
 
@@ -424,6 +435,17 @@ export function swap(prev: RunState, a: number, b: number): RunState {
   if (!canOrganize(prev) || a === b || !prev.team[a] || !prev.team[b]) return prev;
   const s = clone(prev);
   [s.team[a], s.team[b]] = [s.team[b], s.team[a]];
+  return s;
+}
+
+/** Drag and drop on the main screen: onto another Merdomon swaps them, onto an empty slot moves it last. */
+export function moveMerdomon(prev: RunState, from: number, to: number): RunState {
+  if (!canOrganize(prev) || from === to || !prev.team[from] || to < 0) return prev;
+  if (to < prev.team.length) return swap(prev, from, to);
+  if (from === prev.team.length - 1) return prev;
+  const s = clone(prev);
+  const [m] = s.team.splice(from, 1);
+  s.team.push(m);
   return s;
 }
 
@@ -540,6 +562,7 @@ export function takeGift(prev: RunState, item: ItemId, discard?: ItemId): RunSta
   const s = clone(prev);
   if (full) s.items = s.items.filter((i) => i !== discard);
   s.items.push(item);
+  s.stats.itemsObtained++;
   s.giftOffer = [];
   return s;
 }
@@ -581,7 +604,6 @@ function applyReward(s: RunState, r: Reward) {
   switch (r.resource) {
     case 'tp':
       addTp(s, r.amount);
-      s.stats.tpEarned += r.amount;
       break;
     case 'merdascore':
       addPoop(s, r.amount);
@@ -600,11 +622,58 @@ function applyReward(s: RunState, r: Reward) {
   }
 }
 
+// ---------- End-of-wave rewards ----------
+
+/** End-of-wave rewards from traits and items, the same whatever happens in the fight. */
+function passiveRewards(s: RunState): Reward[] {
+  const traits = countTraits(s.team, s.items);
+  const rewards: Reward[] = [];
+  const paper = traitValue('paper', traits.paper);
+  if (paper > 0) rewards.push({ source: 'paper', resource: 'tp', amount: paper });
+  const merdon = traitValue('merdon', traits.merdon);
+  if (merdon > 0) rewards.push({ source: 'merdon', resource: 'merdascore', amount: merdon });
+  if (s.items.includes('plunger')) rewards.push({ source: 'plunger', resource: 'merdascore', amount: BRUSH_MERDASCORE });
+  if (s.items.includes('towel')) rewards.push({ source: 'towel', resource: 'tp', amount: TOWEL_TP });
+  return rewards;
+}
+
+/** Every structure's production after each wave (0 at low tiers is listed too, for the Bonus panel). */
+export function structureProduction(s: RunState): Reward[] {
+  const resource: Record<StructureId, Reward['resource'] | 'reroll'> = {
+    stall: 'hp',
+    sink: 'ap',
+    bidet: 'concentration',
+    scrubber: 'reroll',
+    toilet: 'merdascore',
+    holder: 'tp',
+  };
+  return STRUCTURES.filter((id) => resource[id] !== 'reroll').map((id) => ({
+    source: id,
+    resource: resource[id] as Reward['resource'],
+    amount: STRUCTURE_INFO[id].production[s.structures[id]],
+  }));
+}
+
+/** Structures produce after every combat. */
+function structureRewards(s: RunState): Reward[] {
+  return structureProduction(s).filter((r) => r.amount > 0);
+}
+
+/**
+ * What the coming wave will give for sure (traits, items, structures) and, if won, the modifier's AP.
+ * Fight-dependent rewards (damage, survivors, Collector, Fertilizer, Jackpot) are described by the UI.
+ */
+export function previewRewards(s: RunState): { sure: Reward[]; structures: Reward[]; ifWon: Reward[] } {
+  const modifier = activeModifier(s);
+  const ifWon: Reward[] = [];
+  if (modifier && s.round < ROUNDS) ifWon.push({ source: modifier, resource: 'ap', amount: MODIFIER_AP_REWARD });
+  return { sure: passiveRewards(s), structures: structureProduction(s), ifWon };
+}
+
 /** Runs the whole combat, applies its outcome and moves to the 'combat' phase (for the replay). */
 export function fight(prev: RunState): RunState {
   if (!canFight(prev)) return prev;
   const s = clone(prev);
-  const traits = countTraits(s.team, s.items);
   const toothbrushHp = s.items.includes('toothbrush') ? s.ap : 0;
   const modifier = activeModifier(s);
   const result = withRng(s, (rng) =>
@@ -625,12 +694,7 @@ export function fight(prev: RunState): RunState {
   if (result.won) rewards.push({ source: 'survivors', resource: 'merdascore', amount: result.survivors });
   else rewards.push({ source: 'enemies', resource: 'concentration', amount: -result.enemySurvivors });
   if (result.damageDealt > 0) rewards.push({ source: 'damage', resource: 'tp', amount: result.damageDealt });
-  const paper = traitValue('paper', traits.paper);
-  if (paper > 0) rewards.push({ source: 'paper', resource: 'tp', amount: paper });
-  const merdon = traitValue('merdon', traits.merdon);
-  if (merdon > 0) rewards.push({ source: 'merdon', resource: 'merdascore', amount: merdon });
-  if (s.items.includes('plunger')) rewards.push({ source: 'plunger', resource: 'merdascore', amount: BRUSH_MERDASCORE });
-  if (s.items.includes('towel')) rewards.push({ source: 'towel', resource: 'tp', amount: TOWEL_TP });
+  rewards.push(...passiveRewards(s));
   if (modifier !== 'silentMode') {
     s.team.forEach((m, i) => {
       if (m.ability === 'collector' && result.kills[i] > 0)
@@ -647,13 +711,8 @@ export function fight(prev: RunState): RunState {
   }
   if (modifier && result.won && s.round < ROUNDS)
     rewards.push({ source: modifier, resource: 'ap', amount: MODIFIER_AP_REWARD });
-  // Structures produce after every combat.
+  rewards.push(...structureRewards(s));
   const produce = (id: StructureId) => STRUCTURE_INFO[id].production[s.structures[id]];
-  if (produce('stall') > 0) rewards.push({ source: 'stall', resource: 'hp', amount: produce('stall') });
-  if (produce('sink') > 0) rewards.push({ source: 'sink', resource: 'ap', amount: produce('sink') });
-  if (produce('bidet') > 0) rewards.push({ source: 'bidet', resource: 'concentration', amount: produce('bidet') });
-  if (produce('holder') > 0) rewards.push({ source: 'holder', resource: 'tp', amount: produce('holder') });
-  if (produce('toilet') > 0) rewards.push({ source: 'toilet', resource: 'merdascore', amount: produce('toilet') });
   for (const r of rewards) applyReward(s, r);
 
   // Combat-only bonus HP is dropped; fallen Merdomon come back with half their max HP.
@@ -671,8 +730,9 @@ export function fight(prev: RunState): RunState {
   else s.stats.wavesLost++;
   if (result.won && modifier) s.stats.modifierWavesWon++;
   s.wave.forEach((e, i) => {
-    if (!e.boss || result.enemyHpAfter[i] > 0) return;
-    if (e.bossForm === 'mid') s.stats.midBossDefeated = true;
+    if (result.enemyHpAfter[i] > 0) return;
+    if (!e.boss) s.stats.enemiesBySize[e.rarity]++;
+    else if (e.bossForm === 'mid') s.stats.midBossDefeated = true;
     else s.stats.finalBossDefeated = true;
   });
 
