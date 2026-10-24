@@ -1,6 +1,6 @@
 # D.o.t.T. – Defense of the Toilet · Game Design Document
 
-> Versione regole: **v0.11** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
+> Versione regole: **v0.12** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
 >
 > Fonte ufficiale delle regole. Il gioco è interamente in **inglese**; questo documento è in italiano, con i termini di gioco in inglese.
 
@@ -314,6 +314,11 @@ In entrambi i casi, poi:
   - bottoni **Preparation**, **Next Wave** (con il recap della wave in arrivo) e **Bonus**, tra le due griglie. **Bonus** apre il pannello con tutto quello che si ottiene dopo la wave e la sua origine: produzione di tutte le strutture, tratti e oggetti, regalo; quello che dipende dal combattimento (TP dai danni, Collector, Fertilizer, Jackpot); se vinci (Poop per sopravvissuto, AP del modificatore); se perdi (−Concentration per nemico sopravvissuto);
   - griglia 2×3 del bagno con le strutture (§9d): sotto il nome di ogni blocco due badge, il limite e la produzione per wave (se maggiore di 0);
   - in alto: TP (sinistra), barra Concentration (centro), Poop (destra), con i limiti; sotto, "Round X/10", borsa oggetti (n/limite), Boss, "Actions ◆ /limite", poi i tratti. Gli slot oltre il limite del Toilet sono mostrati bloccati.
+- **Recap delle wave** (toccando "Round X/10"): una riga per ognuna delle 10 wave.
+  - Wave giocate: vinta ✅ o persa ❌, modificatore attivo, nemici affrontati (tipo e taglia, Boss compreso; quelli sconfitti barrati), Concentration persa e risorse ottenute (TP, Poop, Concentration, AP, HP).
+  - Wave attuale (evidenziata): i nemici reali.
+  - Wave future: nemici per taglia (Small / Big), Boss alle wave 5 e 10, e il modificatore già estratto.
+  - In alto: wave vinte e Concentration persa in totale. Le partite iniziate prima della v0.12 mostrano "–" per le wave precedenti.
 - **Preparation panel**: griglia di icone con il costo indicato (AP per le azioni costose, TP per le altre).
 - **Merdomon detail**: popup con statistiche e tratti, a icone.
 - **Combat**: prima una schermata "Bonuses" con il modificatore della wave, le abilità di inizio combattimento, i bonus attivi di tratti e oggetti e la squadra potenziata (si chiude toccando o dopo 2,6 secondi), poi animazione automatica con tasto ⏩.

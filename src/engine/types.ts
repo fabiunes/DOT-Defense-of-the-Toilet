@@ -138,6 +138,18 @@ export interface CombatReport {
   enemySurvivors: number;
 }
 
+/** A wave already fought: who was faced, the outcome and what it gave or cost. */
+export interface WaveLogEntry {
+  round: number;
+  won: boolean;
+  /** The modifier that was active (null if none or Corrupted). */
+  modifier: ModifierId | null;
+  enemies: { kind: EnemyKind; rarity: Rarity; boss: boolean; defeated: boolean }[];
+  concentrationLost: number;
+  /** Positive rewards collected after the wave, by resource. */
+  gains: Partial<Record<Resource, number>>;
+}
+
 export interface RunStats {
   wavesWon: number;
   wavesLost: number;
@@ -207,6 +219,8 @@ export interface RunState {
   /** The upcoming wave, generated at the start of each preparation. */
   wave: Enemy[];
   lastCombat: CombatReport | null;
+  /** One entry per wave fought, for the Round recap (absent in runs saved before v0.12). */
+  waveLog?: WaveLogEntry[];
   rngState: number;
   nextId: number;
   stats: RunStats;

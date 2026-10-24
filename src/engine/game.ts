@@ -11,6 +11,7 @@ import {
   GROUP_ADMIN,
   PLUMBER,
   TRAITS,
+  WAVES,
   BRUSH_MERDASCORE,
   CONCENTRATE_GAIN,
   EVACUATE_CHOICES,
@@ -49,6 +50,7 @@ import { activeTraits, apBonus, combatBonus, countTraits, traitValue } from './t
 import type {
   AbilityId,
   BathroomId,
+  BossForm,
   CombatBonus,
   Level,
   ItemId,
@@ -62,6 +64,7 @@ import type {
   StatKey,
   StructureId,
   TraitId,
+  WaveLogEntry,
 } from './types';
 
 // Every action is a pure function: it returns a new state, or the same state if the action isn't allowed.
@@ -126,6 +129,7 @@ export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
     modifierDisabled: false,
     wave: [],
     lastCombat: null,
+    waveLog: [],
     rngState: seed,
     nextId: 1,
     stats: emptyStats(),
@@ -222,6 +226,16 @@ function planModifiers(rng: Rng): Partial<Record<number, ModifierId>> {
 }
 
 /** The modifier affecting the current wave (null if none or paid off). */
+/** What a coming wave will bring: enemies by size, the Boss form and the planned modifier (types are drawn later). */
+export function wavePlan(s: RunState, round: number): { small: number; big: number; boss: BossForm | null; modifier: ModifierId | null } {
+  const def = WAVES[round - 1];
+  const modifier = s.modifiers[round] ?? null;
+  let small = def.common;
+  if (modifier === 'groupChat') small++;
+  if (s.boss === 'groupAdmin' && round === ROUNDS) small++;
+  return { small, big: def.rare, boss: def.boss ?? null, modifier };
+}
+
 export function activeModifier(s: RunState): ModifierId | null {
   return s.modifierDisabled ? null : (s.modifiers[s.round] ?? null);
 }
@@ -766,6 +780,24 @@ export function fight(prev: RunState): RunState {
   rewards.push(...structureRewards(s));
   const produce = (id: StructureId) => production(s, id);
   for (const r of rewards) applyReward(s, r);
+
+  // The Round recap: who was faced, the outcome, Concentration lost and what was gained.
+  const gains: WaveLogEntry['gains'] = {};
+  for (const r of rewards) if (r.amount > 0) gains[r.resource] = (gains[r.resource] ?? 0) + r.amount;
+  const concentrationLost = rewards
+    .filter((r) => r.resource === 'concentration' && r.amount < 0)
+    .reduce((t, r) => t - r.amount, 0);
+  s.waveLog = [
+    ...(s.waveLog ?? []),
+    {
+      round: s.round,
+      won: result.won,
+      modifier,
+      enemies: s.wave.map((e, i) => ({ kind: e.kind, rarity: e.rarity, boss: e.boss, defeated: result.enemyHpAfter[i] <= 0 })),
+      concentrationLost,
+      gains,
+    },
+  ];
 
   // Combat-only bonus HP is dropped; fallen Merdomon come back with half their max HP.
   s.team.forEach((m, i) => {

@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.12
+
+### Interfaccia
+- **Recap delle wave**: toccando "Round X/10" in alto si apre un pannello con tutte le 10 wave.
+  - **Wave giocate**: vinta o persa, modificatore, nemici affrontati (gli sconfitti barrati), **Concentration persa** e risorse ottenute.
+  - **Wave attuale**: i nemici in arrivo.
+  - **Wave future**: quanti Small e Big, il Boss e il **modificatore**, ora visibile in anticipo.
+  - In alto: wave vinte e Concentration persa in totale.
+- Le partite già in corso restano compatibili: lo storico parte dalle wave giocate dopo l'aggiornamento.
+
 ## v0.11
 
 ### Nuove funzioni

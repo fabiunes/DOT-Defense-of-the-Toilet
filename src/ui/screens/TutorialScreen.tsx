@@ -246,7 +246,8 @@ const pages: Page[] = [
           <TraitsRow run={demoRun} onTrait={noop} />
         </Demo>
         <Row icon={<span className="round-badge">Round 3/{ROUNDS}</span>} title="Round">
-          Current wave out of {ROUNDS}.
+          Current wave out of {ROUNDS}. Tap it for every wave: results, Concentration lost and gains of the past ones,
+          enemies and modifiers of the coming ones.
         </Row>
         <Row icon={I('ap', '#1b1b1b')} title="Action Points">
           +1 every round (more with the Action trait and the Sink). Unspent ones are kept, up to the Toilet Brush limit.

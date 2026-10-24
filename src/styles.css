@@ -2657,3 +2657,94 @@ button:disabled {
 .level-locked {
   opacity: 0.85;
 }
+
+/* ---------- v0.12: Round recap (waves panel) ---------- */
+.round-btn {
+  font: inherit;
+  cursor: pointer;
+}
+.round-btn:disabled {
+  cursor: default;
+  color: inherit;
+  opacity: 1;
+}
+.modal.waves-panel {
+  gap: 3px;
+}
+.waves-panel .panel-head {
+  justify-content: flex-start;
+  gap: 10px;
+  font-size: 19px;
+}
+.waves-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 15px;
+}
+.wave-row {
+  display: grid;
+  grid-template-columns: 18px 20px 20px 1fr auto;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 1px 4px;
+  border-bottom: 1px dashed #ccc;
+  font-size: 13px;
+}
+.wave-row.past .wave-num {
+  color: #888;
+}
+.wave-row.current {
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: #fff8dc;
+}
+.wave-num {
+  font-weight: bold;
+  text-align: center;
+}
+.wave-enemies {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+}
+.wave-enemies .defeated {
+  opacity: 0.35;
+  position: relative;
+}
+.wave-enemies .defeated::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 2px solid #b5452f;
+  transform: rotate(-35deg);
+}
+.wave-enemies > span {
+  display: inline-flex;
+}
+.wave-gains {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 2px 5px;
+  max-width: 130px;
+  font-size: 12px;
+}
+.wave-gains > * {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+.wave-gains .neg {
+  color: #b5452f;
+}
+.wave-mod-col {
+  font-size: 14px;
+  text-align: center;
+}

@@ -15,6 +15,7 @@ import {
   MODIFIER_DISABLE_COST,
   MODIFIER_INFO,
   REROLL_COST,
+  ROUNDS,
   SIZE_NAME,
   STAT_KEYS,
   STRUCTURES,
@@ -25,7 +26,7 @@ import {
 } from '../../engine/data';
 import * as G from '../../engine/game';
 import { countTraits } from '../../engine/traits';
-import type { ItemId, ModifierId, Rarity, Reward, RunState, StructureId, TraitId } from '../../engine/types';
+import type { ItemId, ModifierId, Rarity, Reward, RunState, StructureId, TraitId, WaveLogEntry } from '../../engine/types';
 import { EnemyArt } from '../art';
 import { Bathroom, StructureIcon } from '../bathroom';
 import {
@@ -50,6 +51,7 @@ import { NewMerdomonModal } from './NewMerdomonModal';
 type Panel =
   | { kind: 'actions' }
   | { kind: 'bonus' }
+  | { kind: 'waves' }
   | { kind: 'evacuate' }
   | { kind: 'shop' }
   | { kind: 'trade' }
@@ -171,7 +173,12 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
   return (
     <div className="screen prep">
       <TopBar run={run} />
-      <InfoRow run={run} onItems={() => setPanel({ kind: 'items' })} onBoss={() => setPanel({ kind: 'boss' })} />
+      <InfoRow
+        run={run}
+        onItems={() => setPanel({ kind: 'items' })}
+        onBoss={() => setPanel({ kind: 'boss' })}
+        onRound={() => setPanel({ kind: 'waves' })}
+      />
       <TraitsRow run={run} onTrait={(trait) => setPanel({ kind: 'trait', trait })} />
 
       <div className={`slots ${drag?.moving ? 'dragging' : ''}`}>
@@ -265,6 +272,7 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
         />
       )}
       {panel?.kind === 'bonus' && <BonusPanel run={run} onClose={close} />}
+      {panel?.kind === 'waves' && <WavesPanel run={run} onClose={close} />}
       {panel?.kind === 'evacuate' &&<EvacuatePanel run={run} update={update} onClose={close} />}
       {panel?.kind === 'shop' && <ShopPanel run={run} update={update} onClose={close} />}
       {panel?.kind === 'scout' && <ScoutPanel run={run} update={update} onClose={close} fight={panel.fight} />}
@@ -530,6 +538,84 @@ function BonusPanel({ run, onClose }: { run: RunState; onClose: () => void }) {
         <span>Each surviving Distraction</span>
         <Gain amount={-1} icon="focus" />
       </div>
+    </Modal>
+  );
+}
+
+/** Resources shown in a past wave's row, in this order. */
+const GAIN_ORDER: Reward['resource'][] = ['tp', 'merdascore', 'concentration', 'ap', 'hp'];
+
+/** A wave's enemies as small icons: sizes for coming waves, real types once drawn. Defeated ones are crossed. */
+function WaveEnemies({ run, enemies }: { run: RunState; enemies: WaveLogEntry['enemies'] }) {
+  return (
+    <span className="wave-enemies">
+      {enemies.map((e, i) => (
+        <span key={i} className={e.defeated ? 'defeated' : ''}>
+          <EnemyArt size={e.boss ? 26 : 23} kind={e.kind} rarity={e.boss ? 'epic' : e.rarity} boss={e.boss} bossId={run.boss} />
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/** The Round recap: every wave of the run, fought ones with their outcome, the current one and the coming ones. */
+function WavesPanel({ run, onClose }: { run: RunState; onClose: () => void }) {
+  const log = run.waveLog ?? [];
+  const lost = log.reduce((t, w) => t + w.concentrationLost, 0);
+  return (
+    <Modal onClose={onClose} className="waves-panel">
+      <div className="panel-head">
+        <b>Waves</b>
+        <span className="waves-summary">
+          ✅ {log.filter((w) => w.won).length}/{log.length} · −{lost} <Icon name="focus" size={14} fill="#fff" />
+        </span>
+      </div>
+      {Array.from({ length: ROUNDS }, (_, i) => {
+        const round = i + 1;
+        const past = log.find((w) => w.round === round);
+        const plan = G.wavePlan(run, round);
+        const modifier = past ? past.modifier : plan.modifier;
+        return (
+          <div key={round} className={`wave-row ${round === run.round ? 'current' : ''} ${round < run.round ? 'past' : ''}`}>
+            <span className="wave-num">{round}</span>
+            <span className="wave-status">{past ? (past.won ? '✅' : '❌') : round < run.round ? '–' : ''}</span>
+            <span className="wave-mod-col">{modifier ? MODIFIER_INFO[modifier].icon : ''}</span>
+            {past ? (
+              <WaveEnemies run={run} enemies={past.enemies} />
+            ) : round === run.round ? (
+              <WaveEnemies run={run} enemies={run.wave.map((e) => ({ ...e, defeated: false }))} />
+            ) : round < run.round ? (
+              <span className="wave-enemies muted">–</span>
+            ) : (
+              <span className="wave-enemies plan">
+                {Array.from({ length: plan.small }, (_, j) => (
+                  <Icon key={`s${j}`} name="phone" size={15} fill="#fff" />
+                ))}
+                {Array.from({ length: plan.big }, (_, j) => (
+                  <Icon key={`b${j}`} name="phone" size={15} fill="#1b1b1b" />
+                ))}
+                {plan.boss && <Icon name="crown" size={15} fill="#1b1b1b" />}
+              </span>
+            )}
+            {past && (
+              <span className="wave-gains">
+                {past.concentrationLost > 0 && (
+                  <b className="neg">
+                    −{past.concentrationLost}
+                    <Icon name="focus" size={12} fill="#fff" />
+                  </b>
+                )}
+                {GAIN_ORDER.filter((r) => past.gains[r]).map((r) => (
+                  <span key={r}>
+                    +{past.gains[r]}
+                    <Icon name={RESOURCE_ICON[r]} size={12} fill={r === 'ap' ? '#1b1b1b' : '#fff'} />
+                  </span>
+                ))}
+              </span>
+            )}
+          </div>
+        );
+      })}
     </Modal>
   );
 }

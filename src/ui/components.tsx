@@ -199,12 +199,22 @@ export function TopBar({ run }: { run: RunState }) {
   );
 }
 
-export function InfoRow({ run, onItems, onBoss }: { run: RunState; onItems: () => void; onBoss: () => void }) {
+export function InfoRow({
+  run,
+  onItems,
+  onBoss,
+  onRound,
+}: {
+  run: RunState;
+  onItems: () => void;
+  onBoss: () => void;
+  onRound?: () => void;
+}) {
   return (
     <div className="inforow">
-      <span className="round-badge">
+      <button className="round-badge round-btn" onClick={onRound} disabled={!onRound} aria-label="Waves recap">
         Round {run.round}/{ROUNDS}
-      </span>
+      </button>
       <button className="info-chip" onClick={onItems} aria-label="Items">
         <Icon name="shop" size={16} fill="#fff" />
         {run.items.length}/{itemCap(run)}
