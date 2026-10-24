@@ -161,6 +161,48 @@ function GroupAdminArt() {
   );
 }
 
+/** The level 6 Boss: a round robot vacuum with spinning brushes. */
+function RobotVacuumArt() {
+  return (
+    <>
+      <Crown top={30} />
+      <ellipse cx="50" cy="66" rx="40" ry="24" fill={ENEMY_COLOR.book} />
+      <ellipse cx="50" cy="60" rx="40" ry="22" fill="#e8e8e8" />
+      <rect x="34" y="44" width="32" height="12" rx="6" fill="#333" />
+      <AngryFace x={50} y={66} />
+      <path strokeWidth="3" d="M8 84l-6 6M14 88l-4 8M92 84l6 6M86 88l4 8" />
+      <circle cx="50" cy="40" r="3" fill="#e74c3c" />
+    </>
+  );
+}
+
+/** The level 7 Boss: a grey cat with a tipped crown and an unrolled toilet roll. */
+function CatArt() {
+  return (
+    <>
+      <path fill="none" strokeWidth="5" d="M76 86q18-10 8-34" />
+      <path fill="#9aa0a6" d="M26 92q-6-30 12-40h24q18 10 12 40z" />
+      <path fill="#9aa0a6" d="M30 40l-4-20 14 10h20l14-10-4 20q4 16-20 20-24-4-20-20z" />
+      <g transform="rotate(-12 50 14)">
+        <Crown top={22} />
+      </g>
+      <circle cx="40" cy="42" r="4" fill="#f2c94c" />
+      <circle cx="60" cy="42" r="4" fill="#f2c94c" />
+      <path strokeWidth="2.5" d="M40 40v4M60 40v4M34 36l10 3M66 36l-10 3" />
+      <path strokeWidth="2" d="M50 48l-3 3h6zM50 51v3M26 50l14 1M74 50l-14 1" />
+      <path fill="#fff" strokeWidth="3" d="M10 92h30v-8H18q-8 0-8 8z" />
+      <ellipse cx="14" cy="88" rx="4" ry="4" fill="#fff" strokeWidth="2" />
+    </>
+  );
+}
+
+const DEDICATED_BOSS_ART: Partial<Record<BossId, () => React.JSX.Element>> = {
+  plumber: PlumberArt,
+  groupAdmin: GroupAdminArt,
+  robotVacuum: RobotVacuumArt,
+  cat: CatArt,
+};
+
 export function EnemyArt({
   size = 56,
   kind = 'phone',
@@ -175,11 +217,12 @@ export function EnemyArt({
   /** Bosses with their own drawing (levels 4 and 5); the others use their type's art with a crown. */
   bossId?: BossId;
 }) {
-  if (boss && (bossId === 'plumber' || bossId === 'groupAdmin')) {
+  const Dedicated = boss && bossId ? DEDICATED_BOSS_ART[bossId] : undefined;
+  if (Dedicated) {
     return (
       <svg viewBox="0 0 100 100" width={size} height={size} aria-hidden>
         <g filter="url(#rough)" stroke={INK} strokeWidth="4" strokeLinejoin="round" strokeLinecap="round">
-          {bossId === 'plumber' ? <PlumberArt /> : <GroupAdminArt />}
+          <Dedicated />
         </g>
       </svg>
     );

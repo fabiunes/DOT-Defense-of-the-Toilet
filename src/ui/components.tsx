@@ -11,7 +11,7 @@ import {
   TRAIT_THRESHOLDS,
   TRAIT_VALUES,
 } from '../engine/data';
-import { activeTeam, apCap, concentrationCap, itemCap, mutedTrait, poopCap, tpCap } from '../engine/game';
+import { activeTeam, apCap, concentrationCap, itemCap, mutedTrait, poopCap, tpCap, traitItems } from '../engine/game';
 import { countTraits, traitTier } from '../engine/traits';
 import type { AbilityId, BossId, Merdomon, Rarity, RunState, Stats, TraitId } from '../engine/types';
 import { EnemyArt, MerdomonArt } from './art';
@@ -218,6 +218,7 @@ export function InfoRow({
       <button className="info-chip" onClick={onItems} aria-label="Items">
         <Icon name="shop" size={16} fill="#fff" />
         {run.items.length}/{itemCap(run)}
+        {run.boss === 'robotVacuum' && <span title="Clean Sweep: items don't count for traits">🧹</span>}
       </button>
       <button className="info-chip boss-chip" onClick={onBoss} aria-label={BOSS_INFO[run.boss].name}>
         {BOSS_INFO[run.boss].icon}
@@ -267,7 +268,7 @@ export function BossCard({ boss }: { boss: BossId }) {
 
 export function TraitsRow({ run, onTrait }: { run: RunState; onTrait: (t: TraitId) => void }) {
   // Benched Merdomon (locked slots) don't count; the Group Admin mutes the most common trait.
-  const counts = countTraits(activeTeam(run), run.items);
+  const counts = countTraits(activeTeam(run), traitItems(run));
   const muted = mutedTrait(run);
   const active = TRAITS.filter((t) => counts[t] > 0);
   return (

@@ -8,8 +8,10 @@ import {
   BIDET_CONCENTRATION,
   BATHROOMS,
   BUILD_COST,
+  CAT,
   GROUP_ADMIN,
   PLUMBER,
+  ROBOT_VACUUM,
   TRAITS,
   WAVES,
   BRUSH_MERDASCORE,
@@ -194,10 +196,15 @@ export const teamCap = (s: RunState) => Math.max(1, capacity(s, 'toilet') - pinn
 /** The Merdomon that fight; those beyond the open slots sit out (benched). */
 export const activeTeam = (s: RunState) => s.team.slice(0, teamCap(s));
 
+/** Items that count for the traits: none against the Robot Vacuum (Clean Sweep). */
+export function traitItems(s: RunState): ItemId[] {
+  return s.boss === 'robotVacuum' ? [] : s.items;
+}
+
 /** Group Admin's Muted: the most common trait in the fighting team gives no bonus (ties change each round). */
 export function mutedTrait(s: RunState): TraitId | null {
   if (s.boss !== 'groupAdmin') return null;
-  const counts = countTraits(activeTeam(s), s.items);
+  const counts = countTraits(activeTeam(s), traitItems(s));
   const order = TRAITS.map((_, i) => TRAITS[(i + s.round) % TRAITS.length]);
   let best: TraitId | null = null;
   for (const t of order) if (counts[t] > 0 && (best === null || counts[t] > counts[best])) best = t;
@@ -242,8 +249,10 @@ export function activeModifier(s: RunState): ModifierId | null {
 
 function startPreparation(s: RunState) {
   s.phase = 'preparation';
+  // The Cat knocks things over: the team order is shuffled every round.
+  if (s.boss === 'cat' && s.team.length > 1) s.team = withRng(s, (rng) => rng.shuffle([...s.team]));
   // Unspent AP carry over, up to the Toilet Brush's limit.
-  s.ap = Math.min(apCap(s), s.ap + BASE_AP + apBonus(activeTeam(s), s.items, mutedTrait(s)) + s.bonusAp);
+  s.ap = Math.min(apCap(s), s.ap + BASE_AP + apBonus(activeTeam(s), traitItems(s), mutedTrait(s)) + s.bonusAp);
   s.bonusAp = 0;
   s.freeRerolls = production(s, 'scrubber');
   s.modifierDisabled = false;
@@ -482,8 +491,13 @@ export function concentrate(prev: RunState): RunState {
 
 // ---------- Free actions ----------
 
+/** Against the Cat, every reorder costs Toilet Paper (free on round 1). */
+export function moveCost(s: RunState): number {
+  return s.boss === 'cat' && s.round > 1 ? CAT.moveTp : 0;
+}
+
 export function canOrganize(s: RunState): boolean {
-  return inPreparation(s) && s.team.length > 1;
+  return inPreparation(s) && s.team.length > 1 && s.tp >= moveCost(s);
 }
 
 export function swap(prev: RunState, a: number, b: number): RunState {
@@ -496,11 +510,15 @@ export function swap(prev: RunState, a: number, b: number): RunState {
 /** Drag and drop on the main screen: onto another Merdomon swaps them, onto an empty slot moves it last. */
 export function moveMerdomon(prev: RunState, from: number, to: number): RunState {
   if (!canOrganize(prev) || from === to || !prev.team[from] || to < 0) return prev;
-  if (to < prev.team.length) return swap(prev, from, to);
-  if (from === prev.team.length - 1) return prev;
-  const s = clone(prev);
-  const [m] = s.team.splice(from, 1);
-  s.team.push(m);
+  let s: RunState;
+  if (to < prev.team.length) s = swap(prev, from, to);
+  else if (from === prev.team.length - 1) return prev;
+  else {
+    s = clone(prev);
+    const [m] = s.team.splice(from, 1);
+    s.team.push(m);
+  }
+  if (s !== prev) s.tp -= moveCost(prev);
   return s;
 }
 
@@ -681,7 +699,7 @@ function applyReward(s: RunState, r: Reward) {
 
 /** End-of-wave rewards from traits and items, the same whatever happens in the fight. */
 function passiveRewards(s: RunState): Reward[] {
-  const traits = activeTraits(activeTeam(s), s.items, mutedTrait(s));
+  const traits = activeTraits(activeTeam(s), traitItems(s), mutedTrait(s));
   const rewards: Reward[] = [];
   const paper = traitValue('paper', traits.paper);
   if (paper > 0) rewards.push({ source: 'paper', resource: 'tp', amount: paper });
@@ -735,6 +753,19 @@ export function previewRewards(s: RunState): { sure: Reward[]; structures: Rewar
 export function fight(prev: RunState): RunState {
   if (!canFight(prev)) return prev;
   const s = clone(prev);
+  // The Robot Vacuum sucks up items when its fights start (Turbo Mode: +1 ATK per item left).
+  const bossEnemy = s.wave.find((e) => e.boss);
+  const stolen: ItemId[] = [];
+  if (s.boss === 'robotVacuum' && bossEnemy) {
+    const final = bossEnemy.bossForm === 'final';
+    const n = final ? ROBOT_VACUUM.finalSteal : ROBOT_VACUUM.midSteal;
+    stolen.push(...withRng(s, (rng) => rng.shuffle([...s.items]).slice(0, n)));
+    s.items = s.items.filter((i) => !stolen.includes(i));
+    if (final) {
+      const atk = s.items.length * ROBOT_VACUUM.atkPerItem;
+      s.wave = s.wave.map((e) => (e.boss ? { ...e, stats: { ...e.stats, atk: e.stats.atk + atk } } : e));
+    }
+  }
   const toothbrushHp = s.items.includes('toothbrush') ? s.ap : 0;
   const modifier = activeModifier(s);
   const result = withRng(s, (rng) =>
@@ -743,13 +774,14 @@ export function fight(prev: RunState): RunState {
       modifier,
       bossId: s.boss,
       muted: mutedTrait(s),
+      traitItems: traitItems(s),
     }),
   );
 
   // What changes at combat start, for the pre-fight recap.
   const bonuses: CombatBonus[] = [];
   const statBonus =
-    modifier === 'wifiDown' ? { hp: 0, atk: 0, def: 0, spd: 0 } : combatBonus(activeTeam(s), s.items, mutedTrait(s));
+    modifier === 'wifiDown' ? { hp: 0, atk: 0, def: 0, spd: 0 } : combatBonus(activeTeam(s), traitItems(s), mutedTrait(s));
   const BONUS_TRAIT = { hp: 'healthy', atk: 'fighter', def: 'defender', spd: 'haste' } as const;
   for (const k of STAT_KEYS) if (statBonus[k] > 0) bonuses.push({ source: BONUS_TRAIT[k], stat: k, amount: statBonus[k] });
   if (toothbrushHp > 0) bonuses.push({ source: 'toothbrush', stat: 'hp', amount: toothbrushHp });
@@ -780,6 +812,14 @@ export function fight(prev: RunState): RunState {
   rewards.push(...structureRewards(s));
   const produce = (id: StructureId) => production(s, id);
   for (const r of rewards) applyReward(s, r);
+  // The Cat's Toilet Paper Massacre: after its wave 5 fight, half the Toilet Paper is gone.
+  if (s.boss === 'cat' && bossEnemy?.bossForm === 'mid') {
+    const loss = Math.floor(s.tp / CAT.tpLossDivisor);
+    if (loss > 0) {
+      s.tp -= loss;
+      rewards.push({ source: 'cat', resource: 'tp', amount: -loss });
+    }
+  }
 
   // The Round recap: who was faced, the outcome, Concentration lost and what was gained.
   const gains: WaveLogEntry['gains'] = {};
@@ -796,6 +836,7 @@ export function fight(prev: RunState): RunState {
       enemies: s.wave.map((e, i) => ({ kind: e.kind, rarity: e.rarity, boss: e.boss, defeated: result.enemyHpAfter[i] <= 0 })),
       concentrationLost,
       gains,
+      stolen,
     },
   ];
 
@@ -824,6 +865,7 @@ export function fight(prev: RunState): RunState {
   s.lastCombat = {
     round: s.round,
     bossId: s.boss,
+    stolen,
     bonuses,
     modifier,
     won: result.won,

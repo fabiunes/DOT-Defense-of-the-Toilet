@@ -234,22 +234,32 @@ export const STRUCTURE_INFO: Record<
 
 // ---------- Bosses ----------
 
-export const BOSSES: readonly BossId[] = ['bestseller', 'streamDeck', 'demonScroller', 'plumber', 'groupAdmin'];
+export const BOSSES: readonly BossId[] = [
+  'bestseller',
+  'streamDeck',
+  'demonScroller',
+  'plumber',
+  'groupAdmin',
+  'robotVacuum',
+  'cat',
+];
 
 // ---------- Difficulty levels ----------
 
-export const LEVELS: readonly Level[] = [1, 2, 3, 4, 5];
+export const LEVELS: readonly Level[] = [1, 2, 3, 4, 5, 6, 7];
 export const LEVEL_BOSS: Record<Level, BossId> = {
   1: 'bestseller',
   2: 'streamDeck',
   3: 'demonScroller',
   4: 'plumber',
   5: 'groupAdmin',
+  6: 'robotVacuum',
+  7: 'cat',
 };
 /** Toilet Points earned = final score × this (the score itself does not change). */
-export const LEVEL_REWARD: Record<Level, number> = { 1: 1, 2: 1.1, 3: 1.25, 4: 1.5, 5: 2 };
+export const LEVEL_REWARD: Record<Level, number> = { 1: 1, 2: 1.1, 3: 1.25, 4: 1.5, 5: 2, 6: 2.5, 7: 3 };
 /** Extra stat points for every normal enemy. */
-export const LEVEL_ENEMY_BONUS: Record<Level, number> = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4 };
+export const LEVEL_ENEMY_BONUS: Record<Level, number> = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 4, 7: 4 };
 /** Finished runs kept in the Stats history. */
 export const HISTORY_MAX = 50;
 
@@ -316,6 +326,10 @@ export const PLUMBER = {
 };
 /** The Group Admin (level 5): locked Merdomon slots from wave 5 (1) and on wave 10 (2). */
 export const GROUP_ADMIN = { pinnedFrom: 5, pinned: 1, finalPinned: 2 };
+/** The Robot Vacuum (level 6): items don't count for traits; it sucks up items on its waves. */
+export const ROBOT_VACUUM = { midSteal: 1, finalSteal: 2, atkPerItem: 1 };
+/** The Cat (level 7): shuffles the team, moving costs TP, Nine Lives, half the TP lost after wave 5. */
+export const CAT = { moveTp: 1, lives: 2, livesHpDivisor: 3, tpLossDivisor: 2 };
 
 export const BOSS_INFO: Record<
   BossId,
@@ -377,6 +391,26 @@ export const BOSS_INFO: Record<
     midDesc: 'From wave 5 your last Merdomon slot is locked',
     finalAbility: '@everyone',
     finalDesc: 'On wave 10, 2 slots are locked and 1 extra Small enemy joins',
+  },
+  robotVacuum: {
+    name: 'The Robot Vacuum',
+    icon: '🧹',
+    kind: 'book',
+    runDesc: "All Books +1 ATK. Clean Sweep: items don't count for traits",
+    ability: 'Suction',
+    midDesc: 'Sucks up 1 random item when the fight starts',
+    finalAbility: 'Turbo Mode',
+    finalDesc: 'Sucks up 2 more items, then +1 ATK for each item you still have',
+  },
+  cat: {
+    name: 'The Cat',
+    icon: '🐈',
+    kind: 'console',
+    runDesc: 'All Consoles +1 ATK. Knocks Things Over: shuffles your team every round, moving costs 1 TP',
+    ability: 'Lap Sitter',
+    midDesc: 'Your first Merdomon skips its first attack. After the fight you lose half your Toilet Paper',
+    finalAbility: 'Nine Lives',
+    finalDesc: 'Comes back twice with 1/3 of its HP',
   },
 };
 

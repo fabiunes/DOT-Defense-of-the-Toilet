@@ -1,4 +1,4 @@
-import { ABILITY, JACKPOT, TOWEL_BONUS, TOWEL_KIND } from './data';
+import { CAT, ABILITY, JACKPOT, TOWEL_BONUS, TOWEL_KIND } from './data';
 import type { Rng } from './rng';
 import { combatBonus } from './traits';
 import type { AbilityId, BossId, CombatEvent, Enemy, Fighter, ItemId, Merdomon, ModifierId, Side, TraitId } from './types';
@@ -30,6 +30,8 @@ export interface CombatOptions {
   bossId?: BossId;
   /** Trait giving no bonus (Group Admin). */
   muted?: TraitId | null;
+  /** Items counted for the traits (none against the Robot Vacuum); default: all items. */
+  traitItems?: readonly ItemId[];
 }
 
 /** Defense blocks half its value (rounded down); at least 1 damage always goes through. */
@@ -47,14 +49,14 @@ export function simulateCombat(
   wave: readonly Enemy[],
   items: readonly ItemId[],
   rng: Rng,
-  { extraHp = 0, modifier = null, bossId, muted = null }: CombatOptions = {},
+  { extraHp = 0, modifier = null, bossId, muted = null, traitItems = items }: CombatOptions = {},
 ): CombatResult {
   const events: CombatEvent[] = [];
   const silent = modifier === 'silentMode';
   const has = (i: number, a: AbilityId) => !silent && team[i]?.ability === a;
 
   const bonus =
-    modifier === 'wifiDown' ? { hp: 0, atk: 0, def: 0, spd: 0 } : combatBonus(team, items, muted);
+    modifier === 'wifiDown' ? { hp: 0, atk: 0, def: 0, spd: 0 } : combatBonus(team, traitItems, muted);
   bonus.hp += extraHp;
   const towel = (m: Merdomon) => items.some((i) => TOWEL_KIND[i] === m.kind);
   const ps: Fighter[] = team.map((m) => {
@@ -113,6 +115,9 @@ export function simulateCombat(
   const secondWindUsed = ps.map(() => false);
   let extraLifeUsed = false;
   let pipeBurstUsed = false;
+  // The Cat: Lap Sitter (wave 5) and Nine Lives (wave 10).
+  let lapSitter = bossId === 'cat' && es.some((f) => f.boss && f.bossForm === 'mid');
+  let livesLeft = bossId === 'cat' ? CAT.lives : 0;
   const kills = ps.map(() => 0);
   let damageDealt = 0;
   let merdomonFallen = 0;
@@ -131,6 +136,12 @@ export function simulateCombat(
   /** Enemy `idx` is at 0 HP: the StreamDeck may come back (Extra Life), otherwise it falls. */
   const enemyDown = (idx: number, from: number) => {
     const x = es[idx];
+    if (x.boss && bossId === 'cat' && x.bossForm === 'final' && livesLeft > 0) {
+      livesLeft--;
+      x.hp = Math.ceil(x.maxHp / CAT.livesHpDivisor);
+      events.push({ type: 'boss', boss: bossId, index: idx, hp: x.hp });
+      return;
+    }
     if (x.boss && bossId === 'streamDeck' && !extraLifeUsed) {
       extraLifeUsed = true;
       x.hp = x.bossForm === 'final' ? x.maxHp : Math.ceil(x.maxHp / 2);
@@ -169,7 +180,11 @@ export function simulateCombat(
 
     let turn = first;
     while (p.hp > 0 && e.hp > 0) {
-      if (turn === 'p') {
+      if (turn === 'p' && lapSitter && pi === 0) {
+        // Lap Sitter: the Cat sits on your first Merdomon, which skips its first attack.
+        lapSitter = false;
+        events.push({ type: 'boss', boss: 'cat', index: es.findIndex((f) => f.boss) });
+      } else if (turn === 'p') {
         const hits = hitsPerTurn(p.spd, eSpd, flipFlops) + (windowReady && pi === 0 ? 1 : 0);
         if (pi === 0) windowReady = false;
         const atk = p.atk + (has(pi, 'giantSlayer') && e.rarity !== 'common' ? ABILITY.giantSlayerAtk : 0);

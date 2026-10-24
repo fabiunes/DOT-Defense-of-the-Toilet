@@ -391,6 +391,15 @@ function ResultOverlay({ report, onDone }: { report: CombatReport; onDone: () =>
               </span>
             </div>
           ))}
+          {report.stolen?.map((it) => (
+            <div key={it} className="reward">
+              <SourceIcon source="robotVacuum" />
+              <span className="muted">{ITEM_INFO[it].name}</span>
+              <span className="reward-amount neg">
+                −<ItemIcon item={it} size={20} />
+              </span>
+            </div>
+          ))}
         </div>
         <button className="big-btn shadow" onClick={onDone}>
           <Icon name="play" size={22} fill="#1b1b1b" />

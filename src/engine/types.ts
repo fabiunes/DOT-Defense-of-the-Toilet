@@ -37,10 +37,10 @@ export type ModifierId = 'groupChat' | 'wifiDown' | 'rushHour' | 'doomscrolling'
 export type StartBonusId = 'item' | 'merdomon' | 'resources';
 export type StructureId = 'stall' | 'sink' | 'bidet' | 'scrubber' | 'toilet' | 'holder';
 /** Difficulty level, chosen at the start: it picks the Boss and toughens normal enemies. */
-export type Level = 1 | 2 | 3 | 4 | 5;
+export type Level = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 /** Starting bathroom setup, chosen together with the level. */
 export type BathroomId = 'homeA' | 'homeB' | 'officeA' | 'officeB' | 'publicA' | 'publicB' | 'hotelA' | 'hotelB';
-export type BossId = 'demonScroller' | 'bestseller' | 'streamDeck' | 'plumber' | 'groupAdmin';
+export type BossId = 'demonScroller' | 'bestseller' | 'streamDeck' | 'plumber' | 'groupAdmin' | 'robotVacuum' | 'cat';
 /** Bosses show up twice: a medium form on wave 5 and the final form on wave 10. */
 export type BossForm = 'mid' | 'final';
 
@@ -127,6 +127,8 @@ export interface CombatReport {
   round: number;
   /** The run's Boss, to draw it (absent in reports saved before v0.11). */
   bossId?: BossId;
+  /** Items sucked up by the Robot Vacuum in this fight. */
+  stolen?: ItemId[];
   bonuses: CombatBonus[];
   modifier: ModifierId | null;
   won: boolean;
@@ -148,6 +150,8 @@ export interface WaveLogEntry {
   concentrationLost: number;
   /** Positive rewards collected after the wave, by resource. */
   gains: Partial<Record<Resource, number>>;
+  /** Items sucked up by the Robot Vacuum. */
+  stolen?: ItemId[];
 }
 
 export interface RunStats {

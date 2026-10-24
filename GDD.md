@@ -1,6 +1,6 @@
 # D.o.t.T. – Defense of the Toilet · Game Design Document
 
-> Versione regole: **v0.12** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
+> Versione regole: **v0.13** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
 >
 > Fonte ufficiale delle regole. Il gioco è interamente in **inglese**; questo documento è in italiano, con i termini di gioco in inglese.
 
@@ -179,11 +179,11 @@ Le wave **3, 6 e 9** hanno un modificatore, estratto a inizio partita tra questi
 
 ### 9c. Boss
 
-A inizio partita il giocatore sceglie il **livello di difficoltà**, che determina il Boss: **Livello 1 – The Bestseller**, **Livello 2 – The StreamDeck**, **Livello 3 – Demon Scroller**, **Livello 4 – The Plumber**, **Livello 5 – The Group Admin**. Dal livello 2 ogni nemico normale ha **+1 / +2 / +3 / +4 punti statistica**.
+A inizio partita il giocatore sceglie il **livello di difficoltà**, che determina il Boss: **Livello 1 – The Bestseller**, **Livello 2 – The StreamDeck**, **Livello 3 – Demon Scroller**, **Livello 4 – The Plumber**, **Livello 5 – The Group Admin**, **Livello 6 – The Robot Vacuum**, **Livello 7 – The Cat**. Dal livello 2 ogni nemico normale ha **+1 / +2 / +3 / +4 / +4 / +4 punti statistica**.
 
 **Sblocco**: all'inizio è aperto solo il livello 1; **vincere il livello N sblocca N+1** (le vittorie delle versioni precedenti, presenti nello storico, valgono). La password Testing Privilege sblocca tutti i livelli.
 
-**Ricompensa**: lo score non cambia, ma i **Toilet Points** guadagnati sono score × **1 / 1,1 / 1,25 / 1,5 / 2** (livelli 1–5).
+**Ricompensa**: lo score non cambia, ma i **Toilet Points** guadagnati sono score × **1 / 1,1 / 1,25 / 1,5 / 2 / 2,5 / 3** (livelli 1–7).
  Ogni Boss dà **+1 ATK a tutti i nemici del suo tipo** per tutta la partita, e combatte due volte: in forma **media** alla wave 5 (Big, 15 punti) e in forma **finale** alla wave 10 (Huge, 22 punti). È sempre l'ultimo della fila.
 
 | Boss | Tipo | Abilità (forma media) | Abilità (forma finale) |
@@ -192,14 +192,18 @@ A inizio partita il giocatore sceglie il **livello di difficoltà**, che determi
 | 📚 **The Bestseller** | Book | **Plot Twist**: +1 DEF dopo ogni suo attacco | +1 DEF e +1 ATK dopo ogni suo attacco |
 | 🎮 **The StreamDeck** | Console | **Extra Life**: torna in vita una volta con metà HP | Torna in vita una volta con tutti gli HP |
 | 🔧 **The Plumber** (liv. 4) | Console | **Knock Knock**: −1 Concentration all'inizio del combattimento | **Pipe Burst**: −2 Concentration all'inizio del combattimento, e il suo primo attacco colpisce 2 volte |
+| 🧹 **The Robot Vacuum** (liv. 6) | Book | **Suction**: all'inizio del combattimento aspira 1 oggetto a caso (perso) | **Turbo Mode**: aspira altri 2 oggetti, poi +1 ATK per ogni oggetto rimasto |
+| 🐈 **The Cat** (liv. 7) | Console | **Lap Sitter**: la tua prima Merdomon salta il suo primo attacco; dopo il combattimento perdi metà dei TP (**Toilet Paper Massacre**, arrotondato per difetto) | **Nine Lives**: torna in vita 2 volte con 1/3 degli HP |
 | 📲 **The Group Admin** (liv. 5) | Smartphone | **Pinned Message**: dalla preparazione della wave 5 l'ultimo slot delle Merdomon è bloccato | **@everyone**: alla wave 10 gli slot bloccati sono 2 e arriva 1 nemico Small in più in testa |
 
 **Sabotaggi per tutta la partita** (oltre al +1 ATK al loro tipo):
 - **The Plumber – Water Shut-Off**: **Shower e Bidet sono spenti**, funzionano come al Tier 0 (limite minimo, nessuna produzione) e non si possono costruire. Sui blocchi c'è 🔧.
 - **The Group Admin – Muted**: il **tratto più presente** tra le Merdomon che combattono (e gli oggetti) non dà bonus (conta 0); a parità ne viene scelto uno, che cambia a ogni round. Il tratto appare barrato con 🔇.
+- **The Robot Vacuum – Clean Sweep**: gli oggetti **non contano per i tratti** (funzionano solo i loro effetti). Sulla borsa c'è 🧹. Gli oggetti aspirati compaiono nelle ricompense della wave e nel recap delle wave.
+- **The Cat – Knocks Things Over**: all'inizio di ogni round **l'ordine della squadra viene mescolato** (avviso "🐈 The Cat knocked things over!"); dal round 2 ogni spostamento trascinando **costa 1 TP**, e senza TP non si può riordinare.
 - **Slot bloccati**: le Merdomon oltre gli slot aperti restano **in panchina** (🔒 Bench): non combattono, non contano per i tratti e tengono i loro HP. Trascinandole si sceglie chi resta fuori. Evacuate è possibile solo se c'è uno slot aperto libero.
 
-Il Plumber e il Group Admin hanno un disegno dedicato.
+Plumber, Group Admin, Robot Vacuum e Cat hanno un disegno dedicato.
 
 ### 9d. Strutture del bagno
 

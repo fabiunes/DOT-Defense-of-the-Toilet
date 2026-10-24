@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.13
+
+### Nuove funzioni
+- **Livello 6 – 🧹 The Robot Vacuum** (tipo Book, nemici +4 punti statistica, Toilet Points ×2,5):
+  - per tutta la partita, *Clean Sweep*: gli oggetti non contano per i tratti;
+  - wave 5, *Suction*: aspira 1 oggetto a caso all'inizio del combattimento;
+  - wave 10, *Turbo Mode*: aspira altri 2 oggetti e ha +1 ATK per ogni oggetto rimasto.
+- **Livello 7 – 🐈 The Cat** (tipo Console, nemici +4 punti statistica, Toilet Points ×3):
+  - per tutta la partita, *Knocks Things Over*: mescola la squadra a ogni round, e dal round 2 ogni spostamento costa 1 TP;
+  - wave 5, *Lap Sitter*: la prima Merdomon salta il primo attacco; poi *Toilet Paper Massacre*: perdi metà dei TP;
+  - wave 10, *Nine Lives*: torna in vita 2 volte con 1/3 degli HP.
+- Disegni dedicati per i due nuovi Boss.
+- Sblocco: il livello 6 vincendo il 5, il 7 vincendo il 6.
+- Gli oggetti aspirati compaiono nelle ricompense e nel recap delle wave.
+- Rules: "Levels & Bosses" ora ha 3 pagine.
+
 ## v0.12
 
 ### Interfaccia

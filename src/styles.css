@@ -2748,3 +2748,49 @@ button:disabled {
   font-size: 14px;
   text-align: center;
 }
+
+/* ---------- v0.13: Robot Vacuum and Cat ---------- */
+.drag-cost {
+  position: absolute;
+  top: -10px;
+  right: -6px;
+  padding: 1px 6px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #fff;
+  background: #b5452f;
+  border-radius: 10px;
+}
+.cat-notice {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 16px;
+  background: #fff;
+  box-shadow: 3px 3px 0 var(--ink);
+  font-size: 18px;
+  white-space: nowrap;
+  animation: cat-shake 0.5s;
+}
+.cat-notice small {
+  font-size: 13px;
+  color: #666;
+}
+@keyframes cat-shake {
+  0%,
+  100% {
+    transform: translateX(-50%) rotate(0);
+  }
+  25% {
+    transform: translateX(-50%) rotate(-4deg);
+  }
+  75% {
+    transform: translateX(-50%) rotate(4deg);
+  }
+}

@@ -134,7 +134,7 @@ function LevelCard({ level }: { level: Level }) {
       <span className="level-text">
         <span className="level-head">
           <b>Level {level}</b>
-          <span className="level-skulls">{'💀'.repeat(level)}</span>
+          <span className="level-skulls">{level > 3 ? '💀 ×' + level : '💀'.repeat(level)}</span>
         </span>
         <b className="level-name">{info.name}</b>
         <small>

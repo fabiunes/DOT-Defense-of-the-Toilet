@@ -15,6 +15,7 @@ import {
   MODIFIER_DISABLE_COST,
   MODIFIER_INFO,
   REROLL_COST,
+  ROBOT_VACUUM,
   ROUNDS,
   SIZE_NAME,
   STAT_KEYS,
@@ -146,6 +147,17 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
     };
   }, [drag, run, update]);
 
+  // The Cat shuffles the team at the start of every round: tell the player.
+  const [catNotice, setCatNotice] = useState(false);
+  useEffect(() => {
+    if (run.boss !== 'cat' || run.team.length < 2) return;
+    setCatNotice(true);
+    const timer = window.setTimeout(() => setCatNotice(false), 2500);
+    return () => window.clearTimeout(timer);
+    // Only when a new round starts, not when the team grows during it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [run.boss, run.round]);
+
   /** Open slots, or a benched Merdomon to swap with (to choose who sits out). */
   const canDropOn = (to: number) => to < G.teamCap(run) || !!run.team[to];
 
@@ -224,6 +236,13 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
           style={{ left: drag.x - drag.width / 2, top: drag.y - drag.height / 2, width: drag.width, height: drag.height }}
         >
           <MerdomonCard m={run.team[drag.from]} />
+          {G.moveCost(run) > 0 && <span className="drag-cost">−{G.moveCost(run)} TP</span>}
+        </div>
+      )}
+      {catNotice && (
+        <div className="cat-notice sk" onClick={() => setCatNotice(false)}>
+          🐈 The Cat knocked things over!
+          {G.moveCost(run) > 0 && <small>Moving a Merdomon costs {G.moveCost(run)} TP</small>}
         </div>
       )}
 
@@ -417,7 +436,7 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       )}
       {panel?.kind === 'trait' && (
         <Modal onClose={close}>
-          <TraitDetail trait={panel.trait} count={countTraits(run.team, run.items)[panel.trait]} />
+          <TraitDetail trait={panel.trait} count={countTraits(G.activeTeam(run), G.traitItems(run))[panel.trait]} />
         </Modal>
       )}
 
@@ -452,6 +471,7 @@ function BonusPanel({ run, onClose }: { run: RunState; onClose: () => void }) {
   const { sure, ifWon } = G.previewRewards(run);
   const modifier = G.activeModifier(run);
   const abilities = modifier === 'silentMode' ? [] : run.team.map((m) => m.ability);
+  const bossForm = run.wave.find((e) => e.boss)?.bossForm;
   return (
     <Modal onClose={onClose} className="bonus-panel">
       <div className="panel-head">
@@ -515,6 +535,20 @@ function BonusPanel({ run, onClose }: { run: RunState; onClose: () => void }) {
           <SourceIcon source="jackpot" />
           <span>Jackpot: wave TP and Poop</span>
           <b className="bonus-gain">×2</b>
+        </div>
+      )}
+      {run.boss === 'robotVacuum' && bossForm && (
+        <div className="bonus-row">
+          <SourceIcon source="robotVacuum" />
+          <span>{bossForm === 'final' ? 'Turbo Mode' : 'Suction'}: random items</span>
+          <Gain amount={-(bossForm === 'final' ? ROBOT_VACUUM.finalSteal : ROBOT_VACUUM.midSteal)} icon="shop" />
+        </div>
+      )}
+      {run.boss === 'cat' && bossForm === 'mid' && (
+        <div className="bonus-row">
+          <SourceIcon source="cat" />
+          <span>Toilet Paper Massacre</span>
+          <Gain amount="−½" icon="tp" />
         </div>
       )}
 
@@ -610,6 +644,11 @@ function WavesPanel({ run, onClose }: { run: RunState; onClose: () => void }) {
                     +{past.gains[r]}
                     <Icon name={RESOURCE_ICON[r]} size={12} fill={r === 'ap' ? '#1b1b1b' : '#fff'} />
                   </span>
+                ))}
+                {past.stolen?.map((it) => (
+                  <b key={it} className="neg" title={`${ITEM_INFO[it].name} sucked up`}>
+                    −<ItemIcon item={it} size={12} />
+                  </b>
                 ))}
               </span>
             )}

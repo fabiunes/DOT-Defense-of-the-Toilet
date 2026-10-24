@@ -631,7 +631,7 @@ const pages: Page[] = [
     ),
   },
   {
-    title: 'Levels & Bosses (1/2)',
+    title: 'Levels & Bosses (1/3)',
     body: (
       <>
         <p className="tut-note">
@@ -662,11 +662,11 @@ const pages: Page[] = [
     ),
   },
   {
-    title: 'Levels & Bosses (2/2)',
+    title: 'Levels & Bosses (2/3)',
     body: (
       <>
-        <p className="tut-note">The last two Bosses also sabotage your bathroom.</p>
-        {LEVELS.filter((l) => l >= 4).map((l) => {
+        <p className="tut-note">Levels 4 and 5 also sabotage your bathroom.</p>
+        {LEVELS.filter((l) => l === 4 || l === 5).map((l) => {
           const b = LEVEL_BOSS[l];
           const info = BOSS_INFO[b];
           return (
@@ -688,6 +688,34 @@ const pages: Page[] = [
         </Row>
         <Row icon={<span className="mod-emoji">🔇</span>} title="Muted trait">
           Shown crossed out: it counts 0 for bonuses.
+        </Row>
+      </>
+    ),
+  },
+  {
+    title: 'Levels & Bosses (3/3)',
+    body: (
+      <>
+        <p className="tut-note">The last two Bosses go after your items and your plans.</p>
+        {LEVELS.filter((l) => l >= 6).map((l) => {
+          const b = LEVEL_BOSS[l];
+          const info = BOSS_INFO[b];
+          return (
+            <Row
+              key={l}
+              icon={<EnemyArt size={40} kind={info.kind} rarity="epic" boss bossId={b} />}
+              title={`Level ${l} · ${info.name}`}
+            >
+              {info.runDesc}, enemies +{LEVEL_ENEMY_BONUS[l]} stat. <b>{info.ability}</b> (wave 5): {info.midDesc}.{' '}
+              <b>{info.finalAbility ?? info.ability}</b> (wave 10): {info.finalDesc}.
+            </Row>
+          );
+        })}
+        <Row icon={<span className="mod-emoji">🧹</span>} title="Sucked-up items">
+          Gone for good: they show in the wave results and in the Round recap.
+        </Row>
+        <Row icon={<span className="mod-emoji">🐈</span>} title="Shuffled team">
+          Every round, drag your Merdomon back in order: each move costs Toilet Paper from round 2.
         </Row>
       </>
     ),
