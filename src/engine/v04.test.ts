@@ -22,7 +22,7 @@ const bossFoe = (form: 'mid' | 'final', stats: Partial<Stats>): Enemy => ({
 
 /** A run in preparation (first ability, item bonus) with base values. */
 function prep(seed = 4, patch: Partial<RunState> = {}): RunState {
-  let s = G.chooseStarter(G.beginRun(G.newRun(seed), 1, 'homeA'), 0);
+  let s = G.chooseStarter(G.beginRun(G.newRun(seed), 1, 'home'), 0);
   s = G.confirmMerdomon(s, 'hp', s.pendingAbilities[0]);
   s = G.chooseStartBonus(s, 'item');
   return { ...s, items: [], ap: 1, ...patch };
@@ -61,7 +61,7 @@ describe('structures', () => {
     const r = after.lastCombat!.rewards;
     expect(r).toContainEqual({ source: 'sink', resource: 'ap', amount: 1 });
     expect(r).toContainEqual({ source: 'bidet', resource: 'concentration', amount: 2 });
-    expect(r).toContainEqual({ source: 'holder', resource: 'tp', amount: 5 });
+    expect(r).toContainEqual({ source: 'holder', resource: 'tp', amount: 3 });
     expect(r).toContainEqual({ source: 'toilet', resource: 'merdascore', amount: 3 });
     expect(G.continueAfterCombat(after).ap).toBe(Math.min(4, s.ap + 1 + 1));
   });

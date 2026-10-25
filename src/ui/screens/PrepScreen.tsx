@@ -12,9 +12,9 @@ import {
   KIND_NAME,
   MAX_TIER,
   MODIFIER_AP_REWARD,
-  MODIFIER_DISABLE_COST,
+  MODIFIER_DISABLE_CONCENTRATION,
+  BATHROOM_ACTION_POOP,
   MODIFIER_INFO,
-  REROLL_COST,
   ROBOT_VACUUM,
   ROUNDS,
   SIZE_NAME,
@@ -43,6 +43,7 @@ import {
   TopBar,
   TraitDetail,
   TraitsRow,
+  RerollButton,
 } from '../components';
 import { Icon, ItemIcon, RESOURCE_ICON, STAT_ICON, TraitIcon, type IconName } from '../icons';
 import type { Update } from '../update';
@@ -93,7 +94,7 @@ const slotAt = (x: number, y: number) => {
   return el ? Number(el.getAttribute('data-slot')) : null;
 };
 
-export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
+export function PrepScreen({ run, update, onHelp }: { run: RunState; update: Update; onHelp?: () => void }) {
   const [panel, setPanel] = useState<Panel | null>(null);
   const [mode, setMode] = useState<Mode>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
@@ -190,6 +191,7 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
         onItems={() => setPanel({ kind: 'items' })}
         onBoss={() => setPanel({ kind: 'boss' })}
         onRound={() => setPanel({ kind: 'waves' })}
+        onHelp={onHelp}
       />
       <TraitsRow run={run} onTrait={(trait) => setPanel({ kind: 'trait', trait })} />
 
@@ -249,7 +251,7 @@ export function PrepScreen({ run, update }: { run: RunState; update: Update }) {
       {mode ? (
         <div className="mode-bar sk">
           <Icon name={MODE_ICON[mode]} size={22} />
-          <span>{mode === 'fart' ? `Tap to heal +${FARTING.hp} (${FARTING.tp} TP)` : 'Tap a Merdomon'}</span>
+          <span>{mode === 'fart' ? `Tap to heal +${FARTING.hp} (${G.fartTp(run)} TP)` : 'Tap a Merdomon'}</span>
           <button className="icon-btn" onClick={exitMode} aria-label="Done">
             <Icon name={mode === 'fart' ? 'check' : 'close'} size={20} />
           </button>
@@ -761,6 +763,8 @@ export function WavePreview({ run }: { run: RunState }) {
 interface Tile {
   key: string;
   icon: IconName;
+  /** Shown instead of the icon (the bathroom's own action). */
+  emoji?: string;
   label: string;
   enabled: boolean;
   cost: Parameters<typeof CostBadge>[0];
@@ -793,20 +797,20 @@ function ActionPanel({
       },
     },
     {
+      key: 'trade',
+      icon: 'trade',
+      label: 'Trade',
+      enabled: G.canTrade(run),
+      cost: { ap: 1 },
+      onClick: () => onOpen({ kind: 'trade' }),
+    },
+    {
       key: 'evacuate',
       icon: 'toilet',
       label: 'Evacuate',
       enabled: G.canEvacuate(run, 'common'),
       cost: { ap: 1, ms: `${EVACUATE_COST.common}+` },
       onClick: () => onOpen({ kind: 'evacuate' }),
-    },
-    {
-      key: 'shop',
-      icon: 'shop',
-      label: 'Shop',
-      enabled: run.ap >= 1,
-      cost: { ap: 1, tp: G.tpCost(run, 'shop') },
-      onClick: () => onOpen({ kind: 'shop' }),
     },
     {
       key: 'concentrate',
@@ -820,23 +824,31 @@ function ActionPanel({
       },
     },
     {
-      key: 'trade',
-      icon: 'trade',
-      label: 'Trade',
-      enabled: G.canTrade(run),
-      cost: { ap: 1 },
-      onClick: () => onOpen({ kind: 'trade' }),
+      key: 'shop',
+      icon: 'shop',
+      label: 'Shop',
+      enabled: run.ap >= 1,
+      cost: { ap: 1, tp: G.tpCost(run, 'shop') },
+      onClick: () => onOpen({ kind: 'shop' }),
     },
     {
       key: 'build',
       icon: 'upgrade',
       label: 'Build',
       enabled: STRUCTURES.some((id) => G.canBuild(run, id)),
-      cost: { ap: BUILD_COST.ap, tp: run.items.includes('hammer') ? BUILD_COST.hammerTp : BUILD_COST.tp[0] },
+      cost: { ap: BUILD_COST.ap, tp: Math.min(...STRUCTURES.map((id) => G.buildTp(run, id))) },
       onClick: () => onOpen({ kind: 'build' }),
     },
   ];
   const free: Tile[] = [
+    {
+      key: 'fart',
+      icon: 'heart',
+      label: 'Farting',
+      enabled: G.canFart(run),
+      cost: { tp: G.fartTp(run) },
+      onClick: () => onMode('fart'),
+    },
     {
       key: 'flush',
       icon: 'flush',
@@ -853,19 +865,27 @@ function ActionPanel({
       cost: { tp: G.tpCost(run, 'bonusAction') },
       onClick: () => update(G.bonusAction),
     },
-    {
-      key: 'fart',
-      icon: 'heart',
-      label: 'Farting',
-      enabled: G.canFart(run),
-      cost: { tp: FARTING.tp },
-      onClick: () => onMode('fart'),
-    },
   ];
+  // The bathroom's own action (Office, Public, Home), once per round.
+  if (run.bathroom !== 'hotel') {
+    const b = BATHROOM_INFO[run.bathroom];
+    free.push({
+      key: 'bathroom',
+      icon: 'bonus',
+      emoji: b.icon,
+      label: b.special.name,
+      enabled: G.canBathroomAction(run),
+      cost: { ms: String(BATHROOM_ACTION_POOP) },
+      onClick: () => {
+        update(G.bathroomAction);
+        onClose();
+      },
+    });
+  }
 
   const renderTile = (t: Tile) => (
     <button key={t.key} className="tile sk" data-tut={`tile-${t.key}`} disabled={!t.enabled} onClick={t.onClick}>
-      <Icon name={t.icon} size={30} fill="#fff" />
+      {t.emoji ? <span className="tile-emoji">{t.emoji}</span> : <Icon name={t.icon} size={30} fill="#fff" />}
       <span className="tile-label">{t.label}</span>
       <CostBadge {...t.cost} />
     </button>
@@ -927,7 +947,7 @@ function ChoicesModal({ run, update }: { run: RunState; update: Update }) {
           <MerdomonCard key={m.id} m={m} big onClick={() => update((s) => G.chooseEvacuated(s, i))} />
         ))}
       </div>
-      <RerollButton enabled={G.canRerollChoices(run)} onClick={() => update(G.rerollChoices)} free={run.freeRerolls} />
+      <RerollButton enabled={G.canRerollChoices(run)} onClick={() => update(G.rerollChoices)} free={run.freeRerolls} cost={G.rerollTp(run)} />
     </Modal>
   );
 }
@@ -991,15 +1011,6 @@ function GiftModal({ run, update }: { run: RunState; update: Update }) {
   );
 }
 
-/** Free Re-Rolls (Toilet Brush) are used before paying Toilet Paper. */
-function RerollButton({ enabled, onClick, free }: { enabled: boolean; onClick: () => void; free: number }) {
-  return (
-    <button className="big-btn reroll-btn" disabled={!enabled} onClick={onClick}>
-      <Icon name="dice" size={22} fill="#fff" /> Re-Roll
-      {free > 0 ? <span className="cost free">free ×{free}</span> : <CostBadge tp={REROLL_COST} />}
-    </button>
-  );
-}
 
 function TradePanel({
   run,
@@ -1119,7 +1130,7 @@ function ShopPanel({ run, update, onClose }: { run: RunState; update: Update; on
               ))}
             </div>
           )}
-          <RerollButton enabled={G.canRerollShop(run)} onClick={() => update(G.rerollShop)} free={run.freeRerolls} />
+          <RerollButton enabled={G.canRerollShop(run)} onClick={() => update(G.rerollShop)} free={run.freeRerolls} cost={G.rerollTp(run)} />
         </>
       )}
     </Modal>
@@ -1189,10 +1200,35 @@ function ScoutPanel({
         ))}
       </div>
       <div className="scout-actions">
-        {modifierWave && (
-          <button className="big-btn corrupt-btn" disabled={!G.canDisableModifier(run)} onClick={() => update(G.disableModifier)}>
-            Corrupt <CostBadge tp={MODIFIER_DISABLE_COST} />
+        {run.bathroom === 'hotel' && (
+          <button className="big-btn corrupt-btn" disabled={!G.canPayEntryFee(run)} onClick={() => update(G.payEntryFee)}>
+            {run.entryFeePaid ? (
+              <>🛎️ Entry Fee paid ✓</>
+            ) : (
+              <>
+                🛎️ Entry Fee <CostBadge tp={G.entryFeeTp(run)} />
+              </>
+            )}
           </button>
+        )}
+        {modifierWave && !run.modifierDisabled && (
+          <div className="corrupt-row">
+            <span>Corrupt</span>
+            <button
+              className="big-btn corrupt-btn"
+              disabled={!G.canDisableModifier(run, 'tp')}
+              onClick={() => update((s) => G.disableModifier(s, 'tp'))}
+            >
+              <CostBadge tp={G.corruptTp(run)} />
+            </button>
+            <button
+              className="big-btn corrupt-btn"
+              disabled={!G.canDisableModifier(run, 'concentration')}
+              onClick={() => update((s) => G.disableModifier(s, 'concentration'))}
+            >
+              <CostBadge conc={-MODIFIER_DISABLE_CONCENTRATION} />
+            </button>
+          </div>
         )}
         {fight && (
           <button className="big-btn shadow" onClick={() => update(G.fight)} disabled={!G.canFight(run)}>

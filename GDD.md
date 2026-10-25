@@ -1,6 +1,6 @@
 # D.o.t.T. – Defense of the Toilet · Game Design Document
 
-> Versione regole: **v0.13** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
+> Versione regole: **v0.14** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
 >
 > Fonte ufficiale delle regole. Il gioco è interamente in **inglese**; questo documento è in italiano, con i termini di gioco in inglese.
 
@@ -32,7 +32,7 @@ Single player per smartphone, roguelite + auto-battler. Il giocatore difende la 
 | **Concentration** | 0 → limite Shower (§9d) | dal bagno (§9g) | "Vita" del giocatore, barra a riempimento. 0 = game over. |
 | **Poop** | 0 → limite Bidet (§9d) | dal bagno (§9g) | Spesa con *Evacuate*. L'eccesso va perso. |
 | **Action Points** (AP) | 0 → limite Toilet Brush (§9d) | 1 al primo round | A ogni preparazione: +1, + tratto Action, + Sink, + ricompense. **Quelli non spesi si accumulano** fino al limite. |
-| **Toilet Points** | illimitati | 0 | Valuta permanente tra le partite: il punteggio di ogni partita conclusa si aggiunge. Servono a sbloccare i bagni (§9g). |
+| **Toilet Points** | illimitati | 0 | Valuta permanente tra le partite: il punteggio di ogni partita conclusa (× moltiplicatore del livello) si aggiunge. **Per ora non hanno un utilizzo.** |
 
 ## 5. Merdomon
 
@@ -52,7 +52,7 @@ Single player per smartphone, roguelite + auto-battler. Il giocatore difende la 
   - Esempi (totale 20): Normal 5·5·5·5, Liquid 8·8·2·2, Fart 10·7·2·1. Small Merdomon alla nascita (9): Normal 3·2·2·2, Liquid 4·3·1·1, Fart 5·2·1·1.
 - **HP** = vita massima. I danni **persistono** tra i round.
 - **Tratti**: casuali tra i 7 disponibili (Action compreso), anche ripetuti — 1 (Small), 2 (Big), 3 (Huge).
-- **Abilità**: 1, scelta dal giocatore tra **3 estratte a caso** (tutte diverse) nella stessa schermata del +1, poi *Confirm*. Valori fissi per tutte le grandezze (vedi §7b).
+- **Abilità**: 1, scelta dal giocatore tra **2 estratte a caso** (tutte diverse; **3** per lo starter e con il Game Boy) nella stessa schermata del +1, poi *Confirm*. Le opzioni si possono ripescare con il **Re-Roll** (2 TP, prima quelli gratuiti del Toilet Brush). Valori fissi per tutte le grandezze (vedi §7b).
 - Merdomon in squadra: massimo **3 / 4 / 5 / 6** secondo il Tier del **Toilet** (§9d).
 
 ## 6. Distraction-mon
@@ -90,14 +90,14 @@ Bonus a soglie in base al numero di occorrenze dello **stesso tratto** in squadr
 | Abilità | Effetto |
 |---|---|
 | 📣 **Cheerleader** | Il Merdomon dietro di lui ottiene +1 ATK (inizio combattimento) |
-| 🧱 **Frontliner** | Se è il primo della fila: +2 HP e +1 DEF |
+| 🧱 **Frontliner** | Se è il primo della fila: +1 HP e +1 DEF |
 | 🛡️ **Rear Guard** | Se è l'ultimo della fila: +2 DEF |
 | 🦏 **Thick Skin** | −1 al danno subito (minimo 1): danno = ATK − ⌊DEF/2⌋ − 1 |
 | 🌵 **Spiky** | Chi lo colpisce subisce 1 danno |
 | 💦 **Splash** | Ogni suo colpo infligge 1 danno anche al nemico successivo in fila |
 | 🎯 **Giant Slayer** | +2 ATK contro nemici Big e Huge (Boss compreso) |
 | ⛄ **Snowball** | +1 ATK (per il combattimento) per ogni nemico che sconfigge |
-| 🩸 **Leech** | Si cura di 1 HP quando infligge danno |
+| 🩸 **Leech** | Si cura di 1 HP quando infligge danno, al massimo 2 volte per ogni nemico affrontato |
 | 💨 **Second Wind** | Una volta per combattimento, invece di morire resta con 1 HP |
 | 💥 **Last Gasp** | Quando muore, 3 danni a chi l'ha ucciso |
 | 🎁 **Legacy** | Quando muore, il Merdomon successivo ottiene +2 ATK |
@@ -120,23 +120,24 @@ A ogni preparazione lo shop estrae **2 oggetti a caso** (3 con il Game Boy) tra 
 | Sturalavandini | **Plunger** (ex Toilet Brush) | 💩 Stinky | +2 Poop a fine wave |
 | Rivista | **Magazine** | ❤️ Healthy | Il primo Merdomon che muore resuscita a vita piena (1 volta per combattimento) |
 | Getto d'acqua | **Water Jet** (ex Bidet) | 🛡️ Defender | *Evacuate* dà anche +1 Concentration |
-| Doccino | **Hand Shower** | 🧻 Paper | Shop, Flush e Bonus Action costano −2 TP |
-| Finestra | **Window** | ⚡ Haste | Il primo Merdomon della squadra fa un doppio attacco al suo **primo** attacco del combattimento |
-| Asciugamano | **Paper Towel** | 🥊 Fighter | +5 TP a fine wave |
+| Doccino | **Hand Shower** | 🧻 Paper | Tutto quello che si paga in TP costa −2 (minimo 1): Shop, Build, Flush, Bonus Action, Farting, Re-Roll, Corrupt, Entry Fee |
+| Finestra | **Window** | 🥊 Fighter + 🛡️ Defender | Il primo Merdomon della squadra fa un doppio attacco al suo **primo** attacco del combattimento |
+| Asciugamano | **Paper Towel** | 🥊 Fighter | +4 TP a fine wave |
 | Spazzolino | **Toothbrush** | ◆ Action | +X HP a tutti i Merdomon per il combattimento, dove X = AP non spesi quando si preme Next Wave |
-| Infradito | **Flip-Flops** | ◆ Action + ⚡ Haste | Un Merdomon con Velocità almeno doppia rispetto all'avversario attacca 2 volte a ogni turno (solo Merdomon) |
-| Game Boy | **Game Boy** | 🧻 Paper + 💩 Stinky | 3 opzioni invece di 2 in Shop ed Evacuate |
+| Infradito | **Flip-Flops** | ⚡ Haste | Un Merdomon con Velocità almeno doppia rispetto all'avversario ha **+3 ATK** in quel duello (solo Merdomon; popup in combattimento) |
+| Game Boy | **Game Boy** | 💩 Stinky | 3 opzioni invece di 2 in Shop, Evacuate e abilità |
 | Asciugamano marrone | **Brown Towel** | 💩 Stinky | Merdomon Normal +1 HP e +1 ATK in combattimento |
 | Asciugamano giallo | **Yellow Towel** | ❤️ Healthy | Merdomon Liquid +1 HP e +1 ATK in combattimento |
-| Asciugamano bianco | **White Towel** | ⚡ Haste | Merdomon Fart +1 HP e +1 ATK in combattimento |
-| Martello | **Hammer** | 🥊 Fighter | Ogni Build costa 15 TP, anche dal Tier 0 |
+| Asciugamano bianco | **White Towel** | 🛡️ Defender | Merdomon Fart +1 HP e +1 ATK in combattimento |
+| Martello | **Hammer** | 🥊 Fighter | Ogni Build costa 18 TP, anche dal Tier 0 |
+| Rasoio | **Razor** | 🧻 Paper | +1 TP a fine wave per ogni tratto attivo (almeno 2 simboli) |
 
 - **Regalo**: dopo la wave 5, vinta o persa, si sceglie **1 oggetto tra 3** casuali (non posseduti), gratis. Con la borsa piena si scarta un oggetto oppure si rinuncia (**Skip**).
 - **Borsa**: il numero di oggetti è limitato dal **Sink** (§9d). Con la borsa piena, per comprare si sceglie un oggetto da **scartare**.
 
 ## 9. Flusso della run
 
-1. Home → **New Game** → schermata di preparazione partita con due caroselli: in alto il **livello** (e quindi il Boss, §9c), in basso il **bagno** (§9g; quelli bloccati si sbloccano lì con i Toilet Points) → scelta di 1 tra 3 Merdomon **Small** → abilità (1 tra 3) e +1.
+1. Home → **New Game** → schermata di inizio partita (si riapre sull'ultima scelta): in alto il **bagno** (§9g), al centro il **livello** (Boss, §9c), in basso il **percorso** dei livelli di quel bagno → scelta di 1 tra 3 Merdomon **Small** → abilità (1 tra 3) e +1.
 2. **Bonus di partenza**, uno a scelta tra:
    - un **oggetto** casuale;
    - un Merdomon **Small** casuale (poi abilità e +1);
@@ -175,13 +176,13 @@ Le wave **3, 6 e 9** hanno un modificatore, estratto a inizio partita tra questi
 | 🎰 **Jackpot** | Nemici +1 ATK e +1 HP, ma TP e Poop della wave raddoppiati |
 
 - **Ricompensa**: se vinci una wave con il modificatore attivo, **+1 AP** nella preparazione del round successivo.
-- **Corrupt**: nel recap che compare premendo Next Wave, per **3 TP** (senza sconto). Si perde anche la ricompensa.
+- **Corrupt**: nel recap che compare premendo Next Wave, per **10 TP** (con lo sconto dell'Hand Shower) **oppure 1 Concentration** (non usabile con 1 sola Concentration rimasta). Si perde anche la ricompensa.
 
 ### 9c. Boss
 
 A inizio partita il giocatore sceglie il **livello di difficoltà**, che determina il Boss: **Livello 1 – The Bestseller**, **Livello 2 – The StreamDeck**, **Livello 3 – Demon Scroller**, **Livello 4 – The Plumber**, **Livello 5 – The Group Admin**, **Livello 6 – The Robot Vacuum**, **Livello 7 – The Cat**. Dal livello 2 ogni nemico normale ha **+1 / +2 / +3 / +4 / +4 / +4 punti statistica**.
 
-**Sblocco**: all'inizio è aperto solo il livello 1; **vincere il livello N sblocca N+1** (le vittorie delle versioni precedenti, presenti nello storico, valgono). La password Testing Privilege sblocca tutti i livelli.
+**Sblocco**: ogni bagno è un **percorso** separato. All'inizio di ogni bagno è aperto solo il livello 1; **vincere il livello N con un bagno sblocca N+1 per quel bagno**. Le vittorie delle versioni precedenti, presenti nello storico, valgono per il loro tipo di bagno (es. Public A e B contano come Public). La password Testing Privilege sblocca tutti i livelli di tutti i bagni.
 
 **Ricompensa**: lo score non cambia, ma i **Toilet Points** guadagnati sono score × **1 / 1,1 / 1,25 / 1,5 / 2 / 2,5 / 3** (livelli 1–7).
  Ogni Boss dà **+1 ATK a tutti i nemici del suo tipo** per tutta la partita, e combatte due volte: in forma **media** alla wave 5 (Big, 15 punti) e in forma **finale** alla wave 10 (Huge, 22 punti). È sempre l'ultimo della fila.
@@ -209,7 +210,7 @@ Plumber, Group Admin, Robot Vacuum e Cat hanno un disegno dedicato.
 
 Sei blocchi nella parte bassa della schermata, come gli slot dei Merdomon: in alto **Shower, Sink, Bidet**; in basso **Toilet Brush, Toilet** (il water con il giocatore), **Paper Holder**. Il Tier di partenza dipende dal bagno (§9g), da **0** a **3**; si toccano per vedere l'effetto e potenziarle. Una struttura al **Tier 0** (non ancora costruita) è grigia e tratteggiata, ma dà comunque il suo limite minimo.
 
-**Build**: 1 AP + **20 TP** dal Tier 0 al Tier 1, **25 TP** dal Tier 1 al 2, **30 TP** dal Tier 2 al 3. Con l'**Hammer** ogni Build costa 15 TP (+ 1 AP).
+**Build**: 1 AP + **20 TP** dal Tier 0 al Tier 1, **25 TP** dal Tier 1 al 2, **30 TP** dal Tier 2 al 3. Con l'**Hammer** ogni Build costa 18 TP (+ 1 AP). Con l'Hand Shower −2 TP.
 
 | Struttura | Limite (T0/T1/T2/T3) | Produzione dopo ogni combattimento (T0/T1/T2/T3) |
 |---|---|---|
@@ -218,7 +219,7 @@ Sei blocchi nella parte bassa della schermata, come gli slot dei Merdomon: in al
 | **Bidet** | Poop 10 / 15 / 20 / 25 | +0 / +0 / +1 / +2 Concentration |
 | **Toilet Brush** (Scopettone) | Action Point massimi 2 / 3 / 4 / 5 | 0 / 1 / 2 / 3 **Re-Roll gratuiti** per round (usati prima dei TP) |
 | **Toilet** (Water) | Merdomon 3 / 4 / 5 / 6 | +0 / +1 / +2 / +3 Poop |
-| **Paper Holder** (Porta carta) | Toilet Paper 30 / 40 / 50 / 60 | +0 / +2 / +5 / +8 TP |
+| **Paper Holder** (Porta carta) | Toilet Paper 30 / 40 / 50 / 60 | +1 / +2 / +3 / +4 TP |
 
 ### 9e. Punteggio finale
 
@@ -241,24 +242,28 @@ Con il bot una partita vale in media circa 700–1.200 punti con i bagni base (1
 Schermata **Stats** dalla Home: riepilogo (partite, vittorie, record per livello) e lo storico delle **ultime 50 partite concluse** (quelle abbandonate non vengono salvate), dalla più recente, 6 per pagina. Ogni partita è una riga (icona del Boss, vinta o persa, livello, wave, punteggio, data) che toccata si espande con: bagno, dettaglio del punteggio, squadra finale, oggetti, Tier delle strutture, danni, Merdomon creati, TP e Poop prodotti.
 
 
-### 9g. Tipi di bagno e Toilet Points
+### 9g. Bagni (percorsi)
 
-A inizio partita si sceglie il bagno: decide il **Tier di partenza delle strutture** e le risorse iniziali. Ogni bagno ha un colore distintivo sui blocchi delle strutture (grafica dedicata in futuro). I bagni si sbloccano con i **Toilet Points** dalla schermata **Toilets** (Home) o direttamente nella schermata di inizio partita.
+Quattro bagni, **tutti disponibili dall'inizio**. Ogni bagno è uno scenario-campagna: l'obiettivo del giocatore è **completare tutti i 7 livelli con ciascun bagno** (§9c). Il bagno decide il Tier di partenza delle strutture, le risorse iniziali e un'**azione o regola propria**. Ogni bagno ha un simbolo e un colore sui blocchi delle strutture.
 
-| Bagno | Shower | Sink | Bidet | Toilet Brush | Toilet | Paper Holder | TP | Concentration | Poop | Costo |
-|---|---|---|---|---|---|---|---|---|---|---|
-| **Office Bathroom A** | 0 | 1 | 0 | 1 | 1 | 1 | 5 | 8 | 5 | gratis |
-| **Office Bathroom B** | 0 | 0 | 0 | 0 | 1 | 3 | 5 | 6 | 10 | 2.000 |
-| **Public Toilet A** | 0 | 0 | 0 | 0 | 3 | 3 | 0 | 5 | 10 | 2.000 |
-| **Public Toilet B** | 0 | 1 | 1 | 0 | 2 | 0 | 10 | 6 | 12 | 4.000 |
-| **Home Bathroom A** | 1 | 1 | 1 | 1 | 1 | 1 | 3 | 10 | 5 | 6.000 |
-| **Home Bathroom B** | 0 | 1 | 2 | 1 | 2 | 0 | 0 | 8 | 3 | 10.000 |
-| **Hotel Bathroom A** | 2 | 2 | 2 | 2 | 2 | 2 | 0 | 4 | 0 | 15.000 |
-| **Hotel Bathroom B** | 3 | 3 | 3 | 3 | 3 | 3 | 0 | 1 | 0 | 30.000 |
+| Bagno | Shower | Sink | Bidet | Toilet Brush | Toilet | Paper Holder | TP | Concentration | Poop |
+|---|---|---|---|---|---|---|---|---|---|
+| 💼 **Office Toilet** | 0 | 1 | 0 | 2 | 1 | 1 | 5 | 8 | 5 |
+| 🚻 **Public Toilet** | 0 | 0 | 0 | 0 | 2 | 3 | 0 | 5 | 8 |
+| 🏠 **Home Toilet** | 1 | 1 | 1 | 1 | 1 | 1 | 3 | 8 | 0 |
+| 🛎️ **Hotel Toilet** | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 4 | 0 |
 
-L'ordine (Office → Public → Home → Hotel) è quello della forza, ed è lo stesso nella schermata Toilets e all'inizio della partita. Office A è l'unico gratuito ed è il bagno di default. Le risorse iniziali non superano il limite delle strutture. Si parte con **0 Toilet Points**.
+**Azioni e regole dei bagni** (le azioni sono gratuite in AP, una volta per round, e costano **8 Poop**):
+- 💼 **Office – Coffee Break**: +1 Action Point (fino al limite del Toilet Brush).
+- 🚻 **Public – Wall Graffiti**: una Merdomon a caso (tra quelle che combattono) ottiene un tratto a caso tra quelli già presenti in squadra. Il tratto resta.
+- 🏠 **Home – Comfort**: tutte le Merdomon +1 HP nel prossimo combattimento.
+- 🛎️ **Hotel – Entry Fee**: prima di ogni wave si può pagare un **Entry Fee di 5 TP** dal recap di Next Wave; se non lo paghi, **ogni nemico** prende +1 a una statistica casuale.
 
-**Testing Privilege**: l'ultima pagina della schermata Toilets ha il tasto **Unlock All Toilet**; con la password dei tester sblocca tutti i bagni (e tutti i livelli) senza spendere Toilet Points. Nel codice c'è solo l'hash SHA-256 della password.
+La schermata Toilets non esiste più; i **Toilet Points** restano (si guadagnano e si vedono in Home) ma per ora non hanno un utilizzo.
+
+**Testing Privilege**: ultima pagina delle **Rules**, tasto **Unlock All**: con la password dei tester sblocca tutti i livelli di tutti i bagni. Nel codice c'è solo l'hash SHA-256 della password.
+
+**Record**: uno per ogni **bagno e livello**. I record delle versioni precedenti restano (in coda nello storico) e i punteggi già calcolati con la formula attuale contano per il loro tipo di bagno.
 
 ## 10. Preparation
 
@@ -267,19 +272,22 @@ L'ordine (Office → Public → Home → Hotel) è quello della forza, ed è lo 
 | Azione | Nome | Effetto |
 |---|---|---|
 | Cura | **Heal** | Tutta la squadra a HP massimi |
-| Evacuate | **Evacuate** | Spendi 5 / 10 / 20 Poop → appaiono **2 Merdomon** (3 con il Game Boy) Small / Big / Huge tra cui sceglierne 1, poi il +1. **Re-Roll** delle opzioni: 2 TP, illimitato. Bloccata se il Toilet è pieno. |
+| Evacuate | **Evacuate** | Spendi 5 / 10 / 15 Poop → appaiono **2 Merdomon** (3 con il Game Boy) Small / Big / Huge tra cui sceglierne 1, poi abilità e +1. **Re-Roll** delle opzioni: 2 TP, illimitato. Bloccata se il Toilet è pieno. |
 | Acquista | **Shop** | 10 TP → compri uno dei 3 oggetti in vendita |
 | Concentrate | **Concentrate** | −2 Concentration → +4 Poop. Non usabile con Concentration ≤ 2. |
-| Costruisci | **Build** | Potenzia una struttura: 1 AP + 20 / 25 / 30 TP per il Tier 1 / 2 / 3 (15 con l'Hammer) (§9d). |
+| Costruisci | **Build** | Potenzia una struttura: 1 AP + 20 / 25 / 30 TP per il Tier 1 / 2 / 3 (18 con l'Hammer) (§9d). |
+
+Ordine nel pannello: Heal, Trade, Evacuate, Concentrate, Shop, Build.
 | Scambio | **Trade** | A scelta: +2 Poop, +5 TP, oppure +1 a una statistica di un Merdomon (max 10). Sempre disponibile. |
 
 ### Azioni gratuite
 
 | Azione | Nome | Costo | Effetto |
 |---|---|---|---|
+| Scoreggia | **Farting** | 3 TP | +1 HP a un Merdomon ferito. Ripetibile |
 | Flush | **Flush** | 5 TP | Elimina un Merdomon → +1 Concentration (fino al limite). Non sull'ultimo Merdomon. |
-| Bonus Action | **Bonus Action** | 15 TP | +1 AP (fino al limite del Toilet Brush) |
-| Scoreggia | **Farting** | 3 TP | +1 HP a un Merdomon ferito. Ripetibile, senza sconto dell'Hand Shower |
+| Bonus Action | **Bonus Action** | 16 TP | +1 AP (fino al limite del Toilet Brush) |
+| Azione del bagno | **Coffee Break / Wall Graffiti / Comfort** | 8 Poop | Una volta per round (§9g); l'Hotel non ce l'ha |
 | Combat | **Fight** | – | Avvia la wave |
 
 ## 11. Combattimento (automatico)
@@ -287,7 +295,7 @@ L'ordine (Office → Public → Home → Hotel) è quello della forza, ed è lo 
 1. **Duello**: il primo Merdomon vivo contro il primo Distraction-mon vivo.
 2. **Iniziativa**: SPD più alta inizia. Parità → SPD totale della squadra. Ulteriore parità → casuale. Si ricalcola a **ogni nuovo duello**.
 3. **Danno** = ATK − ⌊DEF / 2⌋, minimo 1. Attacchi alternati fino alla morte di uno dei due.
-4. **Velocità**: decide solo chi colpisce per primo. Il doppio colpo con Velocità doppia esiste solo con le **Flip-Flops** (e solo per i Merdomon).
+4. **Velocità**: decide solo chi colpisce per primo. Con le **Flip-Flops** un Merdomon con Velocità almeno doppia ha +3 ATK in quel duello. Popup in combattimento per Snowball, Cheerleader (quando la Merdomon potenziata entra nel suo primo duello) e Flip-Flops.
 5. Il morto viene sostituito dal successivo in squadra; il sopravvissuto resta con i suoi HP.
 6. Fine quando una squadra è tutta sconfitta. Con 0 Merdomon la wave è persa.
 7. Animazione rapida con tasto ⏩ per velocizzare/saltare.
@@ -306,10 +314,10 @@ In entrambi i casi, poi:
 
 ## 12. Schermate
 
-- **Home**: Toilet Points in alto a destra; New Game, Tutorial Game, Continue, Rules, Stats, Toilets; in basso il numero di versione e l'avviso sulle statistiche anonime (§14).
+- **Home**: Toilet Points in alto a destra; New Game, Tutorial Game, Continue, Rules, Stats; in basso il numero di versione e l'avviso sulle statistiche anonime (§14).
+- **Rules**: la prima pagina è **What's new** (cambi di bilanciamento dell'ultima versione), l'ultima è **Testing Privilege**. Si aprono anche durante la partita con il tasto **?** nella riga in alto.
 - **Tutorial Game**: partita guidata di 2 round (§15).
-- **Inizio partita**: carosello dei livelli (Boss) in alto e carosello dei bagni in basso, con Start o Unlock. Ogni livello mostra il moltiplicatore dei Toilet Points; quelli bloccati mostrano "🔒 Win Level N".
-- **Toilets**: collezione dei bagni, 2 per pagina, con strutture, risorse iniziali e tasto Unlock; 5ª pagina **Testing Privilege** (§9g).
+- **Inizio partita**: in alto il carosello dei **bagni** (simbolo, strutture, risorse, azione propria), al centro il carosello dei **livelli** (Boss, record di quel bagno, moltiplicatore), in basso il **percorso** dei 7 livelli del bagno (✓ vinto almeno una volta, 🔒 bloccato). Si riapre sull'ultima scelta.
 - **Rules** (ex Tutorial): 20 pagine con icone e regole, con esempi presi dalla schermata principale.
 - **Starter**: scelta tra 3 Merdomon Small, poi schermata abilità + +1 con Confirm.
 - **Starting bonus**: scelta tra oggetto, Merdomon Small e Supplies.
@@ -342,7 +350,6 @@ Con **GoatCounter** (senza cookie, senza dati personali), dashboard: https://fab
 | `run-end/L<livello>/<bagno>/win` o `/lose` | Fine partita |
 | `run-lost-at/wave-<n>` | Partita persa, con la wave |
 | `run-score/<fascia>` | Punteggio finale, a fasce di 1.000 |
-| `unlock/<bagno>` | Bagno sbloccato con i Toilet Points |
 | `testing-privilege` | Password Testing Privilege corretta |
 
 I dati sono aggregati: non si vede chi ha giocato, solo quante partite e con quali esiti.

@@ -13,7 +13,6 @@ import { PrepScreen } from './ui/screens/PrepScreen';
 import { StartBonusScreen } from './ui/screens/StartBonusScreen';
 import { StarterScreen } from './ui/screens/StarterScreen';
 import { StatsScreen } from './ui/screens/StatsScreen';
-import { ToiletsScreen } from './ui/screens/ToiletsScreen';
 import { TutorialEndScreen } from './ui/screens/TutorialEndScreen';
 import { TutorialScreen } from './ui/screens/TutorialScreen';
 import { TutorialGuide } from './ui/TutorialGuide';
@@ -24,7 +23,6 @@ export default function App() {
   const [hasSave, setHasSave] = useState(() => loadRun() !== null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showStats, setShowStats] = useState(false);
-  const [showToilets, setShowToilets] = useState(false);
   // The Tutorial Game: a prepared run, never saved or recorded.
   const [tutorial, setTutorial] = useState(false);
   const tutorialRef = useRef(false);
@@ -59,9 +57,7 @@ export default function App() {
   const tutorialDone = tutorial && !!run && run.round > TUTORIAL_ROUNDS;
 
   let content;
-  if (showToilets) {
-    content = <ToiletsScreen onClose={() => setShowToilets(false)} />;
-  } else if (showStats) {
+  if (showStats) {
     content = <StatsScreen onClose={() => setShowStats(false)} />;
   } else if (showTutorial) {
     content = <TutorialScreen onClose={() => setShowTutorial(false)} />;
@@ -74,7 +70,6 @@ export default function App() {
         onContinue={() => setRun(loadRun())}
         onTutorial={() => setShowTutorial(true)}
         onStats={() => setShowStats(true)}
-        onToilets={() => setShowToilets(true)}
       />
     );
   } else if (tutorialDone) {
@@ -98,7 +93,7 @@ export default function App() {
   } else if (run.phase === 'startBonus') {
     content = <StartBonusScreen run={run} update={update} />;
   } else if (run.phase === 'preparation') {
-    content = <PrepScreen run={run} update={update} />;
+    content = <PrepScreen run={run} update={update} onHelp={() => setShowTutorial(true)} />;
   } else if (run.phase === 'combat' && run.lastCombat) {
     content = <CombatScreen key={run.round} report={run.lastCombat} onDone={() => update(continueAfterCombat)} />;
   } else {

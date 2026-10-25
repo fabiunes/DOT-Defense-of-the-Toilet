@@ -4,7 +4,7 @@ import * as G from './game';
 import type { RunState } from './types';
 
 function prep(patch: Partial<RunState> = {}): RunState {
-  let s = G.chooseStarter(G.beginRun(G.newRun(41), 1, 'homeA'), 0);
+  let s = G.chooseStarter(G.beginRun(G.newRun(41), 1, 'home'), 0);
   s = G.confirmMerdomon(s, 'hp', s.pendingAbilities[0]);
   s = G.chooseStartBonus(s, 'resources');
   return { ...s, ...patch };

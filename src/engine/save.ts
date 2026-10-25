@@ -1,17 +1,28 @@
 import {
   BATHROOMS,
-  BATHROOM_INFO,
   HISTORY_MAX,
   LEVELS,
   LEVEL_REWARD,
   STARTING_TOILET_POINTS,
   STRUCTURES,
   TESTING_PASSWORD_SHA256,
+  bathroomOf,
 } from './data';
 import { runScore, type ScoreLine } from './score';
-import type { AbilityId, BathroomId, BossId, ItemId, Level, MerdomonKind, Rarity, RunState, StructureId } from './types';
+import type {
+  AbilityId,
+  BathroomId,
+  BossId,
+  ItemId,
+  LegacyBathroomId,
+  Level,
+  MerdomonKind,
+  Rarity,
+  RunState,
+  StructureId,
+} from './types';
 
-const KEY = 'dot.save.v8';
+const KEY = 'dot.save.v9';
 
 export function saveRun(s: RunState): void {
   try {
@@ -26,7 +37,7 @@ export function loadRun(): RunState | null {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as RunState;
-    return s?.version === 8 && s.phase === 'preparation' ? s : null;
+    return s?.version === 9 && s.phase === 'preparation' ? s : null;
   } catch {
     return null;
   }
@@ -42,17 +53,34 @@ export function clearSave(): void {
 
 // ---------- Records and history (finished runs only) ----------
 
-// v0.9 changed the score formula: records start again under a new key.
-const bestKey = (level: Level) => `dot.best.v2.${level}`;
+// Records are per bathroom and level since v0.14. The per-level records of v0.9–v0.13 are kept and still count
+// in the overall best; runs of the history scored with the v0.9 formula count for their bathroom.
+const bestKey = (bathroom: BathroomId, level: Level) => `dot.best.v3.${bathroom}.${level}`;
+const legacyBestKey = (level: Level) => `dot.best.v2.${level}`;
 const HISTORY_KEY = 'dot.history';
 
-/** Best final score for a difficulty level on this device (0 if none). */
-export function loadBest(level: Level): number {
+const stored = (key: string) => {
   try {
-    return Number(localStorage.getItem(bestKey(level))) || 0;
+    return Number(localStorage.getItem(key)) || 0;
   } catch {
     return 0;
   }
+};
+
+/** Runs scored with the current formula (v0.9+) have a "Merdomon created" line. */
+const currentFormula = (r: RunRecord) => r.lines.some((l) => l.label === 'Merdomon created');
+
+/**
+ * Best final score on this device (0 if none): for a bathroom and level, or for a level across all bathrooms
+ * (old per-level records included).
+ */
+export function loadBest(level: Level, bathroom?: BathroomId): number {
+  const runs = loadHistory().filter((r) => r.level === level && currentFormula(r));
+  if (bathroom) {
+    const fromHistory = runs.filter((r) => bathroomOf(r.bathroom) === bathroom).map((r) => r.score);
+    return Math.max(stored(bestKey(bathroom, level)), ...fromHistory, 0);
+  }
+  return Math.max(stored(legacyBestKey(level)), ...BATHROOMS.map((b) => loadBest(level, b)), 0);
 }
 
 /** One finished run, as shown in the Stats screen. */
@@ -62,7 +90,8 @@ export interface RunRecord {
   date: string;
   level: Level;
   boss: BossId;
-  bathroom: BathroomId;
+  /** Old runs (before v0.14) keep their A/B bathroom id. */
+  bathroom: BathroomId | LegacyBathroomId;
   victory: boolean;
   round: number;
   score: number;
@@ -97,7 +126,7 @@ export function recordRun(s: RunState, runId: string): { previousBest: number; r
   const history = loadHistory();
   const existing = history.find((r) => r.id === runId);
   if (existing) return { previousBest: existing.previousBest, recorded: false };
-  const previousBest = loadBest(s.level);
+  const previousBest = loadBest(s.level, s.bathroom);
   const { lines, total } = runScore(s);
   const record: RunRecord = {
     id: runId,
@@ -120,21 +149,20 @@ export function recordRun(s: RunState, runId: string): { previousBest: number; r
   };
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify([record, ...history].slice(0, HISTORY_MAX)));
-    if (total > previousBest) localStorage.setItem(bestKey(s.level), String(total));
+    if (total > previousBest) localStorage.setItem(bestKey(s.bathroom, s.level), String(total));
     // The final score is also earned as Toilet Points, multiplied by the level's reward.
     localStorage.setItem(POINTS_KEY, String(loadToiletPoints() + toiletPointsFor(total, s.level)));
-    // Winning a level unlocks the next one.
-    if (record.victory) unlockLevel((s.level + 1) as Level);
+    // Winning a level unlocks the next one for this bathroom.
+    if (record.victory) addWin(s.bathroom, s.level);
   } catch {
     // Storage unavailable: nothing is recorded.
   }
   return { previousBest, recorded: true };
 }
 
-// ---------- Toilet Points and unlocked bathrooms (kept between runs) ----------
+// ---------- Toilet Points (kept between runs, no use for now) ----------
 
 const POINTS_KEY = 'dot.toiletPoints';
-const UNLOCKED_KEY = 'dot.unlockedBathrooms';
 
 export function loadToiletPoints(): number {
   try {
@@ -145,42 +173,16 @@ export function loadToiletPoints(): number {
   }
 }
 
-export function isUnlocked(id: BathroomId): boolean {
-  if (BATHROOM_INFO[id].cost === 0) return true;
-  try {
-    const list = JSON.parse(localStorage.getItem(UNLOCKED_KEY) ?? '[]') as BathroomId[];
-    return list.includes(id);
-  } catch {
-    return false;
-  }
-}
-
-/** Spends Toilet Points to unlock a bathroom type. Returns false if it can't be afforded. */
-export function unlockBathroom(id: BathroomId): boolean {
-  if (isUnlocked(id)) return true;
-  const points = loadToiletPoints();
-  if (points < BATHROOM_INFO[id].cost) return false;
-  try {
-    const list = JSON.parse(localStorage.getItem(UNLOCKED_KEY) ?? '[]') as BathroomId[];
-    localStorage.setItem(UNLOCKED_KEY, JSON.stringify([...list, id]));
-    localStorage.setItem(POINTS_KEY, String(points - BATHROOM_INFO[id].cost));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 async function sha256(text: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** Testing Privilege: the right password unlocks every bathroom for free. Returns whether it was right. */
+/** Testing Privilege: the right password unlocks every level of every bathroom. Returns whether it was right. */
 export async function unlockAllWithPassword(password: string): Promise<boolean> {
   if ((await sha256(password)) !== TESTING_PASSWORD_SHA256) return false;
   try {
-    localStorage.setItem(UNLOCKED_KEY, JSON.stringify([...BATHROOMS]));
-    localStorage.setItem(LEVELS_KEY, JSON.stringify([...LEVELS]));
+    localStorage.setItem(ALL_KEY, '1');
   } catch {
     return false;
   }
@@ -203,34 +205,63 @@ export function claimTutorialReward(points: number): number {
   }
 }
 
-// ---------- Levels (unlocked by winning the previous one) ----------
+// ---------- Journey: each bathroom's levels, unlocked by winning the previous one ----------
 
-const LEVELS_KEY = 'dot.unlockedLevels';
+const WINS_KEY = 'dot.journeyWins';
+const ALL_KEY = 'dot.journeyAll';
+const LAST_KEY = 'dot.lastSetup';
+
+function storedWins(): Partial<Record<BathroomId, Level[]>> {
+  try {
+    return JSON.parse(localStorage.getItem(WINS_KEY) ?? '{}') as Partial<Record<BathroomId, Level[]>>;
+  } catch {
+    return {};
+  }
+}
+
+function addWin(bathroom: BathroomId, level: Level) {
+  const wins = storedWins();
+  const list = wins[bathroom] ?? [];
+  if (list.includes(level)) return;
+  localStorage.setItem(WINS_KEY, JSON.stringify({ ...wins, [bathroom]: [...list, level] }));
+}
+
+/** A level won at least once with this bathroom (wins before v0.14 count for their bathroom type). */
+export function hasWon(bathroom: BathroomId, level: Level): boolean {
+  if (storedWins()[bathroom]?.includes(level)) return true;
+  return loadHistory().some((r) => r.victory && r.level === level && bathroomOf(r.bathroom) === bathroom);
+}
+
+/** Level 1 is always open; the others need a win on the previous level with the same bathroom. */
+export function isLevelUnlocked(level: Level, bathroom: BathroomId): boolean {
+  if (level === 1 || hasWon(bathroom, (level - 1) as Level)) return true;
+  try {
+    return localStorage.getItem(ALL_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** The setup screen reopens on the last bathroom and level picked. */
+export function loadLastSetup(): { bathroom: BathroomId; level: Level } {
+  try {
+    const last = JSON.parse(localStorage.getItem(LAST_KEY) ?? 'null') as { bathroom: BathroomId; level: Level } | null;
+    if (last && BATHROOMS.includes(last.bathroom) && LEVELS.includes(last.level)) return last;
+  } catch {
+    // fall through to the default
+  }
+  return { bathroom: BATHROOMS[0], level: 1 };
+}
+
+export function saveLastSetup(bathroom: BathroomId, level: Level): void {
+  try {
+    localStorage.setItem(LAST_KEY, JSON.stringify({ bathroom, level }));
+  } catch {
+    // ignore
+  }
+}
 
 /** Toilet Points earned by a run: its score times the level's reward (rounded). */
 export function toiletPointsFor(score: number, level: Level): number {
   return Math.round(score * LEVEL_REWARD[level]);
-}
-
-function storedLevels(): Level[] {
-  try {
-    return JSON.parse(localStorage.getItem(LEVELS_KEY) ?? '[]') as Level[];
-  } catch {
-    return [];
-  }
-}
-
-function unlockLevel(level: Level) {
-  if (!LEVELS.includes(level) || storedLevels().includes(level)) return;
-  try {
-    localStorage.setItem(LEVELS_KEY, JSON.stringify([...storedLevels(), level]));
-  } catch {
-    // Storage unavailable: nothing is unlocked.
-  }
-}
-
-/** Level 1 is always open; the others need a win on the previous level (also before v0.11, from the history). */
-export function isLevelUnlocked(level: Level): boolean {
-  if (level === 1 || storedLevels().includes(level)) return true;
-  return loadHistory().some((r) => r.victory && r.level === level - 1);
 }

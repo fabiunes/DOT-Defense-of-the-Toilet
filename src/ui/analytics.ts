@@ -31,7 +31,6 @@ export const analytics = {
     if (!victory) track(`run-lost-at/wave-${wave}`);
     track(`run-score/${scoreBand(score)}`);
   },
-  unlock: (bathroom: BathroomId) => track(`unlock/${bathroom}`),
   testingUnlock: () => track('testing-privilege'),
   tutorialStart: () => track('tutorial-start'),
   tutorialComplete: () => track('tutorial-complete'),

@@ -14,7 +14,8 @@ export type ItemId =
   | 'brownTowel'
   | 'yellowTowel'
   | 'whiteTowel'
-  | 'hammer';
+  | 'hammer'
+  | 'razor';
 export type MerdomonKind = 'normal' | 'liquid' | 'fart';
 export type EnemyKind = 'phone' | 'book' | 'console';
 export type AbilityId =
@@ -39,7 +40,9 @@ export type StructureId = 'stall' | 'sink' | 'bidet' | 'scrubber' | 'toilet' | '
 /** Difficulty level, chosen at the start: it picks the Boss and toughens normal enemies. */
 export type Level = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 /** Starting bathroom setup, chosen together with the level. */
-export type BathroomId = 'homeA' | 'homeB' | 'officeA' | 'officeB' | 'publicA' | 'publicB' | 'hotelA' | 'hotelB';
+export type BathroomId = 'office' | 'public' | 'home' | 'hotel';
+/** Bathroom ids used before v0.14 (A/B variants), still found in the run history. */
+export type LegacyBathroomId = 'homeA' | 'homeB' | 'officeA' | 'officeB' | 'publicA' | 'publicB' | 'hotelA' | 'hotelB';
 export type BossId = 'demonScroller' | 'bestseller' | 'streamDeck' | 'plumber' | 'groupAdmin' | 'robotVacuum' | 'cat';
 /** Bosses show up twice: a medium form on wave 5 and the final form on wave 10. */
 export type BossForm = 'mid' | 'final';
@@ -103,6 +106,8 @@ export type CombatEvent =
   /** Merdomon `p` triggers its ability; `target` (if any) is who it changed, with the HP after. */
   | { type: 'ability'; ability: AbilityId; p: number; target?: { side: Side; index: number; hp: number } }
   | { type: 'modifier'; modifier: ModifierId }
+  /** An item acts during a duel (Flip-Flops: +ATK), on Merdomon `p`. */
+  | { type: 'item'; item: ItemId; p: number }
   /** The Boss uses its ability; `hp` is its HP afterwards (Extra Life). */
   | { type: 'boss'; boss: BossId; index: number; hp?: number }
   | { type: 'end'; won: boolean };
@@ -129,6 +134,8 @@ export interface CombatReport {
   bossId?: BossId;
   /** Items sucked up by the Robot Vacuum in this fight. */
   stolen?: ItemId[];
+  /** Hotel: the Entry Fee was not paid, enemies got +1 to a random stat. */
+  entryFeeSkipped?: boolean;
   bonuses: CombatBonus[];
   modifier: ModifierId | null;
   won: boolean;
@@ -179,7 +186,7 @@ export interface RunStats {
 export type Phase = 'boss' | 'starter' | 'startBonus' | 'preparation' | 'combat' | 'gameover' | 'victory';
 
 export interface RunState {
-  version: 8;
+  version: 9;
   phase: Phase;
   round: number;
   concentration: number;
@@ -220,6 +227,12 @@ export interface RunState {
   modifiers: Partial<Record<number, ModifierId>>;
   /** The current round's modifier was paid off. */
   modifierDisabled: boolean;
+  /** Hotel: the Entry Fee was paid for this wave. */
+  entryFeePaid: boolean;
+  /** The bathroom's own action (Office, Public, Home) was used this round. */
+  bathroomActionUsed: boolean;
+  /** Home's Comfort: extra HP for every Merdomon in the next fight. */
+  comfortHp: number;
   /** The upcoming wave, generated at the start of each preparation. */
   wave: Enemy[];
   lastCombat: CombatReport | null;

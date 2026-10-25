@@ -6,7 +6,7 @@ import { Rng } from './rng';
 import type { Enemy, ItemId, Level, Merdomon, RunState } from './types';
 
 function prep(level: Level, patch: Partial<RunState> = {}): RunState {
-  let s = G.chooseStarter(G.beginRun(G.newRun(51), level, 'homeA'), 0);
+  let s = G.chooseStarter(G.beginRun(G.newRun(51), level, 'home'), 0);
   s = G.confirmMerdomon(s, 'hp', s.pendingAbilities[0]);
   s = G.chooseStartBonus(s, 'resources');
   return { ...s, ...patch };

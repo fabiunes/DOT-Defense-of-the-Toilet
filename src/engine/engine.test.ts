@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { damage, hitsPerTurn, simulateCombat } from './combat';
+import { damage, flipFlopsAtk, simulateCombat } from './combat';
 import { ITEMS, KIND_CURVE, MAX_STAT, SIZE_TOTAL } from './data';
 import * as G from './game';
 import { createEnemy, createMerdomon, createWave, splitStats } from './generate';
@@ -25,7 +25,7 @@ const confirm = (s: RunState, stat: Parameters<typeof G.confirmMerdomon>[1] = 'h
 
 /** A run in preparation with a known team. */
 function prepRun(patch: Partial<RunState> = {}): RunState {
-  let s = G.beginRun(G.newRun(42), 1, 'homeA');
+  let s = G.beginRun(G.newRun(42), 1, 'home');
   s = G.chooseStarter(s, 0);
   s = confirm(s, 'atk');
   s = G.chooseStartBonus(s, 'resources');
@@ -110,8 +110,8 @@ describe('traits', () => {
 
   it('counts duplicates and item traits (some items have two)', () => {
     const c = countTraits([mk({}, { traits: ['haste', 'haste'] })], ['window', 'flipflops']);
-    expect(c.haste).toBe(4);
-    expect(c.action).toBe(1);
+    expect(c.haste).toBe(3);
+    expect([c.fighter, c.defender, c.action]).toEqual([1, 1, 0]);
   });
 });
 
@@ -122,19 +122,21 @@ describe('combat', () => {
     expect(damage(5, 2)).toBe(4);
   });
 
-  it('speed only decides who starts, unless Flip-Flops give double hits at twice the speed', () => {
-    expect(hitsPerTurn(4, 2, false)).toBe(1);
-    expect(hitsPerTurn(4, 2, true)).toBe(2);
-    expect(hitsPerTurn(3, 2, true)).toBe(1);
+  it('speed only decides who starts; Flip-Flops give +3 ATK in a duel at twice the speed', () => {
+    expect(flipFlopsAtk(4, 2, false)).toBe(0);
+    expect(flipFlopsAtk(4, 2, true)).toBe(3);
+    expect(flipFlopsAtk(3, 2, true)).toBe(0);
     const team = [mk({ atk: 2, spd: 4 })];
     const wave = [foe({ hp: 10, def: 0, atk: 1, spd: 2 })];
-    const sides = (items: Parameters<typeof simulateCombat>[2]) =>
-      simulateCombat(team, wave, items, new Rng(1)).events.slice(1, 4).map((e) => e.type === 'attack' && e.side);
-    expect(sides([])).toEqual(['p', 'e', 'p']);
-    expect(sides(['flipflops'])).toEqual(['p', 'p', 'e']);
-    // Enemies never double-hit.
+    const firstHit = (items: Parameters<typeof simulateCombat>[2]) => {
+      const e = simulateCombat(team, wave, items, new Rng(1)).events.find((x) => x.type === 'attack');
+      return e?.type === 'attack' ? e.damage : 0;
+    };
+    expect(firstHit([])).toBe(2);
+    expect(firstHit(['flipflops'])).toBe(5);
+    // Only for Merdomon, and only in that duel.
     const r = simulateCombat([mk({ hp: 9, spd: 1 })], [foe({ hp: 9, spd: 9, atk: 1 })], ['flipflops'], new Rng(1));
-    expect(r.events.slice(1, 3).map((e) => e.type === 'attack' && e.side)).toEqual(['e', 'p']);
+    expect(r.events.some((e) => e.type === 'item')).toBe(false);
   });
 
   it('faster fighter strikes first and a win reports survivors', () => {
@@ -193,10 +195,10 @@ describe('combat', () => {
 });
 
 describe('run flow', () => {
-  it('starts (Home Bathroom A) with 3 TP, 5 Poop and 3 small starters, after the setup', () => {
+  it('starts (Home Toilet) with 3 TP, 8 Concentration, no Poop and 3 small starters, after the setup', () => {
     expect(G.newRun(1).phase).toBe('boss');
-    const s = G.beginRun(G.newRun(1), 1, 'homeA');
-    expect(s).toMatchObject({ phase: 'starter', concentration: 10, tp: 3, merdascore: 5, ap: 0 });
+    const s = G.beginRun(G.newRun(1), 1, 'home');
+    expect(s).toMatchObject({ phase: 'starter', concentration: 8, tp: 3, merdascore: 0, ap: 0 });
     expect(s.starters).toHaveLength(3);
     expect(s.starters.every((m) => m.rarity === 'common' && m.traits.length === 1)).toBe(true);
   });
@@ -219,7 +221,7 @@ describe('run flow', () => {
 
   it('Concentrate needs more than 2 concentration; Poop is capped by the Bidet', () => {
     expect(G.canConcentrate(prepRun({ concentration: 2 }))).toBe(false);
-    const s = G.concentrate(prepRun({ merdascore: 13 }));
+    const s = G.concentrate(prepRun({ concentration: 10, merdascore: 13 }));
     expect(s).toMatchObject({ concentration: 8, merdascore: 15, ap: 0 });
   });
 
@@ -281,11 +283,13 @@ describe('run flow', () => {
     expect([...s.shopOffer].sort()).toEqual(['toothbrush', 'towel']);
   });
 
-  it('Hand Shower discounts Shop, Flush and Bonus Action by 2', () => {
+  it('Hand Shower discounts everything paid in Toilet Paper by 2, at least 1', () => {
     const s = prepRun({ tp: 30, items: ['shower'] });
     expect(G.tpCost(s, 'flush')).toBe(3);
     expect(G.tpCost(s, 'shop')).toBe(8);
-    expect(G.tpCost(s, 'bonusAction')).toBe(13);
+    expect(G.tpCost(s, 'bonusAction')).toBe(14);
+    expect([G.rerollTp(s), G.fartTp(s), G.corruptTp(s), G.entryFeeTp(s)]).toEqual([1, 1, 8, 3]);
+    expect(G.buildTp(s, 'sink')).toBe(23);
   });
 
   it('Flush cannot remove the last Merdomon', () => {
@@ -323,11 +327,11 @@ describe('run flow', () => {
   });
 
   it('Toothbrush adds unspent AP as combat HP, listed in the combat bonuses', () => {
-    const s = prepRun({ items: ['toothbrush', 'window'] });
+    const s = prepRun({ items: ['toothbrush', 'magazine'] });
     s.team[0].traits = ['fighter'];
     const after = G.fight(G.bonusAction({ ...s, tp: 20 }));
     expect(after.lastCombat!.player[0].maxHp).toBe(s.team[0].stats.hp + 2);
-    expect(after.lastCombat!.bonuses).toEqual([{ source: 'toothbrush', stat: 'hp', amount: 2 }, { source: 'window' }]);
+    expect(after.lastCombat!.bonuses).toEqual([{ source: 'toothbrush', stat: 'hp', amount: 2 }, { source: 'magazine' }]);
     s.team[0].traits = ['fighter', 'fighter'];
     expect(G.fight(s).lastCombat!.bonuses[0]).toEqual({ source: 'fighter', stat: 'atk', amount: 1 });
   });
@@ -339,7 +343,7 @@ describe('run flow', () => {
     const after = G.fight(s);
     expect(after.phase).toBe('combat');
     expect(after.lastCombat?.won).toBe(false);
-    expect(after.concentration).toBe(5);
+    expect(after.concentration).toBe(s.concentration - 5);
     expect(after.team[0].hp).toBe(3);
     // No damage (the faster enemy kills first): only the Paper Holder's +2 TP.
     expect(after.tp).toBe(s.tp + 2);

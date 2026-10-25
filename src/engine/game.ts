@@ -45,10 +45,15 @@ import {
   STRUCTURE_INFO,
   TOWEL_TP,
   TRADE,
+  BATHROOM_ACTION_POOP,
+  HOTEL_ENTRY_FEE,
+  MODIFIER_DISABLE_CONCENTRATION,
+  RAZOR_TP,
+  STARTER_ABILITY_CHOICES,
 } from './data';
 import { createEnemy, createMerdomon, createWave } from './generate';
 import { Rng } from './rng';
-import { activeTraits, apBonus, combatBonus, countTraits, traitValue } from './traits';
+import { activeTraits, apBonus, combatBonus, countTraits, traitTier, traitValue } from './traits';
 import type {
   AbilityId,
   BathroomId,
@@ -104,7 +109,7 @@ export function emptyStats(): RunStats {
 
 export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
   const s: RunState = {
-    version: 8,
+    version: 9,
     phase: 'boss',
     round: 1,
     concentration: MAX_CONCENTRATION,
@@ -129,6 +134,9 @@ export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
     pendingAbilities: [],
     modifiers: {},
     modifierDisabled: false,
+    entryFeePaid: false,
+    bathroomActionUsed: false,
+    comfortHp: 0,
     wave: [],
     lastCombat: null,
     waveLog: [],
@@ -256,6 +264,8 @@ function startPreparation(s: RunState) {
   s.bonusAp = 0;
   s.freeRerolls = production(s, 'scrubber');
   s.modifierDisabled = false;
+  s.entryFeePaid = false;
+  s.bathroomActionUsed = false;
   const extraPoints = LEVEL_ENEMY_BONUS[s.level];
   s.wave = withRng(s, (rng) =>
     createWave(rng, s.round, s.nextId, s.boss, s.stats.concentrationLost, extraPoints),
@@ -292,9 +302,26 @@ const inPreparation = (s: RunState) =>
   s.phase === 'preparation' && !s.pending && s.choices.length === 0 && s.giftOffer.length === 0;
 
 /** A new Merdomon waits for its ability (1 of 3) and its +1 point. */
-function setPending(s: RunState, m: Merdomon) {
+function setPending(s: RunState, m: Merdomon, starter = false) {
   s.pending = m;
-  s.pendingAbilities = withRng(s, (rng) => rng.shuffle([...ABILITIES]).slice(0, ABILITY_CHOICES));
+  drawAbilities(s, starter ? STARTER_ABILITY_CHOICES : choiceCount(s, ABILITY_CHOICES));
+}
+
+function drawAbilities(s: RunState, count: number) {
+  s.pendingAbilities = withRng(s, (rng) => rng.shuffle([...ABILITIES]).slice(0, count));
+}
+
+export function canRerollAbilities(s: RunState): boolean {
+  return !!s.pending && canPayReroll(s);
+}
+
+/** Redraws the abilities offered to the new Merdomon (same number of options). */
+export function rerollAbilities(prev: RunState): RunState {
+  if (!canRerollAbilities(prev)) return prev;
+  const s = clone(prev);
+  payReroll(s);
+  drawAbilities(s, s.pendingAbilities.length);
+  return s;
 }
 
 // ---------- Starter, new Merdomon, starting bonus ----------
@@ -302,7 +329,7 @@ function setPending(s: RunState, m: Merdomon) {
 export function chooseStarter(prev: RunState, index: number): RunState {
   if (prev.phase !== 'starter' || prev.pending || !prev.starters[index]) return prev;
   const s = clone(prev);
-  setPending(s, s.starters[index]);
+  setPending(s, s.starters[index], true);
   return s;
 }
 
@@ -375,9 +402,19 @@ export function chooseStartBonus(prev: RunState, choice: StartBonusId): RunState
 
 // ---------- Costs ----------
 
-export function tpCost(s: RunState, action: 'shop' | 'flush' | 'bonusAction'): number {
-  return Math.max(0, COSTS[action] - (s.items.includes('shower') ? SHOWER_DISCOUNT : 0));
+/** Hand Shower: everything paid in Toilet Paper costs 2 less, at least 1. */
+export function discounted(s: RunState, cost: number): number {
+  return s.items.includes('shower') ? Math.max(1, cost - SHOWER_DISCOUNT) : cost;
 }
+
+export function tpCost(s: RunState, action: 'shop' | 'flush' | 'bonusAction'): number {
+  return discounted(s, COSTS[action]);
+}
+
+export const rerollTp = (s: RunState) => discounted(s, REROLL_COST);
+export const fartTp = (s: RunState) => discounted(s, FARTING.tp);
+export const corruptTp = (s: RunState) => discounted(s, MODIFIER_DISABLE_COST);
+export const entryFeeTp = (s: RunState) => discounted(s, HOTEL_ENTRY_FEE);
 
 // ---------- AP actions ----------
 
@@ -419,10 +456,10 @@ export function chooseEvacuated(prev: RunState, index: number): RunState {
 
 // ---------- Re-Roll (free ones from the Toilet Brush first, then TP; unlimited) ----------
 
-const canPayReroll = (s: RunState) => s.freeRerolls > 0 || s.tp >= REROLL_COST;
+const canPayReroll = (s: RunState) => s.freeRerolls > 0 || s.tp >= rerollTp(s);
 function payReroll(s: RunState) {
   if (s.freeRerolls > 0) s.freeRerolls--;
-  else s.tp -= REROLL_COST;
+  else s.tp -= rerollTp(s);
 }
 
 export function canRerollChoices(s: RunState): boolean {
@@ -535,6 +572,45 @@ export function flush(prev: RunState, id: number): RunState {
   return s;
 }
 
+// ---------- Bathroom rules: Entry Fee (Hotel) and the bathroom's own action ----------
+
+export function canPayEntryFee(s: RunState): boolean {
+  return inPreparation(s) && s.bathroom === 'hotel' && !s.entryFeePaid && s.tp >= entryFeeTp(s);
+}
+
+export function payEntryFee(prev: RunState): RunState {
+  if (!canPayEntryFee(prev)) return prev;
+  const s = clone(prev);
+  s.tp -= entryFeeTp(s);
+  s.entryFeePaid = true;
+  return s;
+}
+
+/** Office (Coffee Break), Public (Wall Graffiti), Home (Comfort): once per round, paid in Poop. */
+export function canBathroomAction(s: RunState): boolean {
+  if (!inPreparation(s) || s.bathroom === 'hotel' || s.bathroomActionUsed || s.merdascore < BATHROOM_ACTION_POOP) return false;
+  if (s.bathroom === 'office') return s.ap < apCap(s);
+  if (s.bathroom === 'public') return activeTeam(s).some((m) => m.traits.length > 0);
+  return s.team.length > 0;
+}
+
+export function bathroomAction(prev: RunState): RunState {
+  if (!canBathroomAction(prev)) return prev;
+  const s = clone(prev);
+  s.merdascore -= BATHROOM_ACTION_POOP;
+  s.bathroomActionUsed = true;
+  if (s.bathroom === 'office') s.ap++;
+  else if (s.bathroom === 'home') s.comfortHp = 1;
+  else {
+    // Wall Graffiti: a random fighting Merdomon gains a random trait the team already has.
+    const team = activeTeam(s);
+    const owned = TRAITS.filter((t) => team.some((m) => m.traits.includes(t)));
+    const [trait, target] = withRng(s, (rng) => [rng.pick(owned), rng.pick(team)] as const);
+    target.traits = [...target.traits, trait];
+  }
+  return s;
+}
+
 export function canBonusAction(s: RunState): boolean {
   return inPreparation(s) && s.ap < apCap(s) && s.tp >= tpCost(s, 'bonusAction');
 }
@@ -585,8 +661,8 @@ export function tradeStat(prev: RunState, id: number, stat: StatKey): RunState {
 
 /** TP to build the next tier: 20 / 25 / 30 by current tier; 15 for any tier with the Hammer. */
 export function buildTp(s: RunState, id: StructureId): number {
-  if (s.items.includes('hammer')) return BUILD_COST.hammerTp;
-  return BUILD_COST.tp[Math.min(s.structures[id], BUILD_COST.tp.length - 1)];
+  if (s.items.includes('hammer')) return discounted(s, BUILD_COST.hammerTp);
+  return discounted(s, BUILD_COST.tp[Math.min(s.structures[id], BUILD_COST.tp.length - 1)]);
 }
 
 export function canBuild(s: RunState, id: StructureId): boolean {
@@ -605,7 +681,7 @@ export function build(prev: RunState, id: StructureId): RunState {
 // ---------- Farting (free action, TP) ----------
 
 export function canFart(s: RunState, id?: number): boolean {
-  if (!inPreparation(s) || s.tp < FARTING.tp) return false;
+  if (!inPreparation(s) || s.tp < fartTp(s)) return false;
   const hurt = (m: Merdomon) => m.hp < m.stats.hp;
   return id === undefined ? s.team.some(hurt) : s.team.some((m) => m.id === id && hurt(m));
 }
@@ -615,7 +691,7 @@ export function fart(prev: RunState, id: number): RunState {
   if (!canFart(prev, id)) return prev;
   const s = clone(prev);
   const m = s.team.find((x) => x.id === id)!;
-  s.tp -= FARTING.tp;
+  s.tp -= fartTp(s);
   m.hp = Math.min(m.stats.hp, m.hp + FARTING.hp);
   return s;
 }
@@ -647,21 +723,23 @@ export function skipGift(prev: RunState): RunState {
 
 // ---------- Wave modifier ----------
 
-export function canDisableModifier(s: RunState): boolean {
-  return (
-    inPreparation(s) &&
-    !!s.modifiers[s.round] &&
-    !s.modifierDisabled &&
-    s.round < ROUNDS &&
-    s.tp >= MODIFIER_DISABLE_COST
-  );
+/** Corrupt is paid with Toilet Paper or with Concentration (never the last point). */
+export type CorruptPayment = 'tp' | 'concentration';
+
+export function canDisableModifier(s: RunState, pay: CorruptPayment = 'tp'): boolean {
+  const affordable = pay === 'tp' ? s.tp >= corruptTp(s) : s.concentration > MODIFIER_DISABLE_CONCENTRATION;
+  return inPreparation(s) && !!s.modifiers[s.round] && !s.modifierDisabled && s.round < ROUNDS && affordable;
 }
 
 /** Pays to skip the modifier; its reward is lost too. */
-export function disableModifier(prev: RunState): RunState {
-  if (!canDisableModifier(prev)) return prev;
+export function disableModifier(prev: RunState, pay: CorruptPayment = 'tp'): RunState {
+  if (!canDisableModifier(prev, pay)) return prev;
   const s = clone(prev);
-  s.tp -= MODIFIER_DISABLE_COST;
+  if (pay === 'tp') s.tp -= corruptTp(s);
+  else {
+    s.concentration -= MODIFIER_DISABLE_CONCENTRATION;
+    s.stats.concentrationLost += MODIFIER_DISABLE_CONCENTRATION;
+  }
   s.modifierDisabled = true;
   s.wave = s.wave.filter((e) => !e.extra);
   return s;
@@ -707,6 +785,10 @@ function passiveRewards(s: RunState): Reward[] {
   if (merdon > 0) rewards.push({ source: 'merdon', resource: 'merdascore', amount: merdon });
   if (s.items.includes('plunger')) rewards.push({ source: 'plunger', resource: 'merdascore', amount: BRUSH_MERDASCORE });
   if (s.items.includes('towel')) rewards.push({ source: 'towel', resource: 'tp', amount: TOWEL_TP });
+  if (s.items.includes('razor')) {
+    const active = TRAITS.filter((t) => traitTier(traits[t]) > 0).length;
+    if (active > 0) rewards.push({ source: 'razor', resource: 'tp', amount: active * RAZOR_TP });
+  }
   // The Plumber's Knock Knock / Pipe Burst: Concentration lost on its waves.
   const boss = s.wave.find((e) => e.boss);
   if (s.boss === 'plumber' && boss) {
@@ -766,7 +848,18 @@ export function fight(prev: RunState): RunState {
       s.wave = s.wave.map((e) => (e.boss ? { ...e, stats: { ...e.stats, atk: e.stats.atk + atk } } : e));
     }
   }
-  const toothbrushHp = s.items.includes('toothbrush') ? s.ap : 0;
+  // Hotel: without the Entry Fee every enemy gets +1 to a random stat.
+  const entryFeeSkipped = s.bathroom === 'hotel' && !s.entryFeePaid;
+  if (entryFeeSkipped) {
+    s.wave = withRng(s, (rng) =>
+      s.wave.map((e) => {
+        const k = rng.pick(STAT_KEYS);
+        return { ...e, stats: { ...e.stats, [k]: e.stats[k] + 1 } };
+      }),
+    );
+  }
+  const toothbrushHp = (s.items.includes('toothbrush') ? s.ap : 0) + s.comfortHp;
+  s.comfortHp = 0;
   const modifier = activeModifier(s);
   const result = withRng(s, (rng) =>
     simulateCombat(activeTeam(s), s.wave, s.items, rng, {
@@ -866,6 +959,7 @@ export function fight(prev: RunState): RunState {
     round: s.round,
     bossId: s.boss,
     stolen,
+    entryFeeSkipped,
     bonuses,
     modifier,
     won: result.won,

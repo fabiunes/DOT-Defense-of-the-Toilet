@@ -1,23 +1,25 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { BATHROOMS, BATHROOM_INFO, BOSS_INFO, LEVELS, LEVEL_BOSS, LEVEL_ENEMY_BONUS, LEVEL_REWARD, STRUCTURES, STRUCTURE_INFO } from '../../engine/data';
 import { beginRun } from '../../engine/game';
-import { isLevelUnlocked, isUnlocked, loadBest, loadToiletPoints, unlockBathroom } from '../../engine/save';
+import { hasWon, isLevelUnlocked, loadBest, loadLastSetup, saveLastSetup } from '../../engine/save';
 import type { BathroomId, Level, RunState } from '../../engine/types';
 import { analytics } from '../analytics';
 import { EnemyArt } from '../art';
 import { StructureIcon } from '../bathroom';
+import { ToiletPoints } from '../components';
 import { Icon } from '../icons';
 import type { Update } from '../update';
-import { ToiletPoints } from './ToiletsScreen';
 
-/** First screen of a run: pick the level (the Boss) at the top and the starting bathroom at the bottom. */
-export function BossRevealScreen({ run, update }: { run: RunState; update: Update }) {
-  const [level, setLevel] = useState<Level>(run.level);
-  const [bathroomIdx, setBathroomIdx] = useState(0);
-  const [, refresh] = useState(0);
+/**
+ * First screen of a run. Each bathroom is a campaign: pick it at the top, the level (Boss) in the middle,
+ * and see its journey at the bottom. Opens on the last choice.
+ */
+export function BossRevealScreen({ update }: { run: RunState; update: Update }) {
+  const [last] = useState(loadLastSetup);
+  const [bathroomIdx, setBathroomIdx] = useState(Math.max(0, BATHROOMS.indexOf(last.bathroom)));
+  const [level, setLevel] = useState<Level>(last.level);
   const bathroom = BATHROOMS[bathroomIdx];
-  const unlocked = isUnlocked(bathroom);
-  const levelOpen = isLevelUnlocked(level);
+  const open = isLevelUnlocked(level, bathroom);
 
   return (
     <div className="screen setup">
@@ -26,25 +28,21 @@ export function BossRevealScreen({ run, update }: { run: RunState; update: Updat
         <ToiletPoints />
       </div>
 
-      <Carousel
-        label="Level"
-        index={level - 1}
-        count={LEVELS.length}
-        onChange={(i) => setLevel(LEVELS[i])}
-      >
-        <LevelCard level={level} />
-      </Carousel>
-
       <Carousel label="Bathroom" index={bathroomIdx} count={BATHROOMS.length} onChange={setBathroomIdx}>
         <BathroomCard id={bathroom} />
       </Carousel>
 
-      {!levelOpen ? (
-        <button className="big-btn shadow" disabled>
-          🔒 Win Level {level - 1} to unlock
-        </button>
-      ) : unlocked ? (
-        <button className="big-btn shadow" onClick={() => {
+      <Carousel label="Level" index={level - 1} count={LEVELS.length} onChange={(i) => setLevel(LEVELS[i])}>
+        <LevelCard level={level} bathroom={bathroom} />
+      </Carousel>
+
+      <Journey bathroom={bathroom} selected={level} onSelect={setLevel} />
+
+      {open ? (
+        <button
+          className="big-btn shadow"
+          onClick={() => {
+            saveLastSetup(bathroom, level);
             analytics.runStart(level, bathroom);
             update((s) => beginRun(s, level, bathroom));
           }}
@@ -52,27 +50,11 @@ export function BossRevealScreen({ run, update }: { run: RunState; update: Updat
           <Icon name="play" size={22} fill="#1b1b1b" /> Start
         </button>
       ) : (
-        <button
-          className="big-btn shadow unlock-btn"
-          disabled={loadToiletPoints() < BATHROOM_INFO[bathroom].cost}
-          onClick={() => {
-            if (unlockBathroom(bathroom)) analytics.unlock(bathroom);
-            refresh((n) => n + 1);
-          }}
-        >
-          🔒 Unlock <ToiletPointsCost cost={BATHROOM_INFO[bathroom].cost} />
+        <button className="big-btn shadow" disabled>
+          🔒 Win Level {level - 1} to unlock
         </button>
       )}
     </div>
-  );
-}
-
-export function ToiletPointsCost({ cost }: { cost: number }) {
-  return (
-    <span className="cost tp-cost">
-      <Icon name="toilet" size={13} fill="#f2c94c" />
-      {cost.toLocaleString('en')}
-    </span>
   );
 }
 
@@ -124,13 +106,13 @@ function Carousel({
   );
 }
 
-function LevelCard({ level }: { level: Level }) {
+function LevelCard({ level, bathroom }: { level: Level; bathroom: BathroomId }) {
   const info = BOSS_INFO[LEVEL_BOSS[level]];
-  const best = loadBest(level);
-  const open = isLevelUnlocked(level);
+  const best = loadBest(level, bathroom);
+  const open = isLevelUnlocked(level, bathroom);
   return (
     <div className={`level-card ${open ? '' : 'level-locked'}`}>
-      <EnemyArt size={64} kind={info.kind} rarity="epic" boss bossId={LEVEL_BOSS[level]} />
+      <EnemyArt size={60} kind={info.kind} rarity="epic" boss bossId={LEVEL_BOSS[level]} />
       <span className="level-text">
         <span className="level-head">
           <b>Level {level}</b>
@@ -141,9 +123,6 @@ function LevelCard({ level }: { level: Level }) {
           {info.runDesc}
           {LEVEL_ENEMY_BONUS[level] > 0 && ` · enemies +${LEVEL_ENEMY_BONUS[level]} stat`}
         </small>
-        <small>
-          <b>{info.finalAbility ?? info.ability}</b>: {info.finalDesc}
-        </small>
         <small className="level-best">
           {open ? (best > 0 ? `Best: ${best} · ` : '') : `🔒 Win Level ${level - 1} · `}
           Toilet Points ×{LEVEL_REWARD[level]}
@@ -153,37 +132,71 @@ function LevelCard({ level }: { level: Level }) {
   );
 }
 
+/** The bathroom's campaign: its 7 levels, ✓ when won at least once, 🔒 until the previous one is won. */
+function Journey({ bathroom, selected, onSelect }: { bathroom: BathroomId; selected: Level; onSelect: (l: Level) => void }) {
+  const won = LEVELS.filter((l) => hasWon(bathroom, l)).length;
+  return (
+    <div className="journey">
+      <div className="carousel-label">
+        Journey
+        <small className="muted">
+          {won}/{LEVELS.length} won
+        </small>
+      </div>
+      <div className="journey-path">
+        {LEVELS.map((l) => {
+          const state = hasWon(bathroom, l) ? 'won' : isLevelUnlocked(l, bathroom) ? 'open' : 'locked';
+          return (
+            <button
+              key={l}
+              className={`journey-node ${state} ${l === selected ? 'selected' : ''}`}
+              onClick={() => onSelect(l)}
+              aria-label={`Level ${l}`}
+            >
+              <EnemyArt size={30} kind={BOSS_INFO[LEVEL_BOSS[l]].kind} rarity="epic" boss bossId={LEVEL_BOSS[l]} />
+              <small>{state === 'won' ? '✓' : state === 'locked' ? '🔒' : l}</small>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function BathroomCard({ id }: { id: BathroomId }) {
   const b = BATHROOM_INFO[id];
-  const unlocked = isUnlocked(id);
   return (
-    <div className={`bathroom-card ${unlocked ? '' : 'locked'}`} style={{ background: b.color }}>
+    <div className="bathroom-card" style={{ background: b.color }}>
       <div className="bathroom-card-head">
-        <b>{b.name}</b>
-        {!unlocked && <ToiletPointsCost cost={b.cost} />}
+        <b>
+          <span className="bathroom-icon">{b.icon}</span> {b.name}
+        </b>
+        <span className="bathroom-start">
+          <span>
+            <Icon name="tp" size={15} fill="#fff" />
+            {b.tp}
+          </span>
+          <span>
+            <Icon name="focus" size={15} fill="#fff" />
+            {b.concentration}
+          </span>
+          <span>
+            <Icon name="poop" size={15} fill="#fff" />
+            {b.poop}
+          </span>
+        </span>
       </div>
       <div className="bathroom-mini">
         {STRUCTURES.map((s) => (
           <span key={s} className={`mini-struct ${b.structures[s] === 0 ? 't0' : ''}`} title={STRUCTURE_INFO[s].name}>
-            <StructureIcon id={s} tier={Math.max(1, b.structures[s])} size={30} />
+            <StructureIcon id={s} tier={Math.max(1, b.structures[s])} size={26} />
             <small>T{b.structures[s]}</small>
           </span>
         ))}
       </div>
-      <div className="bathroom-start">
-        <span>
-          <Icon name="tp" size={16} fill="#fff" />
-          {b.tp}
-        </span>
-        <span>
-          <Icon name="focus" size={16} fill="#fff" />
-          {b.concentration}
-        </span>
-        <span>
-          <Icon name="poop" size={16} fill="#fff" />
-          {b.poop}
-        </span>
-      </div>
+      <small className="bathroom-special">
+        <b>{b.special.name}</b>: {b.special.desc}
+      </small>
     </div>
   );
 }

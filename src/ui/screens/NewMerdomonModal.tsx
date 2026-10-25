@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { ABILITY_INFO, STAT_KEYS } from '../../engine/data';
-import { canAssignBonus, canConfirm, confirmMerdomon } from '../../engine/game';
+import { canAssignBonus, canConfirm, canRerollAbilities, confirmMerdomon, rerollAbilities, rerollTp } from '../../engine/game';
 import type { AbilityId, Merdomon, RunState, StatKey } from '../../engine/types';
 import { MerdomonArt } from '../art';
-import { AbilityBadge, KindLabel, Modal, Stars, StatValue, TraitList } from '../components';
+import { AbilityBadge, KindLabel, Modal, RerollButton, Stars, StatValue, TraitList } from '../components';
 import { Icon, STAT_ICON } from '../icons';
 import type { Update } from '../update';
 
@@ -44,6 +44,15 @@ export function NewMerdomonModal({
         ))}
       </div>
       <p className="ability-desc">{ability ? ABILITY_INFO[ability].desc : 'Tap an ability to read it'}</p>
+      <RerollButton
+        enabled={canRerollAbilities(run)}
+        onClick={() => {
+          setAbility(null);
+          update(rerollAbilities);
+        }}
+        free={run.freeRerolls}
+        cost={rerollTp(run)}
+      />
 
       <div className="pick-label">+1</div>
       <div className="bonus-stats">

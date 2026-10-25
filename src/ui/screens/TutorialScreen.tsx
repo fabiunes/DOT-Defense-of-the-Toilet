@@ -40,9 +40,14 @@ import {
   TRAIT_INFO,
   TRAIT_VALUES,
   TRADE,
+  ABILITY_CHOICES,
+  BATHROOM_ACTION_POOP,
+  MODIFIER_DISABLE_CONCENTRATION,
 } from '../../engine/data';
 import type { Merdomon, Rarity, RunState } from '../../engine/types';
 import * as G from '../../engine/game';
+import { unlockAllWithPassword } from '../../engine/save';
+import { analytics } from '../analytics';
 import { EnemyArt, MerdomonArt } from '../art';
 import { StructureIcon } from '../bathroom';
 import { AbilityBadge, CostBadge, InfoRow, MerdomonCard, Stars, StatValue, TopBar, TraitsRow } from '../components';
@@ -58,7 +63,7 @@ const demoTeam: Merdomon[] = [
 ];
 
 const demoRun: RunState = {
-  version: 8,
+  version: 9,
   phase: 'preparation',
   round: 3,
   concentration: 7,
@@ -67,7 +72,7 @@ const demoRun: RunState = {
   ap: 1,
   bonusAp: 0,
   level: 1,
-  bathroom: 'homeA',
+  bathroom: 'home',
   startStructures: { stall: 1, sink: 1, bidet: 1, scrubber: 1, toilet: 1, holder: 1 },
   giftOffer: [],
   freeRerolls: 0,
@@ -83,6 +88,9 @@ const demoRun: RunState = {
   pendingAbilities: [],
   modifiers: { 3: 'rushHour' },
   modifierDisabled: false,
+  entryFeePaid: false,
+  bathroomActionUsed: false,
+  comfortHp: 0,
   wave: [
     { id: 10, rarity: 'common', kind: 'phone', stats: { hp: 3, atk: 2, def: 1, spd: 3 }, boss: false },
     { id: 11, rarity: 'rare', kind: 'book', stats: { hp: 5, atk: 4, def: 2, spd: 3 }, boss: false },
@@ -161,6 +169,22 @@ interface Page {
 }
 
 const pages: Page[] = [
+  {
+    title: "What's new (v0.14)",
+    body: (
+      <ul className="tut-news">
+        <li>Bathrooms are now <b>journeys</b>: 💼 Office, 🚻 Public, 🏠 Home, 🛎️ Hotel, all open. Win a level to unlock the next one with that bathroom.</li>
+        <li>Each bathroom has its own action or rule (Coffee Break, Wall Graffiti, Comfort, Entry Fee).</li>
+        <li>New Merdomon pick 1 of <b>2</b> abilities (3 with the Game Boy or for your first one), with <b>Re-Roll</b>.</li>
+        <li>Evacuate a Huge Merdomon: <b>{EVACUATE_COST.epic}</b> Poop. Bonus Action: <b>{COSTS.bonusAction}</b> TP. Corrupt: <b>{MODIFIER_DISABLE_COST}</b> TP or <b>1</b> Concentration.</li>
+        <li>Frontliner +1 HP (was +2). Leech heals at most twice per enemy.</li>
+        <li>Flip-Flops: +3 ATK against a foe at most half as fast (Haste). Window: Fighter + Defender. White Towel: Defender. Game Boy: Stinky, 3 abilities too. Paper Towel +4 TP. Hammer 18 TP. Hand Shower: −2 TP on everything.</li>
+        <li>New item: <b>Razor</b>, +1 TP per active trait.</li>
+        <li>Paper Holder produces +1/+2/+3/+4 TP.</li>
+        <li>Tap <b>?</b> during a run to open these rules.</li>
+      </ul>
+    ),
+  },
   {
     title: 'Defend your break!',
     body: (
@@ -451,10 +475,10 @@ const pages: Page[] = [
         <TileDemo
           tiles={[
             { icon: 'heal', label: 'Heal', cost: { ap: 1 } },
-            { icon: 'toilet', label: 'Evacuate', cost: { ap: 1, ms: `${EVACUATE_COST.common}+` } },
-            { icon: 'shop', label: 'Shop', cost: { ap: 1, tp: COSTS.shop } },
-            { icon: 'focus', label: 'Concentrate', cost: { ap: 1, ms: `+${CONCENTRATE_GAIN}`, conc: -COSTS.concentrate } },
             { icon: 'trade', label: 'Trade', cost: { ap: 1 } },
+            { icon: 'toilet', label: 'Evacuate', cost: { ap: 1, ms: `${EVACUATE_COST.common}+` } },
+            { icon: 'focus', label: 'Concentrate', cost: { ap: 1, ms: `+${CONCENTRATE_GAIN}`, conc: -COSTS.concentrate } },
+            { icon: 'shop', label: 'Shop', cost: { ap: 1, tp: COSTS.shop } },
             { icon: 'upgrade', label: 'Build', cost: { ap: BUILD_COST.ap, tp: BUILD_COST.tp[0] } },
           ]}
         />
@@ -462,7 +486,7 @@ const pages: Page[] = [
           All Merdomon back to full HP.
         </Row>
         <Row icon={I('toilet')} title="Evacuate">
-          Pick 1 of 2 new Merdomon, then its ability and +1.
+          Pick 1 of 2 new Merdomon, then its ability (1 of {ABILITY_CHOICES}) and +1.
         </Row>
         <Row icon={I('shop')} title="Shop">
           Buy 1 of 2 items. Bag full? Drop one.
@@ -487,9 +511,9 @@ const pages: Page[] = [
         <p className="tut-note">The bottom actions need no {ii('ap', '#1b1b1b')}:</p>
         <TileDemo
           tiles={[
+            { icon: 'heart', label: 'Farting', cost: { tp: FARTING.tp } },
             { icon: 'flush', label: 'Flush', cost: { tp: COSTS.flush } },
             { icon: 'bonus', label: 'Bonus Action', cost: { tp: COSTS.bonusAction } },
-            { icon: 'heart', label: 'Farting', cost: { tp: FARTING.tp } },
           ]}
         />
 
@@ -505,8 +529,11 @@ const pages: Page[] = [
         <Row icon={I('heart')} title="Farting">
           +{FARTING.hp} HP to one Merdomon, as often as you like.
         </Row>
+        <Row icon={<span className="mod-emoji">💼</span>} title="Bathroom action">
+          Office, Public and Home have their own, once per round, for {BATHROOM_ACTION_POOP} {ii('poop')}.
+        </Row>
         <Row icon={I('dice')} title="Re-Roll">
-          Redraw Evacuate or Shop for {REROLL_COST} {ii('tp')} (Toilet Brush: free ones).
+          Redraw Evacuate, Shop or abilities for {REROLL_COST} {ii('tp')} (Toilet Brush: free ones).
         </Row>
       </>
     ),
@@ -556,7 +583,7 @@ const pages: Page[] = [
           <b>
             +{MODIFIER_AP_REWARD} {ii('ap', '#1b1b1b')}
           </b>{' '}
-          next round, or <b>Corrupt</b> it for {MODIFIER_DISABLE_COST} {ii('tp')} (and lose the reward).
+          next round, or <b>Corrupt</b> it for {MODIFIER_DISABLE_COST} {ii('tp')} or {MODIFIER_DISABLE_CONCENTRATION} {ii('focus')} (and lose the reward).
         </p>
         {MODIFIERS.map((m) => (
           <Row key={m} icon={<span className="mod-emoji">{MODIFIER_INFO[m].icon}</span>} title={MODIFIER_INFO[m].name}>
@@ -608,25 +635,35 @@ const pages: Page[] = [
     ),
   },
   {
-    title: 'Bathrooms & Toilet Points',
+    title: 'Bathrooms & journey',
     body: (
       <>
         <p className="tut-note">
-          Each run starts in a bathroom type: different structures, Toilet Paper, Concentration and Poop. Your final score
-          becomes <b>Toilet Points</b> {ii('toilet', '#f2c94c')}: spend them in <b>Toilets</b> to unlock new bathrooms.
+          Each bathroom is a <b>journey</b> of {LEVELS.length} levels (Bosses): win a level to unlock the next one with that
+          bathroom. Goal: complete every level with every bathroom!
         </p>
-        {BATHROOMS.map((id) => (
-          <div key={id} className="tut-bathroom" style={{ background: BATHROOM_INFO[id].color }}>
-            <b>{BATHROOM_INFO[id].name}</b>
-            <small>
-              {ii('tp')}
-              {BATHROOM_INFO[id].tp} {ii('focus')}
-              {BATHROOM_INFO[id].concentration} {ii('poop')}
-              {BATHROOM_INFO[id].poop}
-            </small>
-            <small className="muted">{BATHROOM_INFO[id].cost ? BATHROOM_INFO[id].cost.toLocaleString('en') : 'free'}</small>
-          </div>
-        ))}
+        {BATHROOMS.map((id) => {
+          const b = BATHROOM_INFO[id];
+          return (
+            <div key={id} className="tut-bathroom" style={{ background: b.color }}>
+              <b>
+                {b.icon} {b.name}
+              </b>
+              <small>
+                {ii('tp')}
+                {b.tp} {ii('focus')}
+                {b.concentration} {ii('poop')}
+                {b.poop}
+              </small>
+              <small className="tut-bathroom-special">
+                <b>{b.special.name}</b>: {b.special.desc}
+              </small>
+            </div>
+          );
+        })}
+        <p className="tut-note">
+          Your final score still becomes <b>Toilet Points</b> {ii('toilet', '#f2c94c')}: no use for them yet.
+        </p>
       </>
     ),
   },
@@ -786,13 +823,13 @@ const pages: Page[] = [
     ),
   },
   {
-    title: 'Items (1/2)',
+    title: 'Items (1/3)',
     body: (
       <>
         <p className="tut-note">
           2 random items are on sale each round. Each item also counts for its <b>traits</b>.
         </p>
-        {ITEMS.slice(0, 6).map((it) => (
+        {ITEMS.slice(0, 5).map((it) => (
           <Row key={it} icon={<ItemIcon item={it} size={24} />} title={ITEM_INFO[it].name}>
             {ITEM_INFO[it].traits.map((t) => (
               <TraitIcon key={t} trait={t} size={14} />
@@ -804,10 +841,25 @@ const pages: Page[] = [
     ),
   },
   {
-    title: 'Items (2/2)',
+    title: 'Items (2/3)',
     body: (
       <>
-        {ITEMS.slice(6).map((it) => (
+        {ITEMS.slice(5, 10).map((it) => (
+          <Row key={it} icon={<ItemIcon item={it} size={24} />} title={ITEM_INFO[it].name}>
+            {ITEM_INFO[it].traits.map((t) => (
+              <TraitIcon key={t} trait={t} size={14} />
+            ))}{' '}
+            {ITEM_INFO[it].desc}
+          </Row>
+        ))}
+      </>
+    ),
+  },
+  {
+    title: 'Items (3/3)',
+    body: (
+      <>
+        {ITEMS.slice(10).map((it) => (
           <Row
             key={it}
             icon={<ItemIcon item={it} size={24} />}
@@ -822,7 +874,64 @@ const pages: Page[] = [
       </>
     ),
   },
+  {
+    title: 'Testing Privilege',
+    body: <TestingPrivilege />,
+  },
 ];
+
+/** Testers with the password can unlock every level of every bathroom. */
+function TestingPrivilege() {
+  const [asking, setAsking] = useState(false);
+  const [password, setPassword] = useState('');
+  const [status, setStatus] = useState<'idle' | 'wrong' | 'done'>('idle');
+
+  const submit = async () => {
+    const ok = await unlockAllWithPassword(password);
+    if (ok) analytics.testingUnlock();
+    setStatus(ok ? 'done' : 'wrong');
+  };
+
+  return (
+    <div className="toilets-list testing">
+      <p className="tut-note">If you have the password to unlock all the content, tap the button below.</p>
+      {status === 'done' ? (
+        <span className="unlocked-tag">
+          <Icon name="check" size={16} /> Everything unlocked
+        </span>
+      ) : asking ? (
+        <form
+          className="password-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submit();
+          }}
+        >
+          <input
+            className="sk"
+            type="password"
+            placeholder="Insert Password"
+            aria-label="Insert Password"
+            autoFocus
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setStatus('idle');
+            }}
+          />
+          {status === 'wrong' && <small className="wrong">Wrong password</small>}
+          <button className="big-btn shadow" type="submit" disabled={!password}>
+            <Icon name="check" size={20} /> Confirm
+          </button>
+        </form>
+      ) : (
+        <button className="big-btn shadow" onClick={() => setAsking(true)}>
+          🔒 Unlock All
+        </button>
+      )}
+    </div>
+  );
+}
 
 // ---------- Screen ----------
 

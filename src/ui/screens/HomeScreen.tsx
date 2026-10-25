@@ -1,6 +1,6 @@
 import { MerdomonArt, PlayerArt } from '../art';
 import { Icon } from '../icons';
-import { ToiletPoints } from './ToiletsScreen';
+import { ToiletPoints } from '../components';
 
 export function HomeScreen({
   hasSave,
@@ -9,7 +9,6 @@ export function HomeScreen({
   onContinue,
   onTutorial,
   onStats,
-  onToilets,
 }: {
   hasSave: boolean;
   onNew: () => void;
@@ -17,7 +16,6 @@ export function HomeScreen({
   onContinue: () => void;
   onTutorial: () => void;
   onStats: () => void;
-  onToilets: () => void;
 }) {
   return (
     <div className="screen home">
@@ -44,9 +42,6 @@ export function HomeScreen({
         </button>
         <button className="big-btn shadow" onClick={onStats}>
           <Icon name="trophy" size={22} fill="#fff" /> Stats
-        </button>
-        <button className="big-btn shadow" onClick={onToilets}>
-          <Icon name="toilet" size={22} fill="#f2c94c" /> Toilets
         </button>
       </div>
       <div className="home-art">

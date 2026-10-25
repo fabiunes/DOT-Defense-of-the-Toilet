@@ -59,9 +59,9 @@ describe('simulation', () => {
     }
   }, 120_000);
 
-  it('every run terminates, at every level (Home Bathroom A)', () => {
+  it('every run terminates, at every level (Home Toilet)', () => {
     for (const level of LEVELS) {
-      const runs = Array.from({ length: 500 }, (_, i) => playRun(i + 1, 'homeA', level));
+      const runs = Array.from({ length: 500 }, (_, i) => playRun(i + 1, 'home', level));
       const wins = runs.filter((r) => r.phase === 'victory').length;
       const avgRound = runs.reduce((sum, r) => sum + r.round, 0) / runs.length;
       console.log(`[sim] level ${level}: ${((wins / runs.length) * 100).toFixed(1)}% wins, avg round reached ${avgRound.toFixed(2)}`);

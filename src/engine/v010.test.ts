@@ -12,7 +12,7 @@ function play(s: RunState, fn: (s: RunState) => RunState) {
 describe('Tutorial Game', () => {
   it('can always be played as the guide asks, winning both waves', () => {
     let s = tutorialRun();
-    expect(s).toMatchObject({ phase: 'starter', bathroom: 'homeA', modifiers: {} });
+    expect(s).toMatchObject({ phase: 'starter', bathroom: 'home', modifiers: {} });
     expect(s.starters.map((m) => m.kind)).toEqual(['normal', 'liquid', 'fart']);
 
     s = play(s, (x) => G.chooseStarter(x, 0));

@@ -12,6 +12,7 @@ import {
   TRAIT_VALUES,
 } from '../engine/data';
 import { activeTeam, apCap, concentrationCap, itemCap, mutedTrait, poopCap, tpCap, traitItems } from '../engine/game';
+import { loadToiletPoints } from '../engine/save';
 import { countTraits, traitTier } from '../engine/traits';
 import type { AbilityId, BossId, Merdomon, Rarity, RunState, Stats, TraitId } from '../engine/types';
 import { EnemyArt, MerdomonArt } from './art';
@@ -204,11 +205,13 @@ export function InfoRow({
   onItems,
   onBoss,
   onRound,
+  onHelp,
 }: {
   run: RunState;
   onItems: () => void;
   onBoss: () => void;
   onRound?: () => void;
+  onHelp?: () => void;
 }) {
   return (
     <div className="inforow">
@@ -230,6 +233,11 @@ export function InfoRow({
         ))}
         <small className="muted">/{apCap(run)}</small>
       </span>
+      {onHelp && (
+        <button className="info-chip help-chip" onClick={onHelp} aria-label="Help: the rules">
+          <Icon name="question" size={16} fill="#fff" />
+        </button>
+      )}
     </div>
   );
 }
@@ -343,5 +351,25 @@ export function MerdomonDetail({ m, children }: { m: Merdomon; children?: ReactN
       )}
       {children}
     </div>
+  );
+}
+
+/** Toilet Points balance (earned with the final score of every run; no use for now). */
+export function ToiletPoints() {
+  return (
+    <span className="toilet-points" aria-label="Toilet Points">
+      <Icon name="toilet" size={18} fill="#f2c94c" />
+      <b>{loadToiletPoints().toLocaleString('en')}</b>
+    </span>
+  );
+}
+
+/** Re-Roll: free ones (Toilet Brush) are used before paying Toilet Paper. */
+export function RerollButton({ enabled, onClick, free, cost }: { enabled: boolean; onClick: () => void; free: number; cost: number }) {
+  return (
+    <button className="big-btn reroll-btn" disabled={!enabled} onClick={onClick}>
+      <Icon name="dice" size={22} fill="#fff" /> Re-Roll
+      {free > 0 ? <span className="cost free">free ×{free}</span> : <CostBadge tp={cost} />}
+    </button>
   );
 }

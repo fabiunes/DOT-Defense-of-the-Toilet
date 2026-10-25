@@ -1,4 +1,4 @@
-import { CAT, ABILITY, JACKPOT, TOWEL_BONUS, TOWEL_KIND } from './data';
+import { FLIPFLOPS_ATK, CAT, ABILITY, JACKPOT, TOWEL_BONUS, TOWEL_KIND } from './data';
 import type { Rng } from './rng';
 import { combatBonus } from './traits';
 import type { AbilityId, BossId, CombatEvent, Enemy, Fighter, ItemId, Merdomon, ModifierId, Side, TraitId } from './types';
@@ -39,9 +39,9 @@ export function damage(atk: number, def: number, reduction = 0): number {
   return Math.max(1, atk - Math.floor(def / 2) - reduction);
 }
 
-/** With Flip-Flops, a Merdomon at least twice as fast as its opponent hits twice per turn. */
-export function hitsPerTurn(spd: number, opponentSpd: number, flipFlops: boolean): number {
-  return flipFlops && spd >= opponentSpd * 2 ? 2 : 1;
+/** Flip-Flops: a Merdomon at least twice as fast as its opponent gets extra ATK in that duel. */
+export function flipFlopsAtk(spd: number, opponentSpd: number, flipFlops: boolean): number {
+  return flipFlops && spd >= opponentSpd * 2 ? FLIPFLOPS_ATK : 0;
 }
 
 export function simulateCombat(
@@ -89,6 +89,8 @@ export function simulateCombat(
     spd: e.stats.spd,
   }));
 
+  // Merdomon boosted by a Cheerleader: shown again when they enter their first duel.
+  const cheered = ps.map(() => false);
   // Start-of-fight abilities (part of the snapshot shown before the fight).
   ps.forEach((p, i) => {
     if (has(i, 'frontliner') && i === 0) {
@@ -103,6 +105,7 @@ export function simulateCombat(
     }
     if (has(i, 'cheerleader') && ps[i + 1]) {
       ps[i + 1].atk += ABILITY.cheerleaderAtk;
+      cheered[i + 1] = true;
       events.push({ type: 'ability', ability: 'cheerleader', p: i });
     }
   });
@@ -177,6 +180,18 @@ export function simulateCombat(
     }
     events.push({ type: 'duel', p: pi, e: ei, first });
     if (has(pi, 'stinkyAura')) events.push({ type: 'ability', ability: 'stinkyAura', p: pi });
+    if (cheered[pi]) {
+      cheered[pi] = false;
+      events.push({ type: 'ability', ability: 'cheerleader', p: pi });
+    }
+    // Flip-Flops: +ATK for this duel only.
+    const duelAtk = flipFlopsAtk(p.spd, eSpd, flipFlops);
+    if (duelAtk > 0) {
+      p.atk += duelAtk;
+      events.push({ type: 'item', item: 'flipflops', p: pi });
+    }
+    // Leech heals at most twice against each enemy.
+    let leechLeft = ABILITY.leechPerEnemy;
 
     let turn = first;
     while (p.hp > 0 && e.hp > 0) {
@@ -185,14 +200,15 @@ export function simulateCombat(
         lapSitter = false;
         events.push({ type: 'boss', boss: 'cat', index: es.findIndex((f) => f.boss) });
       } else if (turn === 'p') {
-        const hits = hitsPerTurn(p.spd, eSpd, flipFlops) + (windowReady && pi === 0 ? 1 : 0);
+        const hits = 1 + (windowReady && pi === 0 ? 1 : 0);
         if (pi === 0) windowReady = false;
         const atk = p.atk + (has(pi, 'giantSlayer') && e.rarity !== 'common' ? ABILITY.giantSlayerAtk : 0);
         for (let h = 0; h < hits && e.hp > 0; h++) {
           const dealt = hitEnemy(ei, damage(atk, e.def));
           events.push({ type: 'attack', side: 'p', damage: dealt, hp: e.hp, double: h > 0 });
           if (e.hp <= 0) enemyDown(ei, pi);
-          if (has(pi, 'leech') && dealt > 0 && p.hp < p.maxHp) {
+          if (has(pi, 'leech') && dealt > 0 && p.hp < p.maxHp && leechLeft > 0) {
+            leechLeft--;
             p.hp = Math.min(p.maxHp, p.hp + ABILITY.leech);
             events.push({ type: 'ability', ability: 'leech', p: pi, target: { side: 'p', index: pi, hp: p.hp } });
           }
@@ -232,6 +248,7 @@ export function simulateCombat(
       turn = turn === 'p' ? 'e' : 'p';
     }
 
+    p.atk -= duelAtk;
     if (p.hp <= 0 && has(pi, 'secondWind') && !secondWindUsed[pi]) {
       secondWindUsed[pi] = true;
       p.hp = ABILITY.secondWindHp;

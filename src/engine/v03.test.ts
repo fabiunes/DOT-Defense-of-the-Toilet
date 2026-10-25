@@ -19,7 +19,7 @@ const foe = (stats: Partial<Stats>, extra: Partial<Enemy> = {}): Enemy => ({
 });
 /** A run past the starter pick (first ability offered), at the starting-bonus choice. */
 const start = (seed: number) => {
-  const s = G.chooseStarter(G.beginRun(G.newRun(seed), 1, 'homeA'), 0);
+  const s = G.chooseStarter(G.beginRun(G.newRun(seed), 1, 'home'), 0);
   return G.confirmMerdomon(s, 'hp', s.pendingAbilities[0]);
 };
 const fight = (team: Merdomon[], wave: Enemy[], modifier: Parameters<typeof simulateCombat>[4] = {}) =>
@@ -29,7 +29,7 @@ const abilityEvents = (r: ReturnType<typeof fight>, a: AbilityId) =>
 
 describe('new Merdomon flow', () => {
   it('offers 3 distinct abilities and confirms ability + stat together', () => {
-    let s = G.chooseStarter(G.beginRun(G.newRun(5), 1, 'homeA'), 1);
+    let s = G.chooseStarter(G.beginRun(G.newRun(5), 1, 'home'), 1);
     expect(new Set(s.pendingAbilities).size).toBe(3);
     expect(s.pendingAbilities.every((a) => ABILITIES.includes(a))).toBe(true);
     const notOffered = ABILITIES.find((a) => !s.pendingAbilities.includes(a))!;
@@ -60,7 +60,7 @@ describe('starting bonus', () => {
   });
   it('resources: +5 TP, +3 Poop, +1 AP in round 1', () => {
     let s = G.chooseStartBonus(atBonus(), 'resources');
-    expect(s).toMatchObject({ tp: 3 + START_PACK.tp, merdascore: 5 + START_PACK.merdascore, ap: 2 });
+    expect(s).toMatchObject({ tp: 3 + START_PACK.tp, merdascore: START_PACK.merdascore, ap: 2 });
     s = G.continueAfterCombat(G.fight(s));
     expect(s.ap).toBe(3); // unspent AP carry over, capped at 3 by the Toilet Brush (Tier 1)
   });
@@ -85,7 +85,7 @@ describe('abilities', () => {
     expect(r.player[1].def).toBe(1); // frontliner is not first
     expect(r.player[2].def).toBe(3);
     const f = fight([mk({}, 'frontliner')], [foe({})]);
-    expect(f.player[0]).toMatchObject({ maxHp: 7, def: 2 });
+    expect(f.player[0]).toMatchObject({ maxHp: 6, def: 2 });
   });
 
   it('Thick Skin reduces damage (min 1) and Spiky hurts the attacker', () => {
@@ -157,7 +157,7 @@ describe('wave modifiers', () => {
     }
   });
 
-  it('Group Chat adds a Small enemy at the front; disabling removes it and costs 3 TP', () => {
+  it('Group Chat adds a Small enemy at the front; Corrupt removes it for 10 TP or 1 Concentration', () => {
     const base = runAt(3);
     const s = { ...base, modifiers: { ...base.modifiers, 3: 'groupChat' as const } };
     // Re-enter round 3 with the forced modifier.
@@ -165,10 +165,14 @@ describe('wave modifiers', () => {
     const r3 = G.continueAfterCombat(G.fight({ ...prev, concentration: 10, modifiers: s.modifiers }));
     expect(r3.wave[0].extra).toBe(true);
     expect(r3.wave).toHaveLength(5);
-    const off = G.disableModifier({ ...r3, tp: 5 });
+    expect(G.canDisableModifier({ ...r3, tp: 9 })).toBe(false);
+    const off = G.disableModifier({ ...r3, tp: 12 });
     expect(off.tp).toBe(2);
     expect(off.wave).toHaveLength(4);
     expect(G.activeModifier(off)).toBeNull();
+    const byFocus = G.disableModifier({ ...r3, concentration: 5 }, 'concentration');
+    expect(byFocus.concentration).toBe(4);
+    expect(G.canDisableModifier({ ...r3, concentration: 1 }, 'concentration')).toBe(false);
   });
 
   it('cannot be disabled on wave 10', () => {

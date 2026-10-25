@@ -4,7 +4,7 @@ import * as G from './game';
 import { runScore } from './score';
 import type { BathroomId, RunState } from './types';
 
-function prep(bathroom: BathroomId = 'homeA', patch: Partial<RunState> = {}): RunState {
+function prep(bathroom: BathroomId = 'home', patch: Partial<RunState> = {}): RunState {
   let s = G.chooseStarter(G.beginRun(G.newRun(21), 1, bathroom), 0);
   s = G.confirmMerdomon(s, 'hp', s.pendingAbilities[0]);
   s = G.chooseStartBonus(s, 'item');
@@ -19,7 +19,7 @@ describe('score counters', () => {
   });
 
   it('count every TP gained, Trade included', () => {
-    const s = prep('homeA', { ap: 1, tp: 0 });
+    const s = prep('home', { ap: 1, tp: 0 });
     expect(G.trade(s, 'tp').stats.tpEarned).toBe(s.stats.tpEarned + TRADE.tp);
   });
 
@@ -46,7 +46,7 @@ describe('drag to reorder', () => {
 
 describe('Bonus preview', () => {
   it('lists every producing structure and the passive rewards', () => {
-    const s = prep('hotelB', { items: ['plunger'] });
+    const s = prep('hotel', { items: ['plunger'] });
     const { sure, structures } = G.previewRewards(s);
     expect(structures.map((r) => r.source)).toEqual(['stall', 'sink', 'bidet', 'toilet', 'holder']);
     expect(structures.every((r) => r.amount > 0)).toBe(true);
@@ -54,8 +54,9 @@ describe('Bonus preview', () => {
   });
 });
 
-describe('bathroom costs (v0.9)', () => {
-  it('are scaled to the new score', () => {
-    expect(BATHROOMS.map((id) => BATHROOM_INFO[id].cost)).toEqual([0, 2000, 2000, 4000, 6000, 10000, 15000, 30000]);
+describe('bathrooms (v0.14)', () => {
+  it('are four journeys', () => {
+    expect(BATHROOMS).toEqual(['office', 'public', 'home', 'hotel']);
+    expect(BATHROOMS.map((id) => BATHROOM_INFO[id].icon)).toEqual(['💼', '🚻', '🏠', '🛎️']);
   });
 });

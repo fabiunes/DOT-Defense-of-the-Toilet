@@ -22,8 +22,10 @@ const WAVE_SIZE: Record<number, number> = { 1: 1, 2: 2 };
 const ROUND_2_TP = 40;
 
 export function tutorialRun(): RunState {
-  const s = beginRun(newRun(TUTORIAL_SEED), 1, 'homeA');
+  const s = beginRun(newRun(TUTORIAL_SEED), 1, 'home');
   s.modifiers = {};
+  // Home starts without Poop: the guide needs 5 (with Supplies) for its Evacuate.
+  s.merdascore = 5;
   s.starters = s.starters.map((m, i) => ({ ...m, ...STARTERS[i], rarity: 'common', hp: STARTERS[i].stats.hp }));
   return s;
 }

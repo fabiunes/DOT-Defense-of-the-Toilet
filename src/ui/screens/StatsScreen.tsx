@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BATHROOM_INFO, BOSS_INFO, LEVELS, LEVEL_BOSS, STRUCTURES } from '../../engine/data';
+import { BATHROOM_INFO, BOSS_INFO, LEVELS, LEVEL_BOSS, STRUCTURES, bathroomOf } from '../../engine/data';
 import { loadBest, loadHistory, type RunRecord } from '../../engine/save';
 import { EnemyArt, MerdomonArt } from '../art';
 import { StructureIcon } from '../bathroom';
@@ -84,7 +84,7 @@ function RunRow({ r, open, onToggle }: { r: RunRecord; open: boolean; onToggle: 
       </button>
       {open && (
         <div className="run-detail">
-          {r.bathroom && <b className="run-bathroom">{BATHROOM_INFO[r.bathroom].name}</b>}
+          {bathroomOf(r.bathroom) && <b className="run-bathroom">{BATHROOM_INFO[bathroomOf(r.bathroom)!].name}</b>}
           <div className="run-lines">
             {r.lines
               .filter((l) => l.points > 0)

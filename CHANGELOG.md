@@ -1,5 +1,52 @@
 # Changelog
 
+## v0.14
+
+### Bagni e progressione
+- **4 bagni** al posto delle versioni A/B, **tutti disponibili subito**, ognuno con un simbolo:
+  - 💼 **Office**: T0/1/0/2/1/1; 5 TP, 8 Concentration, 5 Poop;
+  - 🚻 **Public**: T0/0/0/0/2/3; 0 TP, 5 Concentration, 8 Poop;
+  - 🏠 **Home**: tutto al T1; 3 TP, 8 Concentration, 0 Poop;
+  - 🛎️ **Hotel**: tutto al T2; 10 TP, 4 Concentration, 0 Poop.
+- **Azioni e regole dei bagni**, una volta per round per 8 Poop:
+  - Office, *Coffee Break*: +1 AP;
+  - Public, *Wall Graffiti*: una Merdomon a caso ottiene un tratto già presente in squadra;
+  - Home, *Comfort*: +1 HP a tutti nel prossimo combattimento;
+  - Hotel, *Entry Fee*: 5 TP prima di ogni wave, altrimenti ogni nemico prende +1 a una statistica casuale.
+- **Percorsi**: ogni bagno ha i suoi 7 livelli. Vincere un livello sblocca il successivo per quel bagno.
+  - Le vittorie e i record già fatti contano per il loro tipo di bagno.
+  - Record per bagno e livello.
+- Nuova **schermata di inizio partita**: bagno in alto, livello al centro, percorso in basso. Si riapre sull'ultima scelta.
+- Tolta la schermata **Toilets**. I Toilet Points restano, ma per ora non hanno un utilizzo. Testing Privilege è ora nell'ultima pagina delle Rules.
+
+### Merdomon e abilità
+- Evacuate di una Huge: **15 Poop** (prima 20).
+- Le nuove Merdomon scelgono tra **2 abilità** (3 per lo starter e con il Game Boy), con **Re-Roll**.
+- **Frontliner**: +1 HP (prima +2) e +1 DEF.
+- **Leech**: al massimo 2 cure per ogni nemico.
+- Popup in combattimento per Snowball, Cheerleader e Flip-Flops.
+
+### Oggetti
+- **Flip-Flops** (solo Haste): +3 ATK nel duello contro un nemico lento almeno la metà, invece del doppio attacco.
+- **Hammer**: 18 TP.
+- **Hand Shower**: −2 TP su tutto quello che si paga in TP, minimo 1.
+- **Game Boy** (solo Stinky): 3 scelte anche per le abilità.
+- **White Towel**: Defender. **Window**: Fighter + Defender.
+- **Paper Towel**: +4 TP.
+- Nuovo **Razor** (Paper): +1 TP a fine wave per ogni tratto attivo.
+
+### Azioni e regole
+- Nuovo ordine: Heal, Trade, Evacuate, Concentrate, Shop, Build; poi Farting, Flush, Bonus Action e l'azione del bagno.
+- **Bonus Action**: 16 TP.
+- **Corrupt**: 10 TP oppure 1 Concentration.
+- **Paper Holder**: produce +1/+2/+3/+4 TP.
+
+### Interfaccia
+- Tasto **?** (Help) nella partita, che apre le Rules.
+- Nuova prima pagina delle Rules, **What's new**, con i cambi di bilanciamento di questa versione.
+
+> I salvataggi della v0.13 non sono compatibili: il tasto Continue li ignora.
+
 ## v0.13
 
 ### Nuove funzioni

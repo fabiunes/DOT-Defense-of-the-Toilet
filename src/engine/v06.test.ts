@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { BATHROOMS, BATHROOM_INFO, FARTING } from './data';
 import * as G from './game';
-import { isUnlocked, loadToiletPoints, recordRun, unlockAllWithPassword, unlockBathroom } from './save';
+import { loadToiletPoints, recordRun } from './save';
 import { runScore } from './score';
 import type { BathroomId, RunState } from './types';
 
-function prep(bathroom: BathroomId = 'homeA', patch: Partial<RunState> = {}): RunState {
+function prep(bathroom: BathroomId = 'home', patch: Partial<RunState> = {}): RunState {
   let s = G.chooseStarter(G.beginRun(G.newRun(21), 1, bathroom), 0);
   s = G.confirmMerdomon(s, 'hp', s.pendingAbilities[0]);
   s = G.chooseStartBonus(s, 'item');
@@ -25,15 +25,15 @@ describe('bathroom types', () => {
   });
 
   it('Tier 0 still gives its minimum capacity', () => {
-    const s = G.beginRun(G.newRun(3), 1, 'publicA'); // Shower, Sink, Bidet, Brush at Tier 0
+    const s = G.beginRun(G.newRun(3), 1, 'public'); // Shower, Sink, Bidet, Brush at Tier 0
     expect([G.concentrationCap(s), G.itemCap(s), G.poopCap(s), G.apCap(s)]).toEqual([8, 3, 10, 2]);
-    expect([G.teamCap(s), G.tpCap(s)]).toEqual([6, 60]);
+    expect([G.teamCap(s), G.tpCap(s)]).toEqual([5, 60]);
   });
 });
 
 describe('building from Tier 0 and the Hammer', () => {
-  it('Build costs 20 / 25 / 30 TP + 1 AP by tier; with the Hammer every build costs 15 TP', () => {
-    const s = prep('officeA', { tp: 40, ap: 2 });
+  it('Build costs 20 / 25 / 30 TP + 1 AP by tier; with the Hammer every build costs 18 TP', () => {
+    const s = prep('office', { tp: 40, ap: 2 });
     expect(s.structures.stall).toBe(0);
     expect(G.buildTp(s, 'stall')).toBe(20);
     expect(G.buildTp(s, 'sink')).toBe(25);
@@ -42,12 +42,12 @@ describe('building from Tier 0 and the Hammer', () => {
     expect(built).toMatchObject({ tp: 20, ap: 1 });
     expect(built.structures.stall).toBe(1);
     const hammer = { ...s, items: ['hammer' as const] };
-    expect(G.buildTp(hammer, 'stall')).toBe(15);
-    expect(G.buildTp(hammer, 'sink')).toBe(15);
+    expect(G.buildTp(hammer, 'stall')).toBe(18);
+    expect(G.buildTp(hammer, 'sink')).toBe(18);
   });
 
   it('only upgrades built during the run count for the score', () => {
-    const s = prep('hotelA');
+    const s = prep('hotel');
     const upgraded = { ...s, structures: { ...s.structures, sink: 3 } };
     expect(runScore(upgraded).lines.find((l) => l.label === 'Structure upgrades')!.count).toBe(1);
   });
@@ -55,7 +55,7 @@ describe('building from Tier 0 and the Hammer', () => {
 
 describe('Farting', () => {
   it('heals 1 HP for 3 TP, repeatable, only a hurt Merdomon', () => {
-    const s = prep('homeA', { tp: 9 });
+    const s = prep('home', { tp: 9 });
     const m = s.team[0];
     expect(G.canFart(s, m.id)).toBe(false); // full HP
     s.team[0].stats.hp = 9;
@@ -100,21 +100,7 @@ describe('Toilet Points', () => {
     } as Storage;
   });
 
-  it('start at 0; only Office A is free; points are spent to unlock bathrooms', () => {
-    expect(loadToiletPoints()).toBe(0);
-    expect(BATHROOMS.filter(isUnlocked)).toEqual(['officeA']);
-    expect(unlockBathroom('homeB')).toBe(false);
-    localStorage.setItem('dot.toiletPoints', '50000');
-    expect(unlockBathroom('homeB')).toBe(true);
-    expect(isUnlocked('homeB')).toBe(true);
-    expect(loadToiletPoints()).toBe(50000 - BATHROOM_INFO.homeB.cost);
-  });
-
-  it('the testing password unlocks every bathroom', async () => {
-    expect(await unlockAllWithPassword('pallemerda')).toBe(false);
-    expect(BATHROOMS.filter(isUnlocked)).toEqual(['officeA']);
-    expect(await unlockAllWithPassword('PalleMerda')).toBe(true);
-    expect(BATHROOMS.every(isUnlocked)).toBe(true);
+  it('start at 0', () => {
     expect(loadToiletPoints()).toBe(0);
   });
 

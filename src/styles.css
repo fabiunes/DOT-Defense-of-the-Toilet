@@ -2794,3 +2794,112 @@ button:disabled {
     transform: translateX(-50%) rotate(4deg);
   }
 }
+
+/* ---------- v0.14: bathroom journeys, Help, bathroom actions, Corrupt options, What's new ---------- */
+.journey {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.journey-path {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+.journey-path::before {
+  content: '';
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  top: 22px;
+  border-top: 2px dashed #bbb;
+  z-index: 0;
+}
+.journey-node {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 3px 0 2px;
+  font: inherit;
+  background: #fff;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+}
+.journey-node small {
+  font-size: 12px;
+  line-height: 1;
+}
+.journey-node.won {
+  background: #e3f3e4;
+  border-color: var(--good);
+}
+.journey-node.won small {
+  color: var(--good);
+  font-weight: bold;
+}
+.journey-node.locked svg {
+  filter: grayscale(1);
+  opacity: 0.4;
+}
+.journey-node.selected {
+  box-shadow: 0 0 0 3px #f2c94c;
+}
+.bathroom-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+.bathroom-card-head .bathroom-start {
+  display: flex;
+  gap: 6px;
+  font-size: 14px;
+}
+.bathroom-card-head .bathroom-start span {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+.bathroom-icon {
+  font-size: 18px;
+}
+.bathroom-special {
+  display: block;
+  font-size: 12px;
+  line-height: 1.25;
+}
+.help-chip {
+  padding: 2px 6px;
+}
+.tile-emoji {
+  font-size: 26px;
+  line-height: 30px;
+}
+.corrupt-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.corrupt-row > span {
+  font-size: 16px;
+}
+.corrupt-row .big-btn {
+  flex: 1;
+}
+.tut-news {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  line-height: 1.3;
+}
+.tut-bathroom-special {
+  display: block;
+  font-size: 12px;
+}

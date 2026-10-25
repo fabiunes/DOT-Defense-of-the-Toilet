@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ABILITY_INFO, BOSS_INFO, ITEM_INFO, MODIFIER_INFO, ROUNDS, STAT_KEYS, STRUCTURE_INFO, TRAIT_INFO } from '../../engine/data';
+import { ABILITY, ABILITY_INFO, BOSS_INFO, FLIPFLOPS_ATK, ITEM_INFO, MODIFIER_INFO, ROUNDS, STAT_KEYS, STRUCTURE_INFO, TRAIT_INFO } from '../../engine/data';
 import type {
   AbilityId,
   BossForm,
@@ -21,6 +21,12 @@ import { StructureIcon } from '../bathroom';
 import { AbilityBadge, HpBar, Stars, StatValue } from '../components';
 import { Icon, ItemIcon, RESOURCE_ICON, STAT_ICON, TraitIcon } from '../icons';
 
+/** Abilities whose fight popup shows the stat they add instead of their name. */
+const ABILITY_POPUP: Partial<Record<AbilityId, string>> = {
+  snowball: `+${ABILITY.snowballAtk} ATK`,
+  cheerleader: `+${ABILITY.cheerleaderAtk} ATK`,
+};
+
 const DELAY: Record<CombatEvent['type'], number> = {
   duel: 450,
   attack: 420,
@@ -28,6 +34,7 @@ const DELAY: Record<CombatEvent['type'], number> = {
   revive: 650,
   ability: 520,
   modifier: 520,
+  item: 520,
   boss: 650,
   end: 350,
 };
@@ -115,8 +122,10 @@ export function CombatScreen({ report, onDone }: { report: CombatReport; onDone:
   const dmgOn = (side: Side) => (last?.type === 'attack' && last.side !== side ? last.damage : null);
   const popup =
     last?.type === 'ability'
-      ? { side: 'p', text: `${ABILITY_INFO[last.ability].icon} ${ABILITY_INFO[last.ability].name}` }
-      : last?.type === 'modifier'
+      ? { side: 'p', text: `${ABILITY_INFO[last.ability].icon} ${ABILITY_POPUP[last.ability] ?? ABILITY_INFO[last.ability].name}` }
+      : last?.type === 'item'
+        ? { side: 'p', text: `🩴 +${FLIPFLOPS_ATK} ATK` }
+        : last?.type === 'modifier'
         ? { side: 'e', text: `${MODIFIER_INFO[last.modifier].icon} +1 ATK` }
         : last?.type === 'boss'
           ? { side: 'e', text: `${BOSS_INFO[last.boss].icon} ${bossAbilityName(last.boss, report.enemies[last.index]?.bossForm)}` }

@@ -8,7 +8,7 @@ import { runScore } from './score';
 import type { Level, Merdomon, RunState } from './types';
 
 function prep(level: Level, patch: Partial<RunState> = {}): RunState {
-  let s = G.chooseStarter(G.beginRun(G.newRun(31), level, 'homeA'), 0);
+  let s = G.chooseStarter(G.beginRun(G.newRun(31), level, 'home'), 0);
   s = G.confirmMerdomon(s, 'hp', s.pendingAbilities[0]);
   s = G.chooseStartBonus(s, 'resources');
   return { ...s, ...patch };
@@ -96,17 +96,19 @@ describe('levels and rewards', () => {
   });
 
   it('only level 1 is open; winning a level unlocks the next', () => {
-    expect([1, 2, 3, 4, 5].map((l) => isLevelUnlocked(l as Level))).toEqual([true, false, false, false, false]);
+    expect([1, 2, 3, 4, 5].map((l) => isLevelUnlocked(l as Level, 'home'))).toEqual([true, false, false, false, false]);
     recordRun({ ...prep(1), phase: 'gameover' }, 'lost');
-    expect(isLevelUnlocked(2)).toBe(false);
+    expect(isLevelUnlocked(2, 'home')).toBe(false);
     recordRun({ ...prep(1), phase: 'victory' }, 'won');
-    expect(isLevelUnlocked(2)).toBe(true);
-    expect(isLevelUnlocked(3)).toBe(false);
+    expect(isLevelUnlocked(2, 'home')).toBe(true);
+    expect(isLevelUnlocked(3, 'home')).toBe(false);
+    // Each bathroom has its own journey.
+    expect(isLevelUnlocked(2, 'office')).toBe(false);
   });
 
   it('the testing password opens every level', async () => {
     expect(await unlockAllWithPassword('PalleMerda')).toBe(true);
-    expect([2, 3, 4, 5].every((l) => isLevelUnlocked(l as Level))).toBe(true);
+    expect([2, 3, 4, 5].every((l) => isLevelUnlocked(l as Level, 'hotel'))).toBe(true);
   });
 
   it('Toilet Points use the level reward, the score does not change', () => {
