@@ -11,6 +11,7 @@ import {
 import { runScore, type ScoreLine } from './score';
 import type {
   AbilityId,
+  RunMode,
   BathroomId,
   BossId,
   ItemId,
@@ -22,7 +23,7 @@ import type {
   StructureId,
 } from './types';
 
-const KEY = 'dot.save.v9';
+const KEY = 'dot.save.v10';
 
 export function saveRun(s: RunState): void {
   try {
@@ -37,7 +38,7 @@ export function loadRun(): RunState | null {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as RunState;
-    return s?.version === 9 && s.phase === 'preparation' ? s : null;
+    return s?.version === 10 && s.phase === 'preparation' ? s : null;
   } catch {
     return null;
   }
@@ -105,6 +106,10 @@ export interface RunRecord {
   merdomonCreated: number;
   tpEarned: number;
   poopEarned: number;
+  /** Endless runs (absent before v0.15: Normal). */
+  mode?: RunMode;
+  /** Endless: the level reached. */
+  endlessLevel?: number;
 }
 
 export function loadHistory(): RunRecord[] {
@@ -126,7 +131,8 @@ export function recordRun(s: RunState, runId: string): { previousBest: number; r
   const history = loadHistory();
   const existing = history.find((r) => r.id === runId);
   if (existing) return { previousBest: existing.previousBest, recorded: false };
-  const previousBest = loadBest(s.level, s.bathroom);
+  const endless = s.mode === 'endless';
+  const previousBest = endless ? loadEndlessBest().score : loadBest(s.level, s.bathroom);
   const { lines, total } = runScore(s);
   const record: RunRecord = {
     id: runId,
@@ -146,14 +152,17 @@ export function recordRun(s: RunState, runId: string): { previousBest: number; r
     merdomonCreated: s.stats.merdomonCreated,
     tpEarned: s.stats.tpEarned,
     poopEarned: s.stats.merdascoreEarned,
+    mode: s.mode,
+    endlessLevel: endless ? s.endlessLevel : undefined,
   };
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify([record, ...history].slice(0, HISTORY_MAX)));
-    if (total > previousBest) localStorage.setItem(bestKey(s.bathroom, s.level), String(total));
+    if (endless) saveEndlessBest(s, total);
+    else if (total > previousBest) localStorage.setItem(bestKey(s.bathroom, s.level), String(total));
     // The final score is also earned as Toilet Points, multiplied by the level's reward.
-    localStorage.setItem(POINTS_KEY, String(loadToiletPoints() + toiletPointsFor(total, s.level)));
+    localStorage.setItem(POINTS_KEY, String(loadToiletPoints() + toiletPointsFor(total, s.level, s.mode)));
     // Winning a level unlocks the next one for this bathroom.
-    if (record.victory) addWin(s.bathroom, s.level);
+    if (record.victory && !endless) addWin(s.bathroom, s.level);
   } catch {
     // Storage unavailable: nothing is recorded.
   }
@@ -246,7 +255,7 @@ export function isLevelUnlocked(level: Level, bathroom: BathroomId): boolean {
 export function loadLastSetup(): { bathroom: BathroomId; level: Level } {
   try {
     const last = JSON.parse(localStorage.getItem(LAST_KEY) ?? 'null') as { bathroom: BathroomId; level: Level } | null;
-    if (last && BATHROOMS.includes(last.bathroom) && LEVELS.includes(last.level)) return last;
+    if (last && [...BATHROOMS, 'custom'].includes(last.bathroom) && LEVELS.includes(last.level)) return last;
   } catch {
     // fall through to the default
   }
@@ -261,7 +270,39 @@ export function saveLastSetup(bathroom: BathroomId, level: Level): void {
   }
 }
 
-/** Toilet Points earned by a run: its score times the level's reward (rounded). */
-export function toiletPointsFor(score: number, level: Level): number {
-  return Math.round(score * LEVEL_REWARD[level]);
+/** Toilet Points earned by a run: its score times the level's reward (rounded); Endless gives the score as it is. */
+export function toiletPointsFor(score: number, level: Level, mode: RunMode = 'normal'): number {
+  return mode === 'endless' ? score : Math.round(score * LEVEL_REWARD[level]);
+}
+
+// ---------- Endless: the best run (score, and how far it got) ----------
+
+const ENDLESS_KEY = 'dot.endlessBest';
+
+export interface EndlessBest {
+  score: number;
+  /** The furthest level and wave reached (in any run). */
+  level: number;
+  round: number;
+}
+
+export function loadEndlessBest(): EndlessBest {
+  try {
+    const best = JSON.parse(localStorage.getItem(ENDLESS_KEY) ?? 'null') as EndlessBest | null;
+    if (best) return best;
+  } catch {
+    // fall through
+  }
+  return { score: 0, level: 0, round: 0 };
+}
+
+function saveEndlessBest(s: RunState, score: number) {
+  const best = loadEndlessBest();
+  const further = s.endlessLevel > best.level || (s.endlessLevel === best.level && s.round > best.round);
+  const next: EndlessBest = {
+    score: Math.max(best.score, score),
+    level: further ? s.endlessLevel : best.level,
+    round: further ? s.round : best.round,
+  };
+  localStorage.setItem(ENDLESS_KEY, JSON.stringify(next));
 }

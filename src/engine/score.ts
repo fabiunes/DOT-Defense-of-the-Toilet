@@ -17,8 +17,11 @@ export function runScore(s: RunState): { lines: ScoreLine[]; total: number } {
   const st = s.stats;
   // Only upgrades built during the run count.
   const tiers = STRUCTURES.reduce((t, id) => t + Math.max(0, s.structures[id] - s.startStructures[id]), 0);
-  const bosses = (st.midBossDefeated ? 1 : 0) + (st.finalBossDefeated ? 1 : 0);
-  const bossPoints = (st.midBossDefeated ? SCORE.midBoss : 0) + (st.finalBossDefeated ? SCORE.finalBoss : 0);
+  // Endless can beat many Bosses; older saves only have the two flags.
+  const mid = st.bossesDefeated?.mid ?? (st.midBossDefeated ? 1 : 0);
+  const final = st.bossesDefeated?.final ?? (st.finalBossDefeated ? 1 : 0);
+  const bosses = mid + final;
+  const bossPoints = mid * SCORE.midBoss + final * SCORE.finalBoss;
   const concentration = Math.max(0, s.concentration);
   const lines: ScoreLine[] = [
     {

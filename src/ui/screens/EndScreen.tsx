@@ -11,11 +11,15 @@ const runId = (s: RunState) => `${s.rngState}-${s.nextId}-${s.level}`;
 
 export function EndScreen({ run, onHome, onNew }: { run: RunState; onHome: () => void; onNew: () => void }) {
   const victory = run.phase === 'victory';
+  const endless = run.mode === 'endless';
   const { lines, total } = runScore(run);
   // Records the run in the history (idempotent) and reads the level's previous record.
   const [{ previousBest }] = useState(() => {
     const result = recordRun(run, runId(run));
-    if (result.recorded) analytics.runEnd(run.level, run.bathroom, run.phase === 'victory', run.round, total);
+    if (result.recorded) {
+      if (endless) analytics.runEndEndless(run.endlessLevel, total);
+      else analytics.runEnd(run.level, run.bathroom, run.phase === 'victory', run.round, total);
+    }
     return result;
   });
   const newRecord = total > previousBest;
@@ -25,9 +29,11 @@ export function EndScreen({ run, onHome, onNew }: { run: RunState; onHome: () =>
     <div className="screen end">
       <div className={`end-title ${victory ? 'win' : 'lose'}`}>
         <Icon name={victory ? 'trophy' : 'skull'} size={52} fill="#fff" />
-        <h1>{victory ? 'Victory!' : 'Game Over'}</h1>
+        <h1>{victory ? 'Victory!' : endless ? 'Endless over' : 'Game Over'}</h1>
         <p className="muted">
-          {BATHROOM_INFO[run.bathroom].name} · Level {run.level} · {boss.icon} {boss.name} · {victory ? 'Break completed in peace.' : `wave ${run.round}`}
+          {endless
+            ? `♾️ Reached Level ${run.endlessLevel} · ${boss.icon} ${boss.name} · wave ${run.round}`
+            : `${BATHROOM_INFO[run.bathroom].name} · Level ${run.level} · ${boss.icon} ${boss.name} · ${victory ? 'Break completed in peace.' : `wave ${run.round}`}`}
         </p>
       </div>
       <div className="end-stats sk">
@@ -46,10 +52,16 @@ export function EndScreen({ run, onHome, onNew }: { run: RunState; onHome: () =>
         </div>
         <div className={`score-best ${newRecord ? 'new' : ''}`}>
           <span className="points-earned">
-            +{toiletPointsFor(total, run.level).toLocaleString('en')} <Icon name="toilet" size={15} fill="#f2c94c" /> Toilet
-            Points{LEVEL_REWARD[run.level] !== 1 && ` (×${LEVEL_REWARD[run.level]})`}
+            +{toiletPointsFor(total, run.level, run.mode).toLocaleString('en')} <Icon name="toilet" size={15} fill="#f2c94c" /> Toilet
+            Points{!endless && LEVEL_REWARD[run.level] !== 1 && ` (×${LEVEL_REWARD[run.level]})`}
           </span>
-          {newRecord ? `★ New Level ${run.level} record!` : `Level ${run.level} best: ${previousBest}`}
+          {endless
+            ? newRecord
+              ? '★ New Endless record!'
+              : `Endless best: ${previousBest}`
+            : newRecord
+              ? `★ New Level ${run.level} record!`
+              : `Level ${run.level} best: ${previousBest}`}
         </div>
       </div>
       <div className="end-buttons">

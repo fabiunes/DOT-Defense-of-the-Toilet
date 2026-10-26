@@ -1,6 +1,6 @@
 # D.o.t.T. – Defense of the Toilet · Game Design Document
 
-> Versione regole: **v0.14** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
+> Versione regole: **v0.15** (modifiche per versione in [CHANGELOG.md](CHANGELOG.md)).
 >
 > Fonte ufficiale delle regole. Il gioco è interamente in **inglese**; questo documento è in italiano, con i termini di gioco in inglese.
 
@@ -253,9 +253,9 @@ Quattro bagni, **tutti disponibili dall'inizio**. Ogni bagno è uno scenario-cam
 | 🏠 **Home Toilet** | 1 | 1 | 1 | 1 | 1 | 1 | 3 | 8 | 0 |
 | 🛎️ **Hotel Toilet** | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 4 | 0 |
 
-**Azioni e regole dei bagni** (le azioni sono gratuite in AP, una volta per round, e costano **8 Poop**):
+**Azioni e regole dei bagni** (le azioni sono gratuite in AP, una volta per round, costano **3 Poop** e chiedono conferma con un pannello che ne spiega l'effetto):
 - 💼 **Office – Coffee Break**: +1 Action Point (fino al limite del Toilet Brush).
-- 🚻 **Public – Wall Graffiti**: una Merdomon a caso (tra quelle che combattono) ottiene un tratto a caso tra quelli già presenti in squadra. Il tratto resta.
+- 🚻 **Public – Wall Graffiti**: una Merdomon a caso (tra quelle che combattono) ottiene un tratto a caso **che la squadra non ha** (contando Merdomon e oggetti); se li ha già tutti, un tratto qualsiasi. Il tratto resta.
 - 🏠 **Home – Comfort**: tutte le Merdomon +1 HP nel prossimo combattimento.
 - 🛎️ **Hotel – Entry Fee**: prima di ogni wave si può pagare un **Entry Fee di 5 TP** dal recap di Next Wave; se non lo paghi, **ogni nemico** prende +1 a una statistica casuale.
 
@@ -285,9 +285,9 @@ Ordine nel pannello: Heal, Trade, Evacuate, Concentrate, Shop, Build.
 | Azione | Nome | Costo | Effetto |
 |---|---|---|---|
 | Scoreggia | **Farting** | 3 TP | +1 HP a un Merdomon ferito. Ripetibile |
-| Flush | **Flush** | 5 TP | Elimina un Merdomon → +1 Concentration (fino al limite). Non sull'ultimo Merdomon. |
+| Flush | **Flush** | 5 TP | Elimina un Merdomon → Small +1 Concentration e +1 AP, Big +2 e +2, Huge +3 e +3 (fino ai limiti). Non sull'ultimo Merdomon. |
 | Bonus Action | **Bonus Action** | 16 TP | +1 AP (fino al limite del Toilet Brush) |
-| Azione del bagno | **Coffee Break / Wall Graffiti / Comfort** | 8 Poop | Una volta per round (§9g); l'Hotel non ce l'ha |
+| Azione del bagno | **Coffee Break / Wall Graffiti / Comfort** | 3 Poop | Una volta per round, con conferma (§9g); l'Hotel non ce l'ha |
 | Combat | **Fight** | – | Avvia la wave |
 
 ## 11. Combattimento (automatico)
@@ -315,7 +315,7 @@ In entrambi i casi, poi:
 ## 12. Schermate
 
 - **Home**: Toilet Points in alto a destra; New Game, Tutorial Game, Continue, Rules, Stats; in basso il numero di versione e l'avviso sulle statistiche anonime (§14).
-- **Rules**: la prima pagina è **What's new** (cambi di bilanciamento dell'ultima versione), l'ultima è **Testing Privilege**. Si aprono anche durante la partita con il tasto **?** nella riga in alto.
+- **Rules**: le prime due pagine sono **What's new** delle ultime 2 versioni, l'ultima è **Testing Privilege**. Si aprono anche durante la partita con il tasto **?** nella riga in alto.
 - **Tutorial Game**: partita guidata di 2 round (§15).
 - **Inizio partita**: in alto il carosello dei **bagni** (simbolo, strutture, risorse, azione propria), al centro il carosello dei **livelli** (Boss, record di quel bagno, moltiplicatore), in basso il **percorso** dei 7 livelli del bagno (✓ vinto almeno una volta, 🔒 bloccato). Si riapre sull'ultima scelta.
 - **Rules** (ex Tutorial): 20 pagine con icone e regole, con esempi presi dalla schermata principale.
@@ -353,6 +353,28 @@ Con **GoatCounter** (senza cookie, senza dati personali), dashboard: https://fab
 | `testing-privilege` | Password Testing Privilege corretta |
 
 I dati sono aggregati: non si vede chi ha giocato, solo quante partite e con quali esiti.
+
+## 15b. Interfaccia comune (v0.15)
+
+- **Tasto Home** (🏠) in alto a destra in ogni schermata. Durante una partita chiede conferma: dalla prima Preparation in poi la partita si potrà riprendere con Continue; prima (setup, personalizzazione, starter, bonus) va persa. Nel Tutorial Game equivale a Skip. In Rules aperte durante la partita resta la X (si torna al gioco).
+- **Statistiche in combattimento aggiornate**: ATK e DEF dei combattenti cambiano dopo il popup (Snowball, Legacy, Flip-Flops solo per quel duello, Bestseller, Doomscrolling); i valori aumentati sono evidenziati.
+- **Stats**: ogni partita mostra il simbolo del bagno e della modalità (⚔️ Normal, ♾️ Endless).
+
+## 16. Endless Mode
+
+Modalità disponibile subito: nel carosello dei bagni, dopo l'Hotel, c'è il **🔧 Custom Toilet** (tutte le strutture al Tier 0; 5 TP, 5 Concentration, 5 Poop). Il pannello del livello mostra solo **Endless Level** ("You will face all enemies in sequence, starting from Level 1"), il percorso mostra il **miglior avanzamento** (livello e wave) e il miglior punteggio; prima di Start c'è un riepilogo della modalità.
+
+- **Customize Toilet** (nuovo passo dopo Start): si piazzano fino a **3 Tier gratuiti**, anche sulla stessa struttura (max T3), e si sceglie l'**azione del bagno** tra Coffee Break, Wall Graffiti e Comfort. Poi starter e bonus di partenza come in Normal. I Tier gratuiti non contano come potenziamenti nello score.
+- **Livelli**: 6 wave per livello. Boss medio alla wave 3, Boss finale alla wave 6, **2 modificatori** (wave 2 e 5).
+
+| Wave | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|
+| Nemici | 2 Small | 3 Small + 1 Big | 3 Small + Boss medio | 3 Small + 2 Big | 2 Small + 4 Big | 4 Big + Boss finale |
+
+- **Avanzamento**: battuto il Boss finale si passa al livello successivo (risorse, squadra, oggetti e strutture restano) e arriva il **regalo**. I sabotaggi dei Boss valgono solo nel loro livello.
+- **Difficoltà**: nemici +0/+1/+2/+3 ai livelli 1–4, poi **+5, +6, +7** ai livelli 5–7. Dopo il Cat si ricomincia dal Bestseller come livello 8 a **+8**, poi +9 e così via.
+- **Fine**: Concentration a 0, oppure sconfitta contro un **Boss finale**.
+- **Punteggio**: stessa formula; Toilet Points ×1. Si salvano il miglior punteggio Endless e l'avanzamento più lungo.
 
 ## 15. Tutorial Game
 

@@ -145,6 +145,7 @@ describe('final score (v0.9)', () => {
         ...s.stats,
         enemiesBySize: { common: 20, rare: 10, epic: 0 },
         midBossDefeated: true,
+        bossesDefeated: { mid: 1, final: 1 },
         finalBossDefeated: true,
         merdomonBySize: { common: 3, rare: 2, epic: 1 },
         itemsObtained: 4,

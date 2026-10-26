@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { continueAfterCombat, newRun } from './engine/game';
+import { continueAfterCombat, newRun, roundsOf } from './engine/game';
 import { clearSave, loadRun, saveRun } from './engine/save';
 import { TUTORIAL_ROUNDS, tutorialAdjust, tutorialRun } from './engine/tutorial';
 import type { RunState } from './engine/types';
 import { analytics } from './ui/analytics';
 import { SketchDefs } from './ui/art';
 import { BossRevealScreen } from './ui/screens/BossRevealScreen';
+import { Modal } from './ui/components';
 import { CombatScreen } from './ui/screens/CombatScreen';
+import { CustomizeScreen } from './ui/screens/CustomizeScreen';
 import { EndScreen } from './ui/screens/EndScreen';
 import { HomeScreen } from './ui/screens/HomeScreen';
 import { PrepScreen } from './ui/screens/PrepScreen';
@@ -56,11 +58,21 @@ export default function App() {
   };
   const tutorialDone = tutorial && !!run && run.round > TUTORIAL_ROUNDS;
 
+  // Home from inside a run: confirm first (a run is saved only from its first Preparation).
+  const [leaving, setLeaving] = useState(false);
+  const requestHome = () => {
+    if (tutorial) return skipTutorial();
+    if (!run || run.phase === 'boss') return goHome();
+    setLeaving(true);
+  };
+  const saved = !!run && (run.phase === 'preparation' || run.phase === 'combat');
+
   let content;
   if (showStats) {
     content = <StatsScreen onClose={() => setShowStats(false)} />;
   } else if (showTutorial) {
-    content = <TutorialScreen onClose={() => setShowTutorial(false)} />;
+    // From Home the rules close back home; from a run (Help) they go back to the game.
+    content = <TutorialScreen onClose={() => setShowTutorial(false)} homeIcon={!run} />;
   } else if (!run) {
     content = (
       <HomeScreen
@@ -87,15 +99,25 @@ export default function App() {
       />
     );
   } else if (run.phase === 'boss') {
-    content = <BossRevealScreen run={run} update={update} />;
+    content = <BossRevealScreen run={run} update={update} onHome={requestHome} />;
+  } else if (run.phase === 'customize') {
+    content = <CustomizeScreen run={run} update={update} onHome={requestHome} />;
   } else if (run.phase === 'starter') {
-    content = <StarterScreen run={run} update={update} />;
+    content = <StarterScreen run={run} update={update} onHome={requestHome} />;
   } else if (run.phase === 'startBonus') {
-    content = <StartBonusScreen run={run} update={update} />;
+    content = <StartBonusScreen run={run} update={update} onHome={requestHome} />;
   } else if (run.phase === 'preparation') {
-    content = <PrepScreen run={run} update={update} onHelp={() => setShowTutorial(true)} />;
+    content = <PrepScreen run={run} update={update} onHelp={() => setShowTutorial(true)} onHome={requestHome} />;
   } else if (run.phase === 'combat' && run.lastCombat) {
-    content = <CombatScreen key={run.round} report={run.lastCombat} onDone={() => update(continueAfterCombat)} />;
+    content = (
+      <CombatScreen
+        key={`${run.endlessLevel}-${run.round}`}
+        report={run.lastCombat}
+        rounds={roundsOf(run)}
+        onDone={() => update(continueAfterCombat)}
+        onHome={requestHome}
+      />
+    );
   } else {
     content = <EndScreen run={run} onHome={goHome} onNew={() => setRun(newRun())} />;
   }
@@ -105,6 +127,24 @@ export default function App() {
       <SketchDefs />
       {content}
       {tutorial && run && !tutorialDone && !showTutorial && <TutorialGuide run={run} onSkip={skipTutorial} />}
+      {leaving && (
+        <Modal onClose={() => setLeaving(false)} className="leave-modal">
+          <h2>Leave the run?</h2>
+          <p className="center">{saved ? 'You can Continue it later from Home.' : 'This run has not started yet: it will be lost.'}</p>
+          <button
+            className="big-btn shadow"
+            onClick={() => {
+              setLeaving(false);
+              goHome();
+            }}
+          >
+            Leave
+          </button>
+          <button className="big-btn" onClick={() => setLeaving(false)}>
+            Stay
+          </button>
+        </Modal>
+      )}
     </div>
   );
 }

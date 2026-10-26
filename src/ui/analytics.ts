@@ -31,6 +31,12 @@ export const analytics = {
     if (!victory) track(`run-lost-at/wave-${wave}`);
     track(`run-score/${scoreBand(score)}`);
   },
+  runStartEndless: () => track('run-start/endless'),
+  /** Endless: how far the run got. */
+  runEndEndless: (level: number, score: number) => {
+    track('run-end/endless/level-' + level);
+    track('run-score/' + scoreBand(score));
+  },
   testingUnlock: () => track('testing-privilege'),
   tutorialStart: () => track('tutorial-start'),
   tutorialComplete: () => track('tutorial-complete'),

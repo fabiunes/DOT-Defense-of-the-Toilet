@@ -48,7 +48,31 @@ function playRun(seed: number, bathroom: BathroomId, level: Level = 1): RunState
   throw new Error(`run ${seed} did not terminate`);
 }
 
+/** Endless: Toilet T2 and Paper Holder T1 from the free tiers, Coffee Break; plays until defeat. */
+function playEndless(seed: number): RunState {
+  let s = G.beginEndless(G.newRun(seed));
+  for (const id of ['toilet', 'toilet', 'holder'] as const) s = G.customBuild(s, id);
+  s = G.finishCustomize(G.setCustomAction(s, 'office'));
+  s = G.chooseStarter(s, 0);
+  s = G.confirmMerdomon(s, 'atk', s.pendingAbilities[0]);
+  s = G.chooseStartBonus(s, 'resources');
+  for (let steps = 0; steps < 2000; steps++) {
+    if (s.phase === 'gameover') return s;
+    if (s.phase === 'combat') s = G.continueAfterCombat(s);
+    else s = playPreparation(s);
+  }
+  throw new Error(`endless run ${seed} did not terminate`);
+}
+
 describe('simulation', () => {
+  it('every Endless run ends', () => {
+    const runs = Array.from({ length: 300 }, (_, i) => playEndless(i + 1));
+    const avg = runs.reduce((t, r) => t + r.endlessLevel, 0) / runs.length;
+    const best = Math.max(...runs.map((r) => r.endlessLevel));
+    console.log(`[sim] endless: avg level reached ${avg.toFixed(2)}, best level ${best}`);
+    expect(runs.every((r) => r.phase === 'gameover')).toBe(true);
+  }, 120_000);
+
   it('every run terminates, in every bathroom', () => {
     for (const bathroom of BATHROOMS) {
       const runs = Array.from({ length: 500 }, (_, i) => playRun(i + 1, bathroom));

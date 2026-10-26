@@ -2,16 +2,19 @@ import { ITEM_INFO, START_PACK } from '../../engine/data';
 import { chooseStartBonus } from '../../engine/game';
 import type { RunState } from '../../engine/types';
 import { PlayerArt } from '../art';
-import { MerdomonCard } from '../components';
+import { HomeButton, MerdomonCard } from '../components';
 import { Icon, ItemIcon, TraitIcon } from '../icons';
 import type { Update } from '../update';
 import { NewMerdomonModal } from './NewMerdomonModal';
 
 /** Pick one starting bonus: a random item, a random Small Merdomon or a resources pack. */
-export function StartBonusScreen({ run, update }: { run: RunState; update: Update }) {
+export function StartBonusScreen({ run, update, onHome }: { run: RunState; update: Update; onHome: () => void }) {
   const options = run.startOptions;
   return (
     <div className="screen start-bonus">
+      <div className="floating-home">
+        <HomeButton onClick={onHome} />
+      </div>
       <h2 className="screen-title">Pick a starting bonus</h2>
       {options && (
         <div className="start-options">

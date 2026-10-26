@@ -40,6 +40,7 @@ import {
   TRAIT_INFO,
   TRAIT_VALUES,
   TRADE,
+  ENDLESS,
   ABILITY_CHOICES,
   BATHROOM_ACTION_POOP,
   MODIFIER_DISABLE_CONCENTRATION,
@@ -63,7 +64,11 @@ const demoTeam: Merdomon[] = [
 ];
 
 const demoRun: RunState = {
-  version: 9,
+  version: 10,
+  mode: 'normal',
+  endlessLevel: 0,
+  customPoints: 0,
+  customAction: null,
   phase: 'preparation',
   round: 3,
   concentration: 7,
@@ -169,6 +174,25 @@ interface Page {
 }
 
 const pages: Page[] = [
+  {
+    title: "What's new (v0.15)",
+    body: (
+      <ul className="tut-news">
+        <li>
+          New <b>♾️ Endless Mode</b>: pick the 🔧 Custom Toilet. Face every Boss in a row, 6 waves each, tougher every level.
+        </li>
+        <li>
+          Bathroom actions cost <b>{BATHROOM_ACTION_POOP}</b> Poop and ask for confirmation. Wall Graffiti now gives a trait your
+          team <b>doesn't</b> have.
+        </li>
+        <li>
+          <b>Flush</b>: Small +1 {ii('focus')} +1 {ii('ap', '#1b1b1b')}, Big +2/+2, Huge +3/+3.
+        </li>
+        <li>Fight stats update live (Snowball, Flip-Flops, Legacy, Bosses…).</li>
+        <li>A 🏠 Home button on every screen. Stats show the bathroom and the mode of each run.</li>
+      </ul>
+    ),
+  },
   {
     title: "What's new (v0.14)",
     body: (
@@ -518,7 +542,7 @@ const pages: Page[] = [
         />
 
         <Row icon={I('flush')} title="Flush">
-          Remove a Merdomon and get +1 Concentration.
+          Remove a Merdomon: Small +1 {ii('focus')} and +1 {ii('ap', '#1b1b1b')}, Big +2 and +2, Huge +3 and +3.
         </Row>
         <Row icon={I('bonus')} title="Bonus Action">
           +1 {ii('ap', '#1b1b1b')} for this round.
@@ -530,7 +554,7 @@ const pages: Page[] = [
           +{FARTING.hp} HP to one Merdomon, as often as you like.
         </Row>
         <Row icon={<span className="mod-emoji">💼</span>} title="Bathroom action">
-          Office, Public and Home have their own, once per round, for {BATHROOM_ACTION_POOP} {ii('poop')}.
+          Office, Public, Home and the Custom Toilet have one, once per round, for {BATHROOM_ACTION_POOP} {ii('poop')}.
         </Row>
         <Row icon={I('dice')} title="Re-Roll">
           Redraw Evacuate, Shop or abilities for {REROLL_COST} {ii('tp')} (Toilet Brush: free ones).
@@ -664,6 +688,29 @@ const pages: Page[] = [
         <p className="tut-note">
           Your final score still becomes <b>Toilet Points</b> {ii('toilet', '#f2c94c')}: no use for them yet.
         </p>
+      </>
+    ),
+  },
+  {
+    title: '♾️ Endless Mode',
+    body: (
+      <>
+        <p className="tut-note">
+          Pick the <b>🔧 Custom Toilet</b> at the start: all structures at Tier 0, 5 {ii('tp')} 5 {ii('focus')} 5 {ii('poop')}.
+        </p>
+        <Row icon={<span className="mod-emoji">🔧</span>} title="Customize">
+          Place {ENDLESS.customTiers} free tiers (stacking is fine) and pick a bathroom action.
+        </Row>
+        <Row icon={<span className="mod-emoji">♾️</span>} title="Levels in a row">
+          {ENDLESS.rounds} waves per level: mid Boss on wave {ENDLESS.midRound}, final Boss on wave {ENDLESS.rounds}, 2 wave
+          modifiers. Beat the final Boss and the next level's comes, with a gift.
+        </Row>
+        <Row icon={<span className="mod-emoji">💀</span>} title="Tougher and tougher">
+          Enemies +0/+1/+2/+3 on levels 1–4, then +5, +6, +7. After the Cat the Bosses start again at +8, +9…
+        </Row>
+        <Row icon={I('skull', '#fff')} title="The end">
+          At 0 Concentration, or when a final Boss beats you. Your best run shows in the Journey.
+        </Row>
       </>
     ),
   },
@@ -935,7 +982,7 @@ function TestingPrivilege() {
 
 // ---------- Screen ----------
 
-export function TutorialScreen({ onClose }: { onClose: () => void }) {
+export function TutorialScreen({ onClose, homeIcon = false }: { onClose: () => void; homeIcon?: boolean }) {
   const [index, setIndex] = useState(0);
   const touchX = useRef<number | null>(null);
   const page = pages[index];
@@ -956,8 +1003,8 @@ export function TutorialScreen({ onClose }: { onClose: () => void }) {
     >
       <div className="tut-head">
         <h2>{page.title}</h2>
-        <button className="icon-btn" onClick={onClose} aria-label="Close rules">
-          <Icon name="close" size={22} />
+        <button className="icon-btn" onClick={onClose} aria-label={homeIcon ? 'Home' : 'Close rules'}>
+          <Icon name={homeIcon ? 'home' : 'close'} size={22} />
         </button>
       </div>
 

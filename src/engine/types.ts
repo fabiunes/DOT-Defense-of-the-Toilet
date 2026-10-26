@@ -40,7 +40,11 @@ export type StructureId = 'stall' | 'sink' | 'bidet' | 'scrubber' | 'toilet' | '
 /** Difficulty level, chosen at the start: it picks the Boss and toughens normal enemies. */
 export type Level = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 /** Starting bathroom setup, chosen together with the level. */
-export type BathroomId = 'office' | 'public' | 'home' | 'hotel';
+export type BathroomId = 'office' | 'public' | 'home' | 'hotel' | 'custom';
+/** The bathroom actions (paid in Poop, once per round); the Custom Toilet picks one. */
+export type BathroomActionId = 'office' | 'public' | 'home';
+/** Normal: one level, 10 waves. Endless: levels in a row, 6 waves each, until defeat. */
+export type RunMode = 'normal' | 'endless';
 /** Bathroom ids used before v0.14 (A/B variants), still found in the run history. */
 export type LegacyBathroomId = 'homeA' | 'homeB' | 'officeA' | 'officeB' | 'publicA' | 'publicB' | 'hotelA' | 'hotelB';
 export type BossId = 'demonScroller' | 'bestseller' | 'streamDeck' | 'plumber' | 'groupAdmin' | 'robotVacuum' | 'cat';
@@ -159,6 +163,8 @@ export interface WaveLogEntry {
   gains: Partial<Record<Resource, number>>;
   /** Items sucked up by the Robot Vacuum. */
   stolen?: ItemId[];
+  /** Endless: the level this wave belongs to. */
+  level?: number;
 }
 
 export interface RunStats {
@@ -181,12 +187,20 @@ export interface RunStats {
   modifierWavesWon: number;
   midBossDefeated: boolean;
   finalBossDefeated: boolean;
+  /** Bosses defeated (Endless can beat many). */
+  bossesDefeated: { mid: number; final: number };
 }
 
-export type Phase = 'boss' | 'starter' | 'startBonus' | 'preparation' | 'combat' | 'gameover' | 'victory';
+export type Phase = 'boss' | 'customize' | 'starter' | 'startBonus' | 'preparation' | 'combat' | 'gameover' | 'victory';
 
 export interface RunState {
-  version: 9;
+  version: 10;
+  mode: RunMode;
+  /** Endless: current level (1, 2, … past 7 the Bosses start again, tougher). */
+  endlessLevel: number;
+  /** Custom Toilet: free tiers left to place, and the chosen bathroom action. */
+  customPoints: number;
+  customAction: BathroomActionId | null;
   phase: Phase;
   round: number;
   concentration: number;

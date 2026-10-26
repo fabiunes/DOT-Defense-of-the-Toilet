@@ -16,7 +16,6 @@ import {
   BATHROOM_ACTION_POOP,
   MODIFIER_INFO,
   ROBOT_VACUUM,
-  ROUNDS,
   SIZE_NAME,
   STAT_KEYS,
   STRUCTURES,
@@ -24,10 +23,12 @@ import {
   CONCENTRATE_GAIN,
   TRAIT_INFO,
   TRADE,
+  BATHROOM_ACTIONS,
+  FLUSH_BONUS,
 } from '../../engine/data';
 import * as G from '../../engine/game';
 import { countTraits } from '../../engine/traits';
-import type { ItemId, ModifierId, Rarity, Reward, RunState, StructureId, TraitId, WaveLogEntry } from '../../engine/types';
+import type { BathroomActionId, ItemId, ModifierId, Rarity, Reward, RunState, StructureId, TraitId, WaveLogEntry } from '../../engine/types';
 import { EnemyArt } from '../art';
 import { Bathroom, StructureIcon } from '../bathroom';
 import {
@@ -54,6 +55,7 @@ type Panel =
   | { kind: 'actions' }
   | { kind: 'bonus' }
   | { kind: 'waves' }
+  | { kind: 'bathroomAction' }
   | { kind: 'evacuate' }
   | { kind: 'shop' }
   | { kind: 'trade' }
@@ -94,7 +96,17 @@ const slotAt = (x: number, y: number) => {
   return el ? Number(el.getAttribute('data-slot')) : null;
 };
 
-export function PrepScreen({ run, update, onHelp }: { run: RunState; update: Update; onHelp?: () => void }) {
+export function PrepScreen({
+  run,
+  update,
+  onHelp,
+  onHome,
+}: {
+  run: RunState;
+  update: Update;
+  onHelp?: () => void;
+  onHome?: () => void;
+}) {
   const [panel, setPanel] = useState<Panel | null>(null);
   const [mode, setMode] = useState<Mode>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
@@ -185,7 +197,7 @@ export function PrepScreen({ run, update, onHelp }: { run: RunState; update: Upd
 
   return (
     <div className="screen prep">
-      <TopBar run={run} />
+      <TopBar run={run} onHome={onHome} />
       <InfoRow
         run={run}
         onItems={() => setPanel({ kind: 'items' })}
@@ -294,6 +306,7 @@ export function PrepScreen({ run, update, onHelp }: { run: RunState; update: Upd
       )}
       {panel?.kind === 'bonus' && <BonusPanel run={run} onClose={close} />}
       {panel?.kind === 'waves' && <WavesPanel run={run} onClose={close} />}
+      {panel?.kind === 'bathroomAction' && <BathroomActionPanel run={run} update={update} onClose={close} />}
       {panel?.kind === 'evacuate' &&<EvacuatePanel run={run} update={update} onClose={close} />}
       {panel?.kind === 'shop' && <ShopPanel run={run} update={update} onClose={close} />}
       {panel?.kind === 'scout' && <ScoutPanel run={run} update={update} onClose={close} fight={panel.fight} />}
@@ -416,7 +429,8 @@ export function PrepScreen({ run, update, onHelp }: { run: RunState; update: Upd
               <Icon name="flush" size={22} fill="#fff" /> Flush
               <CostBadge tp={G.tpCost(run, 'flush')} />
               <span className="gain">
-                +1 <Icon name="focus" size={14} fill="#fff" />
+                +{FLUSH_BONUS[findM(panel.id)!.rarity]} <Icon name="focus" size={14} fill="#fff" /> +
+                {FLUSH_BONUS[findM(panel.id)!.rarity]} <Icon name="ap" size={12} fill="#fff" />
               </span>
             </button>
           </MerdomonDetail>
@@ -578,6 +592,44 @@ function BonusPanel({ run, onClose }: { run: RunState; onClose: () => void }) {
   );
 }
 
+/** What the bathroom action will do, with its cost: confirm or cancel. */
+function BathroomActionPanel({ run, update, onClose }: { run: RunState; update: Update; onClose: () => void }) {
+  const action = G.bathroomActionOf(run);
+  if (!action) return null;
+  const a = BATHROOM_ACTIONS[action];
+  return (
+    <Modal onClose={onClose} className="confirm-panel">
+      <div className="panel-head">
+        <span className="tile-emoji">{a.icon}</span>
+        <b>{a.name}</b>
+      </div>
+      <p className="center">{BATHROOM_ACTION_OUTCOME[action]}</p>
+      <div className="center">
+        <CostBadge ms={String(BATHROOM_ACTION_POOP)} />
+      </div>
+      <button
+        className="big-btn shadow"
+        disabled={!G.canBathroomAction(run)}
+        onClick={() => {
+          update(G.bathroomAction);
+          onClose();
+        }}
+      >
+        <Icon name="check" size={22} /> Confirm
+      </button>
+      <button className="big-btn" onClick={onClose}>
+        Cancel
+      </button>
+    </Modal>
+  );
+}
+
+const BATHROOM_ACTION_OUTCOME: Record<BathroomActionId, string> = {
+  office: '+1 Action Point now.',
+  public: "A random Merdomon gets a trait your team doesn't have yet (any trait if you have them all).",
+  home: 'All your Merdomon get +1 HP in the next fight.',
+};
+
 /** Resources shown in a past wave's row, in this order. */
 const GAIN_ORDER: Reward['resource'][] = ['tp', 'merdascore', 'concentration', 'ap', 'hp'];
 
@@ -596,17 +648,19 @@ function WaveEnemies({ run, enemies }: { run: RunState; enemies: WaveLogEntry['e
 
 /** The Round recap: every wave of the run, fought ones with their outcome, the current one and the coming ones. */
 function WavesPanel({ run, onClose }: { run: RunState; onClose: () => void }) {
-  const log = run.waveLog ?? [];
+  // Endless: only the waves of the current level.
+  const log = (run.waveLog ?? []).filter((w) => run.mode !== 'endless' || w.level === run.endlessLevel);
+  const rounds = G.roundsOf(run);
   const lost = log.reduce((t, w) => t + w.concentrationLost, 0);
   return (
     <Modal onClose={onClose} className="waves-panel">
       <div className="panel-head">
-        <b>Waves</b>
+        <b>{run.mode === 'endless' ? `♾️ Level ${run.endlessLevel}` : 'Waves'}</b>
         <span className="waves-summary">
           ✅ {log.filter((w) => w.won).length}/{log.length} · −{lost} <Icon name="focus" size={14} fill="#fff" />
         </span>
       </div>
-      {Array.from({ length: ROUNDS }, (_, i) => {
+      {Array.from({ length: rounds }, (_, i) => {
         const round = i + 1;
         const past = log.find((w) => w.round === round);
         const plan = G.wavePlan(run, round);
@@ -867,19 +921,17 @@ function ActionPanel({
     },
   ];
   // The bathroom's own action (Office, Public, Home), once per round.
-  if (run.bathroom !== 'hotel') {
-    const b = BATHROOM_INFO[run.bathroom];
+  const action = G.bathroomActionOf(run);
+  if (action) {
+    const a = BATHROOM_ACTIONS[action];
     free.push({
       key: 'bathroom',
       icon: 'bonus',
-      emoji: b.icon,
-      label: b.special.name,
+      emoji: a.icon,
+      label: a.name,
       enabled: G.canBathroomAction(run),
       cost: { ms: String(BATHROOM_ACTION_POOP) },
-      onClick: () => {
-        update(G.bathroomAction);
-        onClose();
-      },
+      onClick: () => onOpen({ kind: 'bathroomAction' }),
     });
   }
 

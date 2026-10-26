@@ -11,6 +11,7 @@ import {
   STAT_KEYS,
   TRAITS,
   WAVES,
+  type WaveDef,
 } from './data';
 import type { Rng } from './rng';
 import type { BossForm, BossId, Enemy, Merdomon, Rarity, Stats } from './types';
@@ -98,8 +99,8 @@ export function createWave(
   bossId: BossId,
   concentrationLost = 0,
   extraPoints = 0,
+  def: WaveDef = WAVES[round - 1],
 ): Enemy[] {
-  const def = WAVES[round - 1];
   let id = firstId;
   const wave: Enemy[] = [];
   for (let i = 0; i < def.common; i++) wave.push(createEnemy(rng, id++, 'common', bossId, extraPoints));

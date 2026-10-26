@@ -101,11 +101,15 @@ describe('bathroom rules', () => {
     expect(G.canBathroomAction({ ...after, merdascore: 20 })).toBe(false);
   });
 
-  it('Public: Wall Graffiti gives a Merdomon a trait the team has', () => {
-    const s = prep('public', { merdascore: 10, team: [mk(1, { traits: ['paper'] }), mk(2, { traits: [] })] });
+  it('Public: Wall Graffiti gives a Merdomon a trait the team does not have (any one if it has them all)', () => {
+    const s = prep('public', { merdascore: 10, items: [], team: [mk(1, { traits: ['paper'] }), mk(2, { traits: [] })] });
     const after = G.bathroomAction(s);
     const traits = after.team.flatMap((m) => m.traits);
-    expect(traits).toEqual(['paper', 'paper']);
+    expect(traits).toHaveLength(2);
+    expect(traits.filter((t) => t === 'paper')).toHaveLength(1);
+    const all = ['paper', 'merdon', 'healthy', 'haste', 'fighter', 'defender', 'action'] as const;
+    const full = G.bathroomAction({ ...s, team: [mk(1, { traits: [...all] })] });
+    expect(full.team[0].traits).toHaveLength(8);
   });
 
   it('Home: Comfort gives +1 HP to everyone in the next fight only', () => {

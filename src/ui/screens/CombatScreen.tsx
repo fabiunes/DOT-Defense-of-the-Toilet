@@ -18,7 +18,7 @@ import type {
 } from '../../engine/types';
 import { EnemyArt, MerdomonArt } from '../art';
 import { StructureIcon } from '../bathroom';
-import { AbilityBadge, HpBar, Stars, StatValue } from '../components';
+import { AbilityBadge, HomeButton, HpBar, Stars, StatValue } from '../components';
 import { Icon, ItemIcon, RESOURCE_ICON, STAT_ICON, TraitIcon } from '../icons';
 
 /** Abilities whose fight popup shows the stat they add instead of their name. */
@@ -44,7 +44,7 @@ const INTRO_MS = 2600;
 const STAT_NAME: Record<StatKey, string> = { hp: 'HP', atk: 'ATK', def: 'DEF', spd: 'SPD' };
 const PASSIVE_TEXT: Partial<Record<CombatBonus['source'], string>> = {
   window: 'First strike hits twice',
-  flipflops: 'Double hits at 2× speed',
+  flipflops: '+3 ATK against a foe at most half as fast',
   magazine: 'One free revive',
   brownTowel: 'Normal: +1 HP +1 ATK',
   yellowTowel: 'Liquid: +1 HP +1 ATK',
@@ -54,6 +54,10 @@ const PASSIVE_TEXT: Partial<Record<CombatBonus['source'], string>> = {
 interface View {
   php: number[];
   ehp: number[];
+  /** ATK and DEF as they change during the fight (abilities, items, Bosses, modifiers). */
+  patk: number[];
+  eatk: number[];
+  edef: number[];
   p: number;
   e: number;
   last: CombatEvent | null;
@@ -62,13 +66,32 @@ interface View {
 function replay(report: CombatReport, upto: number): View {
   const php = report.player.map((f) => f.hp);
   const ehp = report.enemies.map((f) => f.hp);
+  const patk = report.player.map((f) => f.atk);
+  const eatk = report.enemies.map((f) => f.atk);
+  const edef = report.enemies.map((f) => f.def);
+  // Flip-Flops' ATK lasts for one duel only.
+  let duelBonus: { p: number; atk: number } | null = null;
   let p = -1;
   let e = -1;
   for (let i = 0; i < upto; i++) {
     const ev = report.events[i];
     if (ev.type === 'duel') {
+      if (duelBonus) patk[duelBonus.p] -= duelBonus.atk;
+      duelBonus = null;
       p = ev.p;
       e = ev.e;
+    } else if (ev.type === 'item') {
+      patk[ev.p] += FLIPFLOPS_ATK;
+      duelBonus = { p: ev.p, atk: FLIPFLOPS_ATK };
+    } else if (ev.type === 'ability' && ev.ability === 'snowball') {
+      patk[ev.p] += ABILITY.snowballAtk;
+    } else if (ev.type === 'ability' && ev.ability === 'legacy' && ev.p + 1 < patk.length) {
+      patk[ev.p + 1] += ABILITY.legacyAtk;
+    } else if (ev.type === 'modifier' && ev.modifier === 'doomscrolling') {
+      for (let j = 0; j < eatk.length; j++) eatk[j] += 1;
+    } else if (ev.type === 'boss' && ev.boss === 'bestseller' && ev.hp === undefined) {
+      edef[ev.index] += 1;
+      if (report.enemies[ev.index]?.bossForm === 'final') eatk[ev.index] += 1;
     } else if (ev.type === 'attack') {
       if (ev.side === 'p') ehp[e] = ev.hp;
       else php[p] = ev.hp;
@@ -79,7 +102,7 @@ function replay(report: CombatReport, upto: number): View {
       else ehp[ev.target.index] = ev.target.hp;
     }
   }
-  return { php, ehp, p, e, last: upto > 0 ? report.events[upto - 1] : null };
+  return { php, ehp, patk, eatk, edef, p, e, last: upto > 0 ? report.events[upto - 1] : null };
 }
 
 /** The Boss ability shown in combat: the final form may have its own name. */
@@ -88,7 +111,18 @@ function bossAbilityName(boss: BossId, form?: BossForm) {
   return form === 'final' && info.finalAbility ? info.finalAbility : info.ability;
 }
 
-export function CombatScreen({ report, onDone }: { report: CombatReport; onDone: () => void }) {
+export function CombatScreen({
+  report,
+  rounds = ROUNDS,
+  onDone,
+  onHome,
+}: {
+  report: CombatReport;
+  /** Waves in the run (Endless levels have 6). */
+  rounds?: number;
+  onDone: () => void;
+  onHome?: () => void;
+}) {
   const [step, setStep] = useState(0);
   const [speedIdx, setSpeedIdx] = useState(0);
   const [intro, setIntro] = useState(
@@ -135,9 +169,10 @@ export function CombatScreen({ report, onDone }: { report: CombatReport; onDone:
     <div className="screen combat">
       <div className="combat-head">
         <span className="round-badge">
-          Round {report.round}/{ROUNDS}
+          Round {report.round}/{rounds}
         </span>
         <Icon name="fight" size={22} />
+        {onHome && <HomeButton onClick={onHome} />}
       </div>
 
       <Queue fighters={report.enemies} hp={view.ehp} active={view.e} enemy bossId={report.bossId} />
@@ -151,6 +186,8 @@ export function CombatScreen({ report, onDone }: { report: CombatReport; onDone:
               hp={view.ehp[view.e]}
               enemy
               bossId={report.bossId}
+              atk={view.eatk[view.e]}
+              def={view.edef[view.e]}
               anim={anim('e')}
               dmg={dmgOn('e')}
               double={last?.type === 'attack' && last.double}
@@ -169,6 +206,7 @@ export function CombatScreen({ report, onDone }: { report: CombatReport; onDone:
               key={`p-${step}`}
               f={report.player[view.p]}
               hp={view.php[view.p]}
+              atk={view.patk[view.p]}
               anim={anim('p')}
               dmg={dmgOn('p')}
               double={false}
@@ -202,9 +240,14 @@ function BigFighter({
   dmg,
   double,
   bossId,
+  atk = f.atk,
+  def = f.def,
 }: {
   bossId?: BossId;
   f: Fighter;
+  /** Current values, when the fight changed them. */
+  atk?: number;
+  def?: number;
   hp: number;
   enemy?: boolean;
   anim: string;
@@ -233,12 +276,15 @@ function BigFighter({
         </span>
         <HpBar hp={Math.max(0, hp)} max={f.maxHp} />
         <span className="mini-stats">
-          {(['atk', 'def', 'spd'] as const).map((k) => (
-            <span key={k}>
-              <Icon name={STAT_ICON[k]} size={12} />
-              <StatValue value={f[k]} />
-            </span>
-          ))}
+          {(['atk', 'def', 'spd'] as const).map((k) => {
+            const value = k === 'atk' ? atk : k === 'def' ? def : f.spd;
+            return (
+              <span key={k} className={value > f[k] ? 'stat-up' : ''}>
+                <Icon name={STAT_ICON[k]} size={12} />
+                <StatValue value={value} />
+              </span>
+            );
+          })}
         </span>
       </div>
     </div>

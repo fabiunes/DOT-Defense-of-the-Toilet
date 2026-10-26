@@ -26,8 +26,8 @@ export function StatsScreen({ onClose }: { onClose: () => void }) {
     <div className="screen stats">
       <div className="tut-head">
         <h2>Stats</h2>
-        <button className="icon-btn" onClick={onClose} aria-label="Close stats">
-          <Icon name="close" size={22} />
+        <button className="icon-btn" onClick={onClose} aria-label="Home">
+          <Icon name="home" size={22} />
         </button>
       </div>
 
@@ -76,8 +76,12 @@ function RunRow({ r, open, onToggle }: { r: RunRecord; open: boolean; onToggle: 
       <button className="run-head" onClick={onToggle}>
         <EnemyArt size={30} kind={boss.kind} rarity="epic" boss bossId={r.boss} />
         <span className="run-result">{r.victory ? '✅' : '❌'}</span>
+        <span className="run-icons" title={r.mode === 'endless' ? 'Endless' : 'Normal'}>
+          {bathroomOf(r.bathroom) ? BATHROOM_INFO[bathroomOf(r.bathroom)!].icon : ''}
+          {r.mode === 'endless' ? '♾️' : '⚔️'}
+        </span>
         <span className="run-main">
-          <b>L{r.level}</b> · {r.victory ? 'Victory' : `Wave ${r.round}`}
+          <b>{r.mode === 'endless' ? `L${r.endlessLevel}` : `L${r.level}`}</b> · {r.victory ? 'Victory' : `Wave ${r.round}`}
         </span>
         <b className="run-score">{r.score}</b>
         <small className="muted">{shortDate(r.date)}</small>

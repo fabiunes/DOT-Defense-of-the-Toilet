@@ -21,7 +21,6 @@ import {
   COSTS,
   EVACUATE_COST,
   FARTING,
-  FLUSH_CONCENTRATION,
   GIFT_CHOICES,
   GIFT_WAVE,
   ITEMS,
@@ -50,11 +49,17 @@ import {
   MODIFIER_DISABLE_CONCENTRATION,
   RAZOR_TP,
   STARTER_ABILITY_CHOICES,
+  ENDLESS,
+  ENDLESS_WAVES,
+  FLUSH_BONUS,
+  LEVELS,
+  endlessEnemyBonus,
 } from './data';
 import { createEnemy, createMerdomon, createWave } from './generate';
 import { Rng } from './rng';
 import { activeTraits, apBonus, combatBonus, countTraits, traitTier, traitValue } from './traits';
 import type {
+  BathroomActionId,
   AbilityId,
   BathroomId,
   BossForm,
@@ -104,12 +109,17 @@ export function emptyStats(): RunStats {
     modifierWavesWon: 0,
     midBossDefeated: false,
     finalBossDefeated: false,
+    bossesDefeated: { mid: 0, final: 0 },
   };
 }
 
 export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
   const s: RunState = {
-    version: 9,
+    version: 10,
+    mode: 'normal',
+    endlessLevel: 0,
+    customPoints: 0,
+    customAction: null,
     phase: 'boss',
     round: 1,
     concentration: MAX_CONCENTRATION,
@@ -147,8 +157,81 @@ export function newRun(seed = Math.floor(Math.random() * 2 ** 31)): RunState {
   s.starters = withRng(s, (rng) =>
     Array.from({ length: STARTER_CHOICES }, () => createMerdomon(rng, s.nextId++, 'common')),
   );
-  s.modifiers = withRng(s, (rng) => planModifiers(rng));
+  s.modifiers = withRng(s, (rng) => planModifiers(rng, MODIFIER_WAVES));
   return s;
+}
+
+// ---------- Run length: Normal (10 waves) or Endless (6 waves per level) ----------
+
+export const roundsOf = (s: RunState) => (s.mode === 'endless' ? ENDLESS.rounds : ROUNDS);
+/** The wave of the mid Boss (and of the Group Admin's Pinned Message). */
+const midRoundOf = (s: RunState) => (s.mode === 'endless' ? ENDLESS.midRound : GROUP_ADMIN.pinnedFrom);
+const waveDefOf = (s: RunState, round: number) => (s.mode === 'endless' ? ENDLESS_WAVES : WAVES)[round - 1];
+const enemyBonusOf = (s: RunState) => (s.mode === 'endless' ? endlessEnemyBonus(s.endlessLevel) : LEVEL_ENEMY_BONUS[s.level]);
+
+/** The Endless level's Boss: after the Cat (7) they start again from the Bestseller. */
+const endlessLevelOf = (endlessLevel: number) => ((((endlessLevel - 1) % LEVELS.length) + 1) as Level);
+
+/** Endless setup: the Custom Toilet (all Tier 0), level 1; next, the player places 3 free tiers. */
+export function beginEndless(prev: RunState): RunState {
+  if (prev.phase !== 'boss') return prev;
+  const s = beginRun(prev, 1, ENDLESS.bathroom);
+  s.mode = 'endless';
+  s.endlessLevel = 1;
+  s.customPoints = ENDLESS.customTiers;
+  s.customAction = null;
+  s.modifiers = withRng(s, (rng) => planModifiers(rng, ENDLESS.modifierWaves));
+  s.phase = 'customize';
+  return s;
+}
+
+export function canCustomBuild(s: RunState, id: StructureId): boolean {
+  return s.phase === 'customize' && s.customPoints > 0 && s.structures[id] < MAX_TIER;
+}
+
+/** Customize: one free tier on a structure (several on the same one are fine). */
+export function customBuild(prev: RunState, id: StructureId): RunState {
+  if (!canCustomBuild(prev, id)) return prev;
+  const s = clone(prev);
+  s.structures[id]++;
+  s.customPoints--;
+  return s;
+}
+
+export function customUnbuild(prev: RunState, id: StructureId): RunState {
+  if (prev.phase !== 'customize' || prev.structures[id] === 0) return prev;
+  const s = clone(prev);
+  s.structures[id]--;
+  s.customPoints++;
+  return s;
+}
+
+export function setCustomAction(prev: RunState, action: BathroomActionId): RunState {
+  if (prev.phase !== 'customize') return prev;
+  return { ...clone(prev), customAction: action };
+}
+
+/** Up to 3 tiers (fewer is allowed) and a bathroom action, then the starter pick. */
+export function canFinishCustomize(s: RunState): boolean {
+  return s.phase === 'customize' && s.customAction !== null;
+}
+
+export function finishCustomize(prev: RunState): RunState {
+  if (!canFinishCustomize(prev)) return prev;
+  const s = clone(prev);
+  // The free tiers are the starting toilet: they don't count as upgrades for the score.
+  s.startStructures = { ...s.structures };
+  s.concentration = Math.min(BATHROOM_INFO.custom.concentration, concentrationCap(s));
+  s.merdascore = Math.min(s.merdascore, poopCap(s));
+  s.tp = Math.min(s.tp, tpCap(s));
+  s.phase = 'starter';
+  return s;
+}
+
+/** The bathroom action this run has (the Custom Toilet's is chosen; the Hotel has none). */
+export function bathroomActionOf(s: RunState): BathroomActionId | null {
+  if (s.bathroom === 'custom') return s.customAction;
+  return s.bathroom === 'hotel' ? null : s.bathroom;
 }
 
 /**
@@ -196,8 +279,8 @@ export const poopCap = (s: RunState) => capacity(s, 'bidet');
 export const tpCap = (s: RunState) => capacity(s, 'holder');
 /** Merdomon slots locked by the Group Admin (Pinned Message, @everyone). */
 export function pinnedSlots(s: RunState): number {
-  if (s.boss !== 'groupAdmin' || s.round < GROUP_ADMIN.pinnedFrom) return 0;
-  return s.round >= ROUNDS ? GROUP_ADMIN.finalPinned : GROUP_ADMIN.pinned;
+  if (s.boss !== 'groupAdmin' || s.round < midRoundOf(s)) return 0;
+  return s.round >= roundsOf(s) ? GROUP_ADMIN.finalPinned : GROUP_ADMIN.pinned;
 }
 /** Merdomon that can fight: the Toilet's limit minus the locked slots (at least 1). */
 export const teamCap = (s: RunState) => Math.max(1, capacity(s, 'toilet') - pinnedSlots(s));
@@ -235,19 +318,19 @@ function addPoop(s: RunState, amount: number) {
 }
 
 /** One distinct modifier for each modifier wave. */
-function planModifiers(rng: Rng): Partial<Record<number, ModifierId>> {
-  const picks = rng.shuffle([...MODIFIERS]).slice(0, MODIFIER_WAVES.length);
-  return Object.fromEntries(MODIFIER_WAVES.map((w, i) => [w, picks[i]]));
+function planModifiers(rng: Rng, waves: readonly number[]): Partial<Record<number, ModifierId>> {
+  const picks = rng.shuffle([...MODIFIERS]).slice(0, waves.length);
+  return Object.fromEntries(waves.map((w, i) => [w, picks[i]]));
 }
 
 /** The modifier affecting the current wave (null if none or paid off). */
 /** What a coming wave will bring: enemies by size, the Boss form and the planned modifier (types are drawn later). */
 export function wavePlan(s: RunState, round: number): { small: number; big: number; boss: BossForm | null; modifier: ModifierId | null } {
-  const def = WAVES[round - 1];
+  const def = waveDefOf(s, round);
   const modifier = s.modifiers[round] ?? null;
   let small = def.common;
   if (modifier === 'groupChat') small++;
-  if (s.boss === 'groupAdmin' && round === ROUNDS) small++;
+  if (s.boss === 'groupAdmin' && round === roundsOf(s)) small++;
   return { small, big: def.rare, boss: def.boss ?? null, modifier };
 }
 
@@ -266,9 +349,9 @@ function startPreparation(s: RunState) {
   s.modifierDisabled = false;
   s.entryFeePaid = false;
   s.bathroomActionUsed = false;
-  const extraPoints = LEVEL_ENEMY_BONUS[s.level];
+  const extraPoints = enemyBonusOf(s);
   s.wave = withRng(s, (rng) =>
-    createWave(rng, s.round, s.nextId, s.boss, s.stats.concentrationLost, extraPoints),
+    createWave(rng, s.round, s.nextId, s.boss, s.stats.concentrationLost, extraPoints, waveDefOf(s, s.round)),
   );
   s.nextId += s.wave.length;
   if (s.modifiers[s.round] === 'groupChat') {
@@ -276,7 +359,7 @@ function startPreparation(s: RunState) {
     s.wave.unshift({ ...extra, extra: true });
   }
   // The Group Admin's @everyone: one more Small enemy on the last wave.
-  if (s.boss === 'groupAdmin' && s.round === ROUNDS) {
+  if (s.boss === 'groupAdmin' && s.round === roundsOf(s)) {
     s.wave.unshift(withRng(s, (rng) => createEnemy(rng, s.nextId++, 'common', s.boss, extraPoints)));
   }
   drawShop(s);
@@ -567,8 +650,12 @@ export function flush(prev: RunState, id: number): RunState {
   if (!canFlush(prev) || !prev.team.some((m) => m.id === id)) return prev;
   const s = clone(prev);
   s.tp -= tpCost(s, 'flush');
+  const flushed = s.team.find((m) => m.id === id)!;
   s.team = s.team.filter((m) => m.id !== id);
-  addConcentration(s, FLUSH_CONCENTRATION);
+  // Small +1, Big +2, Huge +3: Concentration and Action Points (both up to their limits).
+  const bonus = FLUSH_BONUS[flushed.rarity];
+  addConcentration(s, bonus);
+  s.ap = Math.min(apCap(s), s.ap + bonus);
   return s;
 }
 
@@ -588,9 +675,9 @@ export function payEntryFee(prev: RunState): RunState {
 
 /** Office (Coffee Break), Public (Wall Graffiti), Home (Comfort): once per round, paid in Poop. */
 export function canBathroomAction(s: RunState): boolean {
-  if (!inPreparation(s) || s.bathroom === 'hotel' || s.bathroomActionUsed || s.merdascore < BATHROOM_ACTION_POOP) return false;
-  if (s.bathroom === 'office') return s.ap < apCap(s);
-  if (s.bathroom === 'public') return activeTeam(s).some((m) => m.traits.length > 0);
+  const action = bathroomActionOf(s);
+  if (!action || !inPreparation(s) || s.bathroomActionUsed || s.merdascore < BATHROOM_ACTION_POOP) return false;
+  if (action === 'office') return s.ap < apCap(s);
   return s.team.length > 0;
 }
 
@@ -599,13 +686,16 @@ export function bathroomAction(prev: RunState): RunState {
   const s = clone(prev);
   s.merdascore -= BATHROOM_ACTION_POOP;
   s.bathroomActionUsed = true;
-  if (s.bathroom === 'office') s.ap++;
-  else if (s.bathroom === 'home') s.comfortHp = 1;
+  const action = bathroomActionOf(s);
+  if (action === 'office') s.ap++;
+  else if (action === 'home') s.comfortHp = 1;
   else {
-    // Wall Graffiti: a random fighting Merdomon gains a random trait the team already has.
+    // Wall Graffiti: a random fighting Merdomon gets a trait the team (Merdomon and items) doesn't have yet;
+    // with all of them already, any trait.
     const team = activeTeam(s);
-    const owned = TRAITS.filter((t) => team.some((m) => m.traits.includes(t)));
-    const [trait, target] = withRng(s, (rng) => [rng.pick(owned), rng.pick(team)] as const);
+    const counts = countTraits(s.team, s.items);
+    const missing = TRAITS.filter((t) => counts[t] === 0);
+    const [trait, target] = withRng(s, (rng) => [rng.pick(missing.length ? missing : TRAITS), rng.pick(team)] as const);
     target.traits = [...target.traits, trait];
   }
   return s;
@@ -728,7 +818,7 @@ export type CorruptPayment = 'tp' | 'concentration';
 
 export function canDisableModifier(s: RunState, pay: CorruptPayment = 'tp'): boolean {
   const affordable = pay === 'tp' ? s.tp >= corruptTp(s) : s.concentration > MODIFIER_DISABLE_CONCENTRATION;
-  return inPreparation(s) && !!s.modifiers[s.round] && !s.modifierDisabled && s.round < ROUNDS && affordable;
+  return inPreparation(s) && !!s.modifiers[s.round] && !s.modifierDisabled && s.round < roundsOf(s) && affordable;
 }
 
 /** Pays to skip the modifier; its reward is lost too. */
@@ -827,7 +917,7 @@ function structureRewards(s: RunState): Reward[] {
 export function previewRewards(s: RunState): { sure: Reward[]; structures: Reward[]; ifWon: Reward[] } {
   const modifier = activeModifier(s);
   const ifWon: Reward[] = [];
-  if (modifier && s.round < ROUNDS) ifWon.push({ source: modifier, resource: 'ap', amount: MODIFIER_AP_REWARD });
+  if (modifier && s.round < roundsOf(s)) ifWon.push({ source: modifier, resource: 'ap', amount: MODIFIER_AP_REWARD });
   return { sure: passiveRewards(s), structures: structureProduction(s), ifWon };
 }
 
@@ -900,7 +990,7 @@ export function fight(prev: RunState): RunState {
       if (extra > 0) rewards.push({ source: 'jackpot', resource: res, amount: extra });
     }
   }
-  if (modifier && result.won && s.round < ROUNDS)
+  if (modifier && result.won && s.round < roundsOf(s))
     rewards.push({ source: modifier, resource: 'ap', amount: MODIFIER_AP_REWARD });
   rewards.push(...structureRewards(s));
   const produce = (id: StructureId) => production(s, id);
@@ -930,6 +1020,7 @@ export function fight(prev: RunState): RunState {
       concentrationLost,
       gains,
       stolen,
+      level: s.mode === 'endless' ? s.endlessLevel : undefined,
     },
   ];
 
@@ -951,8 +1042,13 @@ export function fight(prev: RunState): RunState {
   s.wave.forEach((e, i) => {
     if (result.enemyHpAfter[i] > 0) return;
     if (!e.boss) s.stats.enemiesBySize[e.rarity]++;
-    else if (e.bossForm === 'mid') s.stats.midBossDefeated = true;
-    else s.stats.finalBossDefeated = true;
+    else if (e.bossForm === 'mid') {
+      s.stats.midBossDefeated = true;
+      s.stats.bossesDefeated.mid++;
+    } else {
+      s.stats.finalBossDefeated = true;
+      s.stats.bossesDefeated.final++;
+    }
   });
 
   s.lastCombat = {
@@ -979,11 +1075,27 @@ export function continueAfterCombat(prev: RunState): RunState {
   if (prev.phase !== 'combat') return prev;
   const s = clone(prev);
   if (s.concentration <= 0) s.phase = 'gameover';
-  else if (s.round >= ROUNDS) s.phase = s.lastCombat?.won ? 'victory' : 'gameover';
+  else if (s.mode === 'endless' && s.round >= ENDLESS.rounds) {
+    // Endless: beating the final Boss leads to the next level's Boss; losing to it ends the run.
+    if (!s.lastCombat?.won) s.phase = 'gameover';
+    else {
+      s.endlessLevel++;
+      s.level = endlessLevelOf(s.endlessLevel);
+      s.boss = LEVEL_BOSS[s.level];
+      s.round = 1;
+      s.modifiers = withRng(s, (rng) => planModifiers(rng, ENDLESS.modifierWaves));
+      startPreparation(s);
+      // A new Boss can change the limits (the Plumber's Water Shut-Off).
+      s.concentration = Math.min(s.concentration, concentrationCap(s));
+      s.merdascore = Math.min(s.merdascore, poopCap(s));
+      // The gift comes after every final Boss.
+      drawGift(s);
+    }
+  } else if (s.round >= ROUNDS) s.phase = s.lastCombat?.won ? 'victory' : 'gameover';
   else {
     s.round++;
     startPreparation(s);
-    if (s.round === GIFT_WAVE + 1) drawGift(s);
+    if (s.mode !== 'endless' && s.round === GIFT_WAVE + 1) drawGift(s);
   }
   return s;
 }

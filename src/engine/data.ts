@@ -9,6 +9,7 @@ import type {
   StatKey,
   Level,
   BathroomId,
+  BathroomActionId,
   LegacyBathroomId,
   StructureId,
   TraitId,
@@ -292,13 +293,27 @@ export const LEGACY_BATHROOM: Record<LegacyBathroomId, BathroomId> = {
 /** The bathroom of a run record, old ids included. */
 export function bathroomOf(id: string | undefined): BathroomId | null {
   if (!id) return null;
-  if ((BATHROOMS as readonly string[]).includes(id)) return id as BathroomId;
+  if (([...BATHROOMS, 'custom'] as readonly string[]).includes(id)) return id as BathroomId;
   return LEGACY_BATHROOM[id as LegacyBathroomId] ?? null;
 }
 
 /** Bathroom actions (once per round, paid in Poop) and the Hotel's Entry Fee. */
-export const BATHROOM_ACTION_POOP = 8;
+// (BATHROOM_ACTIONS is below the constants it uses.)
+export const BATHROOM_ACTION_POOP = 3;
 export const HOTEL_ENTRY_FEE = 5;
+
+export const BATHROOM_ACTIONS: Record<BathroomActionId, { name: string; icon: string; desc: string }> = {
+  office: { name: 'Coffee Break', icon: '💼', desc: `Once per round: +1 Action Point for ${BATHROOM_ACTION_POOP} Poop` },
+  public: {
+    name: 'Wall Graffiti',
+    icon: '🚻',
+    desc: `Once per round: a random Merdomon gets a trait your team doesn't have, for ${BATHROOM_ACTION_POOP} Poop`,
+  },
+  home: { name: 'Comfort', icon: '🏠', desc: `Once per round: all Merdomon +1 HP in the next fight, for ${BATHROOM_ACTION_POOP} Poop` },
+};
+
+/** Flush: Concentration and Action Points by the size of the flushed Merdomon. */
+export const FLUSH_BONUS: Record<Rarity, number> = { common: 1, rare: 2, epic: 3 };
 
 const tiers = (stall: number, sink: number, bidet: number, scrubber: number, toilet: number, holder: number) => ({
   stall,
@@ -327,7 +342,7 @@ export const BATHROOM_INFO: Record<
     name: 'Office Toilet',
     icon: '💼',
     color: '#eeeeea',
-    special: { name: 'Coffee Break', desc: `Once per round: +1 Action Point for ${BATHROOM_ACTION_POOP} Poop` },
+    special: { name: BATHROOM_ACTIONS.office.name, desc: BATHROOM_ACTIONS.office.desc },
     structures: tiers(0, 1, 0, 2, 1, 1),
     tp: 5,
     concentration: 8,
@@ -337,7 +352,7 @@ export const BATHROOM_INFO: Record<
     name: 'Public Toilet',
     icon: '🚻',
     color: '#eef6e6',
-    special: { name: 'Wall Graffiti', desc: `Once per round: a random Merdomon gains a trait your team has, for ${BATHROOM_ACTION_POOP} Poop` },
+    special: { name: BATHROOM_ACTIONS.public.name, desc: BATHROOM_ACTIONS.public.desc },
     structures: tiers(0, 0, 0, 0, 2, 3),
     tp: 0,
     concentration: 5,
@@ -347,7 +362,7 @@ export const BATHROOM_INFO: Record<
     name: 'Home Toilet',
     icon: '🏠',
     color: '#e8f1fb',
-    special: { name: 'Comfort', desc: `Once per round: all Merdomon +1 HP in the next fight, for ${BATHROOM_ACTION_POOP} Poop` },
+    special: { name: BATHROOM_ACTIONS.home.name, desc: BATHROOM_ACTIONS.home.desc },
     structures: tiers(1, 1, 1, 1, 1, 1),
     tp: 3,
     concentration: 8,
@@ -363,7 +378,44 @@ export const BATHROOM_INFO: Record<
     concentration: 4,
     poop: 0,
   },
+  custom: {
+    name: 'Custom Toilet',
+    icon: '🔧',
+    color: '#f1ece2',
+    special: { name: 'Your choice', desc: 'Build 3 tiers and pick a bathroom action before you start' },
+    structures: tiers(0, 0, 0, 0, 0, 0),
+    tp: 5,
+    concentration: 5,
+    poop: 5,
+  },
 };
+
+// ---------- Endless Mode ----------
+
+/** Endless: the Custom Toilet, 6 waves per level (mid Boss on 3, final on 6), then the next level's Boss. */
+export const ENDLESS = {
+  bathroom: 'custom' as BathroomId,
+  rounds: 6,
+  midRound: 3,
+  modifierWaves: [2, 5] as readonly number[],
+  /** Free tiers placed while customizing the toilet. */
+  customTiers: 3,
+};
+
+/** One Endless level. common = Small, rare = Big. */
+export const ENDLESS_WAVES: readonly WaveDef[] = [
+  { common: 2, rare: 0 },
+  { common: 3, rare: 1 },
+  { common: 3, rare: 0, boss: 'mid' },
+  { common: 3, rare: 2 },
+  { common: 2, rare: 4 },
+  { common: 0, rare: 4, boss: 'final' },
+];
+
+/** Endless enemies: +0/+1/+2/+3 on levels 1–4 (as in Normal), then +level (+5, +6, … +8 when the Bosses start again). */
+export function endlessEnemyBonus(level: number): number {
+  return level <= 4 ? level - 1 : level;
+}
 
 /** Toilet Points a new player starts with. */
 export const STARTING_TOILET_POINTS = 0;

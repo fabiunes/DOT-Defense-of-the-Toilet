@@ -3,7 +3,6 @@ import {
   ABILITY_INFO,
   BOSS_INFO,
   KIND_NAME,
-  ROUNDS,
   SIZE_NAME,
   STAT_KEYS,
   TRAITS,
@@ -11,7 +10,7 @@ import {
   TRAIT_THRESHOLDS,
   TRAIT_VALUES,
 } from '../engine/data';
-import { activeTeam, apCap, concentrationCap, itemCap, mutedTrait, poopCap, tpCap, traitItems } from '../engine/game';
+import { activeTeam, roundsOf, apCap, concentrationCap, itemCap, mutedTrait, poopCap, tpCap, traitItems } from '../engine/game';
 import { loadToiletPoints } from '../engine/save';
 import { countTraits, traitTier } from '../engine/traits';
 import type { AbilityId, BossId, Merdomon, Rarity, RunState, Stats, TraitId } from '../engine/types';
@@ -175,7 +174,7 @@ export function CostBadge({ ap, tp, ms, conc }: { ap?: number; tp?: number; ms?:
   );
 }
 
-export function TopBar({ run }: { run: RunState }) {
+export function TopBar({ run, onHome }: { run: RunState; onHome?: () => void }) {
   return (
     <div className="topbar">
       <div className="res" aria-label="Toilet Paper">
@@ -196,6 +195,7 @@ export function TopBar({ run }: { run: RunState }) {
         <small>/{poopCap(run)}</small>
         <Icon name="poop" size={24} fill="#fff" />
       </div>
+      {onHome && <HomeButton onClick={onHome} />}
     </div>
   );
 }
@@ -216,7 +216,15 @@ export function InfoRow({
   return (
     <div className="inforow">
       <button className="round-badge round-btn" onClick={onRound} disabled={!onRound} aria-label="Waves recap">
-        Round {run.round}/{ROUNDS}
+        {run.mode === 'endless' ? (
+          <>
+            ♾️{run.endlessLevel} · {run.round}/{roundsOf(run)}
+          </>
+        ) : (
+          <>
+            Round {run.round}/{roundsOf(run)}
+          </>
+        )}
       </button>
       <button className="info-chip" onClick={onItems} aria-label="Items">
         <Icon name="shop" size={16} fill="#fff" />
@@ -370,6 +378,15 @@ export function RerollButton({ enabled, onClick, free, cost }: { enabled: boolea
     <button className="big-btn reroll-btn" disabled={!enabled} onClick={onClick}>
       <Icon name="dice" size={22} fill="#fff" /> Re-Roll
       {free > 0 ? <span className="cost free">free ×{free}</span> : <CostBadge tp={cost} />}
+    </button>
+  );
+}
+
+/** Back to the Home screen (top right of every screen). */
+export function HomeButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button className="icon-btn home-btn" onClick={onClick} aria-label="Home">
+      <Icon name="home" size={20} />
     </button>
   );
 }

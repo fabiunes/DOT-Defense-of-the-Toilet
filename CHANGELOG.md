@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.15
+
+### Nuova modalità: ♾️ Endless
+- Si sceglie con il **🔧 Custom Toilet**, dopo l'Hotel nel carosello dei bagni. Parte con tutte le strutture al Tier 0, 5 TP, 5 Concentration e 5 Poop.
+- **Customize Toilet**: 3 Tier gratuiti da piazzare (anche sulla stessa struttura) e la scelta dell'azione del bagno.
+- **Livelli in sequenza**: 6 wave per livello, Boss medio alla wave 3 e finale alla wave 6, 2 modificatori. Battuto il Boss finale arriva il regalo e si passa al Boss successivo.
+- **Difficoltà**: nemici +0/+1/+2/+3 ai livelli 1–4, poi +5/+6/+7; dopo il Cat si ricomincia a +8, +9…
+- La partita finisce con Concentration a 0 o perdendo contro un Boss finale.
+- Il percorso mostra il miglior avanzamento e il miglior punteggio.
+
+### Bilanciamento
+- **Azioni dei bagni**: costano **3 Poop** (prima 8).
+- **Wall Graffiti** dà un tratto che la squadra **non ha** (uno qualsiasi se li ha tutti).
+- **Flush**: Small +1 Concentration e +1 AP, Big +2 e +2, Huge +3 e +3.
+
+### Interfaccia
+- Pannello di **conferma** per le azioni dei bagni, con l'effetto spiegato.
+- **Statistiche aggiornate in combattimento** dopo i popup: Snowball, Legacy, Flip-Flops, Bestseller, Doomscrolling.
+- Tasto **🏠 Home** in ogni schermata, con conferma durante la partita.
+- **Stats**: simbolo del bagno e della modalità (⚔️ Normal, ♾️ Endless) per ogni partita.
+- **Rules**: le note di versione mostrano le ultime 2 patch; nuova pagina sull'Endless.
+
+> I salvataggi della v0.14 non sono compatibili: il tasto Continue li ignora.
+
 ## v0.14
 
 ### Bagni e progressione
